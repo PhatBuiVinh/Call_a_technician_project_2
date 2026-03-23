@@ -1,8 +1,12 @@
+import { Link } from 'react-router-dom';
+
 export default function Button({
   children,
   type = "button",
   variant = "primary",
   className = "",
+  to,
+  href,
   ...props
 }) {
   const base =
@@ -15,8 +19,7 @@ export default function Button({
   ghost: "text-brand-blue hover:bg-brand-lightblue/20 focus:ring-brand-lightblue",
 };
 
-
-  return (
+  const buttonContent = (
     <button
       type={type}
       className={`${base} ${styles[variant]} ${className}`}
@@ -25,4 +28,25 @@ export default function Button({
       {children}
     </button>
   );
+
+  // If 'to' prop is provided, render as Link for internal navigation
+  if (to) {
+    return (
+      <Link to={to} className="inline-block">
+        {buttonContent}
+      </Link>
+    );
+  }
+
+  // If 'href' prop is provided, render as anchor tag
+  if (href) {
+    return (
+      <a href={href} className="inline-block">
+        {buttonContent}
+      </a>
+    );
+  }
+
+  // Default: render as button
+  return buttonContent;
 }

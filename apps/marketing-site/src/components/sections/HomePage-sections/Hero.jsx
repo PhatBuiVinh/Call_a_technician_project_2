@@ -39,8 +39,8 @@ export default function Hero({ imageUrl }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.18, ease: "easeOut" }}
           >
-            <Button variant="primary">Book a Technician</Button>
-            <Button variant="secondary">1300 551 350</Button>
+            <Button variant="primary" to="/contact">Book a Technician</Button>
+            <Button variant="secondary" href="tel:1300551350">1300 551 350</Button>
           </motion.div>
 
           <motion.p

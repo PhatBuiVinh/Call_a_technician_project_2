@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import ErrorBoundary from './components/ErrorBoundary';
+import ScrollToTop from './components/UI/ScrollToTop';
 
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -23,6 +24,7 @@ function RequireAuth() {
 export default function App() {
   return (
     <ErrorBoundary>
+      <ScrollToTop />
       <Routes>
         {/* Public */}
         <Route path="/" element={<Login />} />

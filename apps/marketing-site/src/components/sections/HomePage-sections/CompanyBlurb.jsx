@@ -89,11 +89,11 @@ Today, we support homes and small businesses across South Australia with the sam
 
           {/* CTA row */}
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
-            <Button variant="primary">Book a Technician</Button>
+            <Button variant="primary" to="/contact">Book a Technician</Button>
             <Button
               variant="secondary"
               className="border-brand-blue text-brand-blue hover:text-brand-navy"
-              onClick={() => (window.location.href = "/about")}
+              to="/about"
             >
               Learn more about us
             </Button>

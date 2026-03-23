@@ -20,8 +20,8 @@ export default function About() {
             without jargon, and with a clear promise: <span className="font-medium">No Fix, No Fee.</span>
           </p>
           <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-            <Button variant="primary" className="px-6 py-3">Book a Technician</Button>
-            <Button variant="secondary" className="px-6 py-3">Contact Us</Button>
+            <Button variant="primary" className="px-6 py-3" to="/contact">Book a Technician</Button>
+            <Button variant="secondary" className="px-6 py-3" to="/contact">Contact Us</Button>
           </div>
         </div>
       </Section>
@@ -210,8 +210,8 @@ export default function About() {
               Book a technician today — we’ll get you back on track quickly.
             </p>
             <div className="mt-6 flex flex-col sm:flex-row gap-3">
-              <Button variant="primary">Book Now</Button>
-              <Button variant="secondary" className="border-white text-white hover:text-brand-navy">
+              <Button variant="primary" to="/contact">Book Now</Button>
+              <Button variant="secondary" className="border-white text-white hover:text-brand-navy" href="tel:1300551350">
                 1300 551 350
               </Button>
             </div>

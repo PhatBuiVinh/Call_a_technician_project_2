@@ -36,6 +36,7 @@ import UrgentCallout from "./components/layout/UrgentCallout";
 import Footer from "./components/layout/Footer";
 import LiveChatButton from "./components/UI/LiveChatButton";
 import BackToTop from "./components/UI/BackToTop";
+import ScrollToTop from "./components/UI/ScrollToTop";
 import Home from "./pages/Home";
 import About from "./pages/About";
 import Services from "./pages/Services";
@@ -48,6 +49,7 @@ import Login from "./pages/Login";
 export default function App() {
   return (
     <>
+      <ScrollToTop />
       <NavBar />
       <UrgentCallout persist="none"/> {/* sticky banner under the nav */}
       <div className="pt-24 md:pt-28">
