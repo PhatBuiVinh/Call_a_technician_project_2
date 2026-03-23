@@ -13,6 +13,7 @@ const mongoose  = require('mongoose');
 const cors      = require('cors');
 const bcrypt    = require('bcrypt');
 const jwt       = require('jsonwebtoken');
+const dns       = require('node:dns');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -25,6 +26,22 @@ const MARKETING_ORIGIN = process.env.MARKETING_ORIGIN || 'http://localhost:5174'
 const ALWAYS_OPEN = (process.env.ALWAYS_OPEN ?? 'true') === 'true';
 // If you want to forbid cross-midnight jobs, set ENFORCE_SAME_DAY=true
 const ENFORCE_SAME_DAY = (process.env.ENFORCE_SAME_DAY ?? 'false') === 'true';
+
+/* ------------------------ DNS (Atlas SRV) ------------------- */
+// On some Windows/VPN/AV setups, Node's SRV lookup can fail with ECONNREFUSED while Compass works.
+// Allow overriding resolvers to make mongodb+srv:// connections reliable.
+const DNS_SERVERS = (process.env.MONGODB_DNS_SERVERS || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+if (DNS_SERVERS.length) {
+  try {
+    dns.setServers(DNS_SERVERS);
+    console.log('[mongo] Using custom DNS servers:', DNS_SERVERS.join(', '));
+  } catch (e) {
+    console.warn('[mongo] Failed to set custom DNS servers:', e?.message || e);
+  }
+}
 
 /* ------------------------ MIDDLEWARE ------------------------ */
 app.use(cors({
@@ -969,12 +986,26 @@ async function start() {
       process.exit(1);
     }
     console.log('Connecting to MongoDB...');
-    await mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 10000 });
+
+    const uri = process.env.MONGODB_URI;
+    const uriScheme = String(uri).split(':')[0];
+    const redacted = String(uri)
+      .replace(/\/\/([^:/?#]+):([^@/?#]+)@/i, '//$1:***@');
+
+    console.log('[mongo] Node:', process.version, '| Mongoose:', mongoose.version, '| URI scheme:', uriScheme);
+    console.log('[mongo] URI (redacted):', redacted);
+
+    await mongoose.connect(uri, {
+      serverSelectionTimeoutMS: Number(process.env.MONGODB_SERVER_SELECTION_TIMEOUT_MS) || 30000,
+      connectTimeoutMS: Number(process.env.MONGODB_CONNECT_TIMEOUT_MS) || 30000,
+      socketTimeoutMS: Number(process.env.MONGODB_SOCKET_TIMEOUT_MS) || 45000,
+    });
     console.log('MongoDB connected');
     app.listen(PORT, () => console.log(`API on http://localhost:${PORT}`));
   } catch (e) {
     console.error('❌ Failed to connect to MongoDB:', e.message);
     console.error('Check: Network Access, DB user/password, and MONGODB_URI.');
+    if (e?.name || e?.code) console.error('[mongo] Error meta:', { name: e.name, code: e.code });
     process.exit(1);
   }
 }
