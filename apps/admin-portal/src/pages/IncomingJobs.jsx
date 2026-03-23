@@ -3,8 +3,34 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { incomingJobsApi } from '../lib/api';
 import Header from '../components/Header';
 
+function toDisplayImageSrc(raw) {
+  if (!raw) return '';
+  const s = String(raw).trim();
+  if (!s) return '';
+
+  // Already a data URI
+  if (s.startsWith('data:')) return s;
+
+  // Absolute URL
+  if (/^https?:\/\//i.test(s)) return s;
+
+  // Relative path to backend
+  if (s.startsWith('/')) {
+    const origin = import.meta.env.VITE_BACKEND_ORIGIN || 'http://localhost:5000';
+    return origin + s;
+  }
+
+  // Raw base64 (no prefix) -> assume JPEG
+  const looksBase64 = /^[A-Za-z0-9+/=\s]+$/.test(s) && s.length > 100;
+  if (looksBase64) return `data:image/jpeg;base64,${s.replace(/\s+/g, '')}`;
+
+  // Fallback: try as-is
+  return s;
+}
+
 export default function IncomingJobs() {
   const [selectedJob, setSelectedJob] = useState(null);
+  const [lightboxImage, setLightboxImage] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const queryClient = useQueryClient();
 
@@ -158,9 +184,13 @@ export default function IncomingJobs() {
                     {job.images && job.images.length > 0 ? (
                       <div className="flex items-center gap-1">
                         <img 
-                          src={job.images[0]} 
+                          src={toDisplayImageSrc(job.images[0])} 
                           alt="Preview" 
                           className="w-10 h-10 object-cover rounded border border-white/20"
+                          loading="lazy"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
                         />
                         {job.images.length > 1 && (
                           <span className="text-xs text-white bg-white/10 px-2 py-1 rounded">
@@ -273,30 +303,51 @@ export default function IncomingJobs() {
               </div>
 
               {/* Image Gallery Section */}
-              {selectedJob.images && selectedJob.images.length > 0 && (
-                <div className="mb-6 rounded-2xl p-6 border border-brand-sky/20" style={{ backgroundColor: '#0c1450' }}>
-                  <h4 className="text-lg font-semibold text-brand-sky flex items-center gap-2 mb-4">
-                    <span>🖼️</span> Uploaded Images ({selectedJob.images.length})
-                  </h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    {selectedJob.images.map((image, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={image}
-                          alt={`Job image ${index + 1}`}
-                          className="w-full h-40 object-cover rounded-lg border-2 border-white/20 cursor-pointer hover:border-brand-sky transition"
-                          onClick={() => window.open(image, '_blank')}
-                        />
-                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition rounded-lg flex items-center justify-center">
-                          <span className="text-white opacity-0 group-hover:opacity-100 text-sm font-medium">
-                            Click to enlarge
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+              {selectedJob.images && selectedJob.images.length > 0 && (() => {
+                const displayImages = selectedJob.images
+                  .map((img) => toDisplayImageSrc(img))
+                  .filter(Boolean);
+
+                if (!displayImages.length) {
+                  return (
+                    <div className="mb-6 rounded-2xl p-6 border border-brand-sky/20" style={{ backgroundColor: '#0c1450' }}>
+                      <h4 className="text-lg font-semibold text-brand-sky flex items-center gap-2 mb-4">
+                        <span>🖼️</span> Uploaded Images ({selectedJob.images.length})
+                      </h4>
+                      <p className="text-sm text-slate-300">Images were attached but could not be displayed.</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="mb-6 rounded-2xl p-6 border border-brand-sky/20" style={{ backgroundColor: '#0c1450' }}>
+                    <h4 className="text-lg font-semibold text-brand-sky flex items-center gap-2 mb-4">
+                      <span>🖼️</span> Uploaded Images ({displayImages.length})
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      {displayImages.map((src, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => setLightboxImage(src)}
+                          className="block text-left"
+                          title="Click to enlarge"
+                        >
+                          <img
+                            src={src}
+                            alt={`Job image ${index + 1}`}
+                            className="w-full h-40 object-cover rounded-lg border-2 border-white/20 cursor-pointer hover:border-brand-sky transition"
+                            loading="lazy"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
 
               {/* Job Information Section */}
@@ -321,6 +372,30 @@ export default function IncomingJobs() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Image lightbox (avoid opening a new tab) */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-[70] p-4"
+          onClick={() => setLightboxImage(null)}
+        >
+          <button
+            type="button"
+            className="absolute top-4 right-4 text-white text-2xl hover:text-slate-300 font-bold w-10 h-10 rounded-full bg-white/10 hover:bg-white/20"
+            onClick={() => setLightboxImage(null)}
+            aria-label="Close image"
+          >
+            ×
+          </button>
+          <img
+            src={lightboxImage}
+            alt="Enlarged job attachment"
+            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            loading="eager"
+          />
         </div>
       )}
       </div>

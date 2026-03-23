@@ -5,7 +5,7 @@ import Input from "../../atoms/Input";
 import Textarea from "../../atoms/Textarea";
 import Button from "../../atoms/Button";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 export default function RequestCallForm() {
   const [formData, setFormData] = useState({
@@ -115,7 +115,8 @@ export default function RequestCallForm() {
         body: JSON.stringify(submitData),
       });
 
-      const responseData = await response.json();
+      let responseData = null;
+      try { responseData = await response.json(); } catch { responseData = null; }
 
       if (response.ok) {
         setSubmitStatus('success');
@@ -134,7 +135,7 @@ export default function RequestCallForm() {
         
         console.log('Form submitted successfully:', responseData);
       } else {
-        throw new Error(responseData.error || `Server error: ${response.status}`);
+        throw new Error((responseData && responseData.error) || `Server error: ${response.status}`);
       }
     } catch (error) {
       console.error('Error submitting form:', error);

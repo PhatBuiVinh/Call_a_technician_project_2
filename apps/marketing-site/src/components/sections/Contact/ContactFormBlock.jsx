@@ -172,20 +172,26 @@ export default function ContactFormBlock() {
     setJobRef("");
 
     try {
-      // Map UI fields to backend payload
-      const startAtISO = values.preferredAt ? new Date(values.preferredAt).toISOString() : null;
+      // Backend expects:
+      // { fullName, phone, email?, description, images? }
+      const descriptionParts = [
+        values.message,
+        values.suburb ? `Suburb: ${values.suburb}` : null,
+        values.time ? `Preferred time notes: ${values.time}` : null,
+        values.preferredAt
+          ? `Preferred date/time: ${new Date(values.preferredAt).toISOString()}`
+          : null,
+      ].filter(Boolean);
+
       const payload = {
-        title: values.message?.slice(0, 60) || `Request from ${values.name}`,
-        description: `${values.message}${values.time ? `\n\nPreferred time notes: ${values.time}` : ""}`,
-        customerName: values.name,
-        phone: values.phone,
-        suburb: values.suburb || "",
-        startAt: startAtISO,      // ok to be null if backend allows; else make preferredAt required
-        additionalMins: 0,
-        email: values.email || null, // optional if backend accepts it
+        fullName: values.name.trim(),
+        phone: values.phone.trim(),
+        email: (values.email || '').trim(),
+        description: descriptionParts.join('\n'),
+        images: [], // this form currently does not convert uploads to base64
       };
 
-      const res = await portal.createPublicJob(payload);
+      const res = await portal.submitJobRequest(payload);
 
       setSubmitting(false);
       setSuccess(true);

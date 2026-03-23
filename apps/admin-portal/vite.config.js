@@ -17,7 +17,7 @@ export default defineConfig({
     proxy: {
       // All calls starting with /api go to your Node server
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:5000',
         changeOrigin: true,
         secure: false,
       },

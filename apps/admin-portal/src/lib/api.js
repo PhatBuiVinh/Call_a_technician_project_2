@@ -1,4 +1,6 @@
-const BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000/api';
+// In local dev, prefer the Vite proxy by using BASE="/api" to avoid CORS/port drift.
+// In production, set VITE_API_BASE to a full URL like "https://api.example.com/api".
+const BASE = import.meta.env.VITE_API_BASE || '/api';
 
 export function getToken(){
   // one source of truth
@@ -7,15 +9,22 @@ export function getToken(){
 
 export async function api(path, { method='GET', body, headers={} } = {}){
   const token = getToken();
-  const res = await fetch(BASE + path, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: 'Bearer ' + token } : {}),
-      ...headers
-    },
-    body: body ? JSON.stringify(body) : undefined
-  });
+  let res;
+  try {
+    res = await fetch(BASE + path, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: 'Bearer ' + token } : {}),
+        ...headers
+      },
+      body: body ? JSON.stringify(body) : undefined
+    });
+  } catch (e) {
+    const url = BASE + path;
+    const detail = e?.message ? ` (${e.message})` : '';
+    throw new Error(`Network error calling API: ${url}${detail}`);
+  }
 
   const text = await res.text();
   let data = null; try{ data = text ? JSON.parse(text) : null }catch{}
