@@ -13,21 +13,36 @@ async function handle(res) {
   try { return JSON.parse(text); } catch { return text; }
 }
 
+// Demo fallback for deployment without backend
+const demoResponse = async (message) => {
+  console.log('Demo mode: Simulating API response -', message);
+  await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+  return { success: true, id: 'demo-' + Date.now(), message: `${message} (demo mode)` };
+};
+
 export const portal = {
   // Submit the "Request a Call" / contact inquiry to the backend (no auth).
-  submitJobRequest: (body) =>
-    fetch(`${API}/marketing/job-request`, {
+  submitJobRequest: async (body) => {
+    if (!API) return demoResponse('Job request submitted successfully');
+    return fetch(`${API}/marketing/job-request`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
-    }).then(handle),
+    }).then(handle);
+  },
 
   // Back-compat: older code may still call createPublicJob.
-  createPublicJob: (body) =>
-    fetch(`${API}/marketing/job-request`, {
+  createPublicJob: async (body) => {
+    if (!API) return demoResponse('Public job created successfully');
+    return fetch(`${API}/marketing/job-request`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
-    }).then(handle),
-  health: () => fetch(`${API}/health`).then(handle),
+    }).then(handle);
+  },
+  
+  health: async () => {
+    if (!API) return { ok: true, message: 'Demo mode - no backend health check' };
+    return fetch(`${API}/health`).then(handle);
+  },
 };

@@ -147,6 +147,30 @@ export default function ContactFormBlock() {
     }
     setFiles(next);
   }
+
+  // Convert files to base64 for submission
+  const convertFilesToBase64 = async (fileList) => {
+    const base64Images = [];
+    
+    for (const fileObj of fileList) {
+      if (fileObj.error) continue; // Skip files with errors
+      
+      try {
+        const base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(fileObj.file);
+        });
+        
+        base64Images.push(base64);
+      } catch (error) {
+        console.error('Error converting image to base64:', error);
+      }
+    }
+    
+    return base64Images;
+  }
   function removeFile(idx) {
     setFiles((arr) => {
       const copy = [...arr];
@@ -159,23 +183,21 @@ export default function ContactFormBlock() {
   // SUBMIT: replaced to call Portal API (no more fake demo delay)
   async function onSubmit(e) {
     e.preventDefault();
-    setTouched((t) => ({ ...t, name: true, phone: true, email: true, suburb: true, time: true, preferredAt: true, message: true }));
-    if (hasErrors) {
-      const first = ["name", "phone", "email", "preferredAt", "message"].find((k) => errors[k]);
-      if (first && refs[first]?.current) refs[first].current.scrollIntoView({ behavior: "smooth", block: "center" });
-      return;
-    }
-
     setSubmitting(true);
     setServerError("");
-    setSuccess(false);
-    setJobRef("");
 
     try {
-      // Backend expects:
-      // { fullName, phone, email?, description, images? }
+      // Basic validation
+      if (!values.name?.trim() || !values.phone?.trim()) {
+        throw new Error("Name and phone are required.");
+      }
+
+      // Convert uploaded images to base64
+      const base64Images = await convertFilesToBase64(files);
+
+      // Build description
       const descriptionParts = [
-        values.message,
+        values.message?.trim(),
         values.suburb ? `Suburb: ${values.suburb}` : null,
         values.time ? `Preferred time notes: ${values.time}` : null,
         values.preferredAt
@@ -188,7 +210,7 @@ export default function ContactFormBlock() {
         phone: values.phone.trim(),
         email: (values.email || '').trim(),
         description: descriptionParts.join('\n'),
-        images: [], // this form currently does not convert uploads to base64
+        images: base64Images, // Now includes converted base64 images
       };
 
       const res = await portal.submitJobRequest(payload);

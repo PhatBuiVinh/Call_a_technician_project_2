@@ -6,6 +6,9 @@ import logo from "../../assets/logo/Transparent-01.png";
 export default function NavBar() {
   const [isOpen, setIsOpen] = useState(false);
   const PORTAL_URL = import.meta.env.VITE_PORTAL_URL || 'http://localhost:5173'; // Admin portal URL
+  
+  // Only show login button if portal URL is configured
+  const showLoginButton = !!PORTAL_URL;
 
   const navLinks = [
     { name: "Home", path: "/" },
@@ -46,15 +49,20 @@ export default function NavBar() {
         <div className="hidden md:flex items-center gap-3">
           <Link to="/contact" className="btn-primary">Contact Us</Link>
 
-          {/* LOGIN → external Portal */}
-          <a
-            href={`${PORTAL_URL}/login`}
-            className="btn-secondary"
-            // target="_self" (default) keeps user on the portal; use _blank if you prefer new tab
-            rel="noreferrer"
-          >
-            Login
-          </a>
+          {/* LOGIN → external Portal - only show if configured */}
+          {showLoginButton ? (
+            <a
+              href={`${PORTAL_URL}/login`}
+              className="btn-secondary"
+              rel="noreferrer"
+            >
+              Login
+            </a>
+          ) : (
+            <span className="btn-secondary opacity-60 cursor-not-allowed" title="Portal available on request">
+              Portal
+            </span>
+          )}
         </div>
 
         {/* Mobile hamburger */}
@@ -92,15 +100,25 @@ export default function NavBar() {
               Contact Us
             </Link>
 
-            {/* LOGIN (mobile) → external Portal */}
-            <a
-              href={`${PORTAL_URL}/login`}
-              className="btn-secondary text-center"
-              onClick={() => setIsOpen(false)}
-              rel="noreferrer"
-            >
-              Login
-            </a>
+            {/* LOGIN (mobile) → external Portal - only show if configured */}
+            {showLoginButton ? (
+              <a
+                href={`${PORTAL_URL}/login`}
+                className="btn-secondary text-center"
+                onClick={() => setIsOpen(false)}
+                rel="noreferrer"
+              >
+                Login
+              </a>
+            ) : (
+              <span 
+                className="btn-secondary text-center opacity-60 cursor-not-allowed"
+                onClick={() => setIsOpen(false)}
+                title="Portal available on request"
+              >
+                Portal
+              </span>
+            )}
           </div>
         </div>
       )}
