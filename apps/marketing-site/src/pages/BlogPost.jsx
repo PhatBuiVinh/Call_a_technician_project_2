@@ -3,16 +3,27 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import Section from "../components/layout/Section";
 import PostBody from "../components/sections/Blog/PostBody";
 import RelatedPosts from "../components/sections/Blog/RelatedPosts";
-import { POSTS } from "../data/blog";
+import { useBlogPost } from "../hooks/useBlogPost";
+import { useBlogPosts } from "../hooks/useBlogPosts";
 
 export default function BlogPost() {
   const { id } = useParams();
   const navigate = useNavigate();
+  
+  const { post, loading, error } = useBlogPost(id);
+  const { posts: allPosts } = useBlogPosts();
 
-  const post = useMemo(() => POSTS.find(p => p.id === id), [id]);
-  const idx = useMemo(() => POSTS.findIndex(p => p.id === id), [id]);
+  if (loading) {
+    return (
+      <Section>
+        <div className="container-app text-center py-10">
+          <p>Loading blog post...</p>
+        </div>
+      </Section>
+    );
+  }
 
-  if (!post) {
+  if (error || !post) {
     return (
       <Section>
         <div className="container-app">
@@ -23,8 +34,9 @@ export default function BlogPost() {
     );
   }
 
-  const prev = idx > 0 ? POSTS[idx - 1] : null;
-  const next = idx < POSTS.length - 1 ? POSTS[idx + 1] : null;
+  const idx = useMemo(() => allPosts.findIndex(p => p.id === id), [id, allPosts]);
+  const prev = idx > 0 ? allPosts[idx - 1] : null;
+  const next = idx < allPosts.length - 1 ? allPosts[idx + 1] : null;
 
   return (
     <div className="text-slate-800">
@@ -81,7 +93,7 @@ export default function BlogPost() {
             </div>
 
             {/* Related */}
-            <RelatedPosts allPosts={POSTS} currentId={post.id} category={post.category} />
+            <RelatedPosts allPosts={allPosts} currentId={post.id} category={post.category} />
           </div>
 
           {/* Sidebar: simple author box for now */}
