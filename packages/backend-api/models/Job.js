@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const JobSchema = new mongoose.Schema(
   {
-    owner: { type: String, required: true, index: true },
+    owner: { type: String, required: true },
     title: { type: String, required: true },
     invoice: { type: String, required: true },
     priority: { type: String, enum: ['Low','Medium','High','Urgent'], default: 'Low' },

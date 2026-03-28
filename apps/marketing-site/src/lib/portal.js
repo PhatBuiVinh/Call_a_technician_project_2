@@ -15,7 +15,6 @@ async function handle(res) {
 
 // Demo fallback for deployment without backend
 const demoResponse = async (message) => {
-  console.log('Demo mode: Simulating API response -', message);
   await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
   return { success: true, id: 'demo-' + Date.now(), message: `${message} (demo mode)` };
 };

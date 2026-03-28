@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Section from "../components/layout/Section";
 import BlogHero from "../components/sections/Blog/BlogHero";
 import BlogGrid from "../components/sections/Blog/BlogGrid";
@@ -6,10 +7,12 @@ import { useBlogPosts } from "../hooks/useBlogPosts";
 
 export default function Blog() {
   const { posts, categories, loading, error } = useBlogPosts();
+  const [activeCategory, setActiveCategory] = useState("");
 
-  // If later you want category from query param, wire it here.
-  const activeCategory = "";
-  const filteredPosts = activeCategory ? posts.filter(p => p.category === activeCategory) : posts;
+  // Filter posts by category if one is selected
+  const filteredPosts = activeCategory 
+    ? posts.filter(p => p.category === activeCategory) 
+    : posts;
 
   if (loading) {
     return (
@@ -45,10 +48,7 @@ export default function Blog() {
           <BlogSidebar
             categories={categories}
             activeCategory={activeCategory}
-            onSelectCategory={(cat) => {
-              // For now just alert; later you can update state/URL param
-              alert(`Demo only — filter to "${cat}" (we can wire this to state or URL param).`);
-            }}
+            onSelectCategory={setActiveCategory}
           />
         </div>
       </Section>

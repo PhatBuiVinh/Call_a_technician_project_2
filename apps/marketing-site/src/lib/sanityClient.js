@@ -43,57 +43,94 @@ const mockCategories = ['Tips', 'Troubleshooting', 'Security', 'Wi-Fi', 'Busines
 // Helper to fetch blog posts
 export const getBlogPosts = async () => {
   if (!isSanityConfigured) {
-    console.log('Sanity not configured - using mock data')
     return mockPosts
   }
 
-  const query = `*[_type == "blogPost" && status == "published"] | order(publishedAt desc) {
+  // Query for both "blogPost" and "post" types to handle existing data
+  const query = `*[_type in ["blogPost", "post"]] | order(publishedAt desc) {
     _id,
     title,
     slug,
-    excerpt,
     content,
+    body,
     category->{title},
+    categories[]->{title},
     author,
+    author->{name, bio},
     date,
+    publishedAt,
     readMins,
     featured,
     image,
-    publishedAt
+    mainImage,
+    status,
+    _type
   }`
   
-  return await client.fetch(query)
+  try {
+    const posts = await client.fetch(query)
+    
+    // Filter for published posts in JavaScript instead of GROQ
+    // Treat null status as published for existing posts
+    const publishedPosts = posts.filter(post => 
+      post.status === 'published' || post.status === null
+    )
+    
+    return publishedPosts
+  } catch (error) {
+    console.error('Error fetching posts:', error)
+    return []
+  }
 }
 
 // Helper to fetch single blog post by slug
 export const getBlogPost = async (slug) => {
   if (!isSanityConfigured) {
-    console.log('Sanity not configured - using mock data')
     return mockPosts[0]
   }
 
-  const query = `*[_type == "blogPost" && slug.current == $slug && status == "published"][0] {
+  // Query for both "blogPost" and "post" types
+  const query = `*[_type in ["blogPost", "post"]] | order(publishedAt desc) {
     _id,
     title,
     slug,
-    excerpt,
     content,
+    body,
     category->{title},
+    categories[]->{title},
     author,
+    author->{name, bio},
     date,
+    publishedAt,
     readMins,
     featured,
     image,
-    publishedAt
+    mainImage,
+    status,
+    _type
   }`
   
-  return await client.fetch(query, { slug })
+  try {
+    const posts = await client.fetch(query)
+    
+    // Find the post by slug OR _id, and status
+    const post = posts.find(p => {
+      const slugMatch = p.slug?.current === slug
+      const idMatch = p._id === slug
+      const statusMatch = p.status === 'published' || p.status === null
+      return (slugMatch || idMatch) && statusMatch
+    })
+    
+    return post
+  } catch (error) {
+    console.error('Error fetching single post:', error)
+    return null
+  }
 }
 
 // Helper to fetch categories
 export const getCategories = async () => {
   if (!isSanityConfigured) {
-    console.log('Sanity not configured - using mock data')
     return mockCategories.map(title => ({ _id: title, title }))
   }
 

@@ -10,13 +10,23 @@ export default function BlogGrid({ posts = [], onPickCategory }) {
   // featured = first post with featured:true (optional)
   const featured = useMemo(() => posts.find((p) => p.featured), [posts]);
 
+  // Defensive rendering for featured post
+  const safeFeatured = featured ? {
+    id: String(featured.id || 'unknown'),
+    title: String(featured.title || 'Untitled Post'),
+    category: String(featured.category || 'Tips'),
+    author: String(featured.author || 'Anonymous'),
+    readMins: Number(featured.readMins) || 5,
+    date: String(featured.date || new Date().toISOString()),
+    image: String(featured.image || '/src/assets/blog/blogdemo.jpg')
+  } : null;
+
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     const list = s
       ? posts.filter(
           (p) =>
             p.title.toLowerCase().includes(s) ||
-            p.excerpt.toLowerCase().includes(s) ||
             p.category.toLowerCase().includes(s)
         )
       : posts;
@@ -55,19 +65,18 @@ export default function BlogGrid({ posts = [], onPickCategory }) {
         <div className="rounded-2xl border bg-white overflow-hidden">
           <div className="grid md:grid-cols-2">
             {featured.image ? (
-              <img src={featured.image} alt={featured.title} className="h-full w-full object-cover" />
+              <img src={safeFeatured.image} alt={safeFeatured.title} className="h-full w-full object-cover" />
             ) : (
               <div className="bg-slate-100 h-full w-full" />
             )}
             <div className="p-6">
-              <div className="text-xs uppercase tracking-wide text-brand-blue">{featured.category}</div>
-              <h2 className="mt-1 text-2xl font-semibold text-brand-navy">{featured.title}</h2>
-              <p className="mt-2 text-slate-700">{featured.excerpt}</p>
+              <div className="text-xs uppercase tracking-wide text-brand-blue">{safeFeatured.category}</div>
+              <h2 className="mt-1 text-2xl font-semibold text-brand-navy">{safeFeatured.title}</h2>
               <div className="mt-4 text-sm text-slate-500">
-                By {featured.author} • {featured.readMins} min read •{" "}
-                {new Date(featured.date).toLocaleDateString()}
+                By {safeFeatured.author} • {safeFeatured.readMins} min read •{" "}
+                {new Date(safeFeatured.date).toLocaleDateString()}
               </div>
-              <a href={`/blog/${featured.id}`} className="mt-6 inline-block rounded-md border px-4 py-2 text-sm font-medium hover:bg-slate-50">
+              <a href={`/blog/${safeFeatured.id}`} className="mt-6 inline-block rounded-md border px-4 py-2 text-sm font-medium hover:bg-slate-50">
                 Read article →
               </a>
             </div>

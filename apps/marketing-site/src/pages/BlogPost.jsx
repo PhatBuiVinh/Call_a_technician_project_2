@@ -13,6 +13,11 @@ export default function BlogPost() {
   const { post, loading, error } = useBlogPost(id);
   const { posts: allPosts } = useBlogPosts();
 
+  // Compute prev/next posts - must be called before any early returns
+  const idx = useMemo(() => allPosts.findIndex(p => p.id === id), [id, allPosts]);
+  const prev = idx > 0 ? allPosts[idx - 1] : null;
+  const next = idx < allPosts.length - 1 ? allPosts[idx + 1] : null;
+
   if (loading) {
     return (
       <Section>
@@ -33,10 +38,6 @@ export default function BlogPost() {
       </Section>
     );
   }
-
-  const idx = useMemo(() => allPosts.findIndex(p => p.id === id), [id, allPosts]);
-  const prev = idx > 0 ? allPosts[idx - 1] : null;
-  const next = idx < allPosts.length - 1 ? allPosts[idx + 1] : null;
 
   return (
     <div className="text-slate-800">
@@ -96,13 +97,12 @@ export default function BlogPost() {
             <RelatedPosts allPosts={allPosts} currentId={post.id} category={post.category} />
           </div>
 
-          {/* Sidebar: simple author box for now */}
+          {/* Sidebar: About the author */}
           <aside className="space-y-6">
             <div className="rounded-xl border bg-white p-4">
               <div className="font-semibold text-brand-navy">About the author</div>
               <p className="mt-1 text-sm text-slate-600">
-                {post.author} is a technician at Call-a-Technician working on networking and
-                device performance.
+                {post.authorBio || `${post.author} is a technician at Call-a-Technician working on networking and device performance.`}
               </p>
             </div>
 

@@ -102,11 +102,6 @@ export default function RequestCallForm() {
         images: images || [] // Ensure images is always an array
       };
 
-      console.log('Submitting form with data:', {
-        ...submitData,
-        images: submitData.images.length + ' images'
-      });
-
       const response = await fetch(`${API_BASE_URL}/api/marketing/job-request`, {
         method: 'POST',
         headers: {
@@ -132,8 +127,6 @@ export default function RequestCallForm() {
         // Reset the file input
         const fileInput = document.querySelector('input[type="file"]');
         if (fileInput) fileInput.value = '';
-        
-        console.log('Form submitted successfully:', responseData);
       } else {
         throw new Error((responseData && responseData.error) || `Server error: ${response.status}`);
       }
