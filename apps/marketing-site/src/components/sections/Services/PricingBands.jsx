@@ -3,7 +3,7 @@ import Section from "../../layout/Section";
 export default function PricingBands() {
   const plans = [
     { name: "Basic Visit", price: "from $99", best: false, features: ["Diagnosis & quick fixes", "Optimise performance", "Advice & next steps"] },
-    { name: "Standard Visit", price: "from $129", best: true, features: ["Most on-site jobs", "Wi-Fi troubleshooting", "Backup & security setup"] },
+    { name: "Standard Visit", price: "from $169", best: true, features: ["Most on-site jobs", "Wi-Fi troubleshooting", "Backup & security setup"] },
     { name: "Advanced / Quote", price: "request", best: false, features: ["Hardware repairs", "Data recovery attempts", "Small office work"] },
   ];
   return (

@@ -192,8 +192,13 @@ export default function Technicians() {
                               👨‍🔧
                             </div>
                             <div>
-                              <h3 className="text-xl font-bold text-white group-hover:text-brand-sky transition-colors">
+                              <h3 className="text-xl font-bold text-white group-hover:text-brand-sky transition-colors flex items-center gap-2">
                                 {technician.name}
+                                {technician.technicianCode && (
+                                  <span className="text-xs font-mono bg-brand-blue/30 text-brand-sky px-2 py-1 rounded border border-brand-sky/30">
+                                    {technician.technicianCode}
+                                  </span>
+                                )}
                               </h3>
                               <div className="flex items-center gap-4 text-sm text-text-secondary">
                                 <span className="flex items-center gap-1">

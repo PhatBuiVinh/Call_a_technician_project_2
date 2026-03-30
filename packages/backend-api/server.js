@@ -143,8 +143,10 @@ const TimeOffSchema = new mongoose.Schema(
   { start: { type: Date, required: true }, end: { type: Date, required: true }, reason: String },
   { _id: true }
 );
+
 const TechSchema = new mongoose.Schema({
   name:     { type: String, required: true, trim: true, index: true },
+  technicianCode: { type: String, unique: true, sparse: true }, // TECH-001, TECH-002, etc.
   email:    { type: String, trim: true, default: '' },
   phone:    { type: String, trim: true, default: '' },
   skills:   { type: [String], default: [] },
@@ -591,7 +593,19 @@ app.delete('/api/invoices/:id', auth, async (req, res) => {
   res.json({ ok: true });
 });
 
-// single (owner-scoped)
+// Get next sequential invoice number (format: INV-2026-0001) - MUST be before /:id routes
+app.get('/api/invoices/next-number', auth, async (req, res) => {
+  try {
+    const year = new Date().getFullYear();
+    const seq = await getNextSequence(`invoice-${year}`, 'INV', year);
+    const invoiceNumber = `INV-${year}-${String(seq).padStart(4, '0')}`;
+    res.json({ number: invoiceNumber });
+  } catch (e) {
+    res.status(500).json({ error: e.message || 'Failed to generate invoice number' });
+  }
+});
+
+// single (owner-scoped) - MUST be after specific routes like /next-number
 app.get('/api/invoices/:id', auth, async (req, res) => {
   const { id } = req.params;
   const doc = await Invoice.findOne({ _id: id, createdBy: req.user.sub }).lean();
@@ -626,7 +640,7 @@ app.get('/api/techs/names', auth, async (req, res) => {
   res.json(list);
 });
 
-// create
+// create (auto-generates technicianCode)
 app.post('/api/techs', auth, async (req, res) => {
   const {
     name, email = '', phone = '', skills = [],
@@ -634,8 +648,14 @@ app.post('/api/techs', auth, async (req, res) => {
     workingHours, timeOff
   } = req.body || {};
   if (!name) return res.status(400).json({ error: 'Name required' });
+  
+  // Generate next technician code atomically
+  const seq = await getNextSequence('tech', 'TECH');
+  const technicianCode = `TECH-${String(seq).padStart(3, '0')}`;
+  
   const doc = await Tech.create({
     name, email, phone, skills, active, notes, address, emergencyContact,
+    technicianCode,
     ...(workingHours ? { workingHours } : {}),
     ...(timeOff ? { timeOff } : {}),
     createdBy: req.user.sub
@@ -742,7 +762,32 @@ app.get('/api/techs/:id/availability', auth, async (req, res) => {
   res.json(blocked);
 });
 
-/* ---------- NEW: Aggregate time-off for all techs ---------- */
+// Counter schema for sequential numbering (technician codes, invoice numbers)
+const CounterSchema = new mongoose.Schema({
+  name: { type: String, required: true, unique: true }, // e.g., 'tech', 'invoice-2026'
+  prefix: { type: String, default: '' }, // e.g., 'TECH', 'INV'
+  year: { type: Number }, // optional year for yearly sequences
+  seq: { type: Number, default: 0 }, // current sequence number
+}, { timestamps: true });
+const Counter = mongoose.models.Counter || mongoose.model('Counter', CounterSchema);
+
+// Helper to get next sequence number atomically
+async function getNextSequence(name, prefix = '', year = null) {
+  const query = { name };
+  const update = { $inc: { seq: 1 } };
+  const options = { new: true, upsert: true };
+  
+  // If year is specified, include it in the query and update
+  if (year) {
+    query.year = year;
+    update.$setOnInsert = { prefix, year };
+  } else {
+    update.$setOnInsert = { prefix };
+  }
+  
+  const counter = await Counter.findOneAndUpdate(query, update, options);
+  return counter.seq;
+}
 /**
  * GET /api/timeoff?from=ISO&to=ISO&technician=Name
  * Returns: [{ technician, startAt, endAt, reason }]

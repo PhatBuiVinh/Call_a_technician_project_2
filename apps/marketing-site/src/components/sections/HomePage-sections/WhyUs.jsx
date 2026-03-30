@@ -30,7 +30,7 @@ export default function WhyUs() {
               <thead className="sticky top-0 bg-white z-10">
                 <tr className="text-left text-sm text-slate-600">
                   <th className="p-4 font-medium"></th>
-                  <th className="p-4 font-semibold text-brand-navy bg-amber-50">Call-a-Technician</th>
+                  <th className="p-4 font-bold bg-brand-navy text-white rounded-t-lg">Call-a-Technician</th>
                   <th className="p-4 font-medium">Big-box Repair Counter</th>
                   <th className="p-4 font-medium">Remote-only Service</th>
                 </tr>
@@ -47,7 +47,7 @@ export default function WhyUs() {
                         <div className="text-xs text-slate-500 mt-1">{r.note}</div>
                       )}
                     </th>
-                    <td className="p-4 font-bold align-top bg-amber-50">{renderCell(r.us)}</td>
+                    <td className="p-4 font-bold align-top bg-brand-navy/10 border-l-4 border-brand-navy">{renderCell(r.us)}</td>
                     <td className="p-4 align-top text-slate-700">{renderCell(r.counter)}</td>
                     <td className="p-4 align-top text-slate-700">{renderCell(r.remote)}</td>
                   </tr>

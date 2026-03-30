@@ -56,7 +56,7 @@ export default function NavBar() {
               className="btn-secondary"
               rel="noreferrer"
             >
-              Login
+              Admin Login
             </a>
           ) : (
             <span className="btn-secondary opacity-60 cursor-not-allowed" title="Portal available on request">
@@ -108,7 +108,7 @@ export default function NavBar() {
                 onClick={() => setIsOpen(false)}
                 rel="noreferrer"
               >
-                Login
+                Admin Login
               </a>
             ) : (
               <span 

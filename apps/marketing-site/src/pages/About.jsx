@@ -156,26 +156,27 @@ export default function About() {
         </div>
       </Section>
 
-      {/* TEAM (simple teaser, optional) */}
+      {/* FOUNDER */}
       <Section>
         <div className="container-app">
-          <H2 className="text-center">Meet the team</H2>
-          <p className="text-center text-slate-600 mt-2">Real people, local support.</p>
+          <div className="max-w-2xl mx-auto">
+            <H2 className="text-center">Meet the founder</H2>
+            <p className="text-center text-slate-600 mt-2">The person behind Call-a-Technician.</p>
 
-          <div className="mt-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              { name: "Alex T.", role: "Lead Technician", img: "/src/assets/about/people.jpg" },
-              { name: "Sam R.", role: "Networking Specialist", img: "/src/assets/about/people.jpg" },
-              { name: "Casey M.", role: "Customer Support", img: "/src/assets/about/people.jpg" },
-            ].map((p) => (
-              <div key={p.name} className="rounded-xl overflow-hidden border bg-white">
-                <img src={p.img} alt={p.name} className="h-44 w-full object-cover" />
-                <div className="p-4">
-                  <div className="font-semibold text-brand-navy">{p.name}</div>
-                  <div className="text-sm text-slate-600">{p.role}</div>
+            <div className="mt-8 flex justify-center">
+              <div className="rounded-2xl overflow-hidden border bg-white shadow-lg max-w-sm">
+                <img src="/src/assets/about/people.jpg" alt="Alex T. - Founder" className="h-56 w-full object-cover" />
+                <div className="p-6 text-center">
+                  <div className="text-xl font-semibold text-brand-navy">Alex T.</div>
+                  <div className="text-brand-blue font-medium">Founder & Lead Technician</div>
+                  <p className="mt-3 text-sm text-slate-600 leading-relaxed">
+                    Started Call-a-Technician in 2015 with a simple mission: make reliable tech support 
+                    accessible to everyone in Adelaide. Today, Alex leads a growing team while still 
+                    handling the complex cases himself.
+                  </p>
                 </div>
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </Section>

@@ -264,9 +264,9 @@ useEffect(() => {
     localStorage.setItem('cat_theme', next);
   }
 
-  function openNew(prefill = {}) {
+  async function openNew(prefill = {}) {
     // Refresh jobs data to ensure accurate counts
-    load();
+    await load();
     
     const startIso = new Date(
       new Date().getFullYear(),
@@ -280,12 +280,18 @@ useEffect(() => {
     const extra = Number(prefill.additionalMins ?? 0);
     const endIso = addMinutesISO(startIso, duration + extra);
 
-    // Generate unique invoice number
-    const existingInvoices = jobs.map(j => j.invoice).filter(Boolean);
+    // Get sequential invoice number from API (format: INV-2026-0001)
     let newInvoice;
-    do {
-      newInvoice = String(Math.floor(10000 + Math.random() * 90000));
-    } while (existingInvoices.includes(newInvoice));
+    try {
+      const response = await api('/invoices/next-number');
+      newInvoice = response.number;
+    } catch (e) {
+      // Fallback to random if API fails
+      const existingInvoices = jobs.map(j => j.invoice).filter(Boolean);
+      do {
+        newInvoice = String(Math.floor(10000 + Math.random() * 90000));
+      } while (existingInvoices.includes(newInvoice));
+    }
 
     setEditingId(null);
     setForm({
@@ -300,7 +306,7 @@ useEffect(() => {
       phone: prefill.phone || '',
       customerAddress: prefill.customerAddress || '',
       customerEmail: prefill.customerEmail || '',
-      invoice: newInvoice, // Auto-generate unique invoice
+      invoice: newInvoice, // Sequential invoice from API
       ...prefill,
     });
     setOpen(true);
@@ -1697,31 +1703,14 @@ async function save() {
 
                     {/* Invoice Number */}
                     <Field label="Invoice Number *">
-                      <div className="flex gap-2">
-                    <input
-                      className="w-full px-3 py-2 rounded-lg bg-transparent border border-white/10"
-                      value={form.invoice}
-                      onChange={(e) => setForm({ ...form, invoice: e.target.value })}
-                          placeholder="5-digit invoice"
-                        />
-                        <button
-                          type="button"
-                          className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-sm"
-                          onClick={() => {
-                            // Generate unique invoice number by checking existing jobs
-                            const existingInvoices = jobs.map(j => j.invoice).filter(Boolean);
-                            let newInvoice;
-                            do {
-                              newInvoice = String(Math.floor(10000 + Math.random() * 90000));
-                            } while (existingInvoices.includes(newInvoice));
-                            setForm(f => ({ ...f, invoice: newInvoice }));
-                          }}
-                          title="Generate unique invoice"
-                        >
-                          Generate
-                        </button>
-                      </div>
-                  </Field>
+                      <input
+                        className="w-full px-3 py-2 rounded-lg bg-transparent border border-white/10"
+                        value={form.invoice}
+                        onChange={(e) => setForm({ ...form, invoice: e.target.value })}
+                        placeholder="INV-2026-0001"
+                        readOnly
+                      />
+                    </Field>
 
                     {/* Priority */}
                   <Field label="Priority">

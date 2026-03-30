@@ -56,7 +56,7 @@ export default function Footer() {
         {/* Customer Rating */}
         <div>
           <h3 className="font-semibold mb-3">Customer Rating</h3>
-          <p className="text-2xl font-bold text-red-500">4.6/5</p>
+          <p className="text-2xl font-bold text-green-500">4.6/5</p>
           <p className="text-xs text-gray-400">based on 300,000+ ratings</p>
         </div>
       </div>
