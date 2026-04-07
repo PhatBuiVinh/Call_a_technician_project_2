@@ -22,12 +22,17 @@ export default function Login() {
     setMsg('');
     setLoading(true);
     try {
-      if (mode === 'login') {
-        await login(email.trim(), pwd, remember);
+      const result = mode === 'login'
+        ? await login(email.trim(), pwd, remember)
+        : await register(name.trim(), email.trim(), pwd, remember);
+      
+      // Redirect based on user role
+      const userRole = result?.user?.role;
+      if (userRole === 'technician') {
+        nav('/tech-view');
       } else {
-        await register(name.trim(), email.trim(), pwd, remember);
+        nav('/app');
       }
-      nav('/app');
     } catch (err) {
       setMsg(err?.message || 'Something went wrong');
     } finally {

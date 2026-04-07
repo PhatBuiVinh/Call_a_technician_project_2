@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { incomingJobsApi } from '../lib/api';
 import Header from '../components/Header';
@@ -32,7 +33,9 @@ export default function IncomingJobs() {
   const [selectedJob, setSelectedJob] = useState(null);
   const [lightboxImage, setLightboxImage] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [convertingId, setConvertingId] = useState(null);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   // Fetch incoming jobs
   const { data: jobs = [], isLoading, error } = useQuery({
@@ -69,6 +72,44 @@ export default function IncomingJobs() {
 
   const handleAssignmentChange = (jobId, assignedTo) => {
     updateJobMutation.mutate({ id: jobId, updates: { assignedTo } });
+  };
+
+  const handleConvertToJob = async (job) => {
+    setConvertingId(job._id);
+    try {
+      const result = await incomingJobsApi.convertCheck(job._id);
+      
+      if (!result.canConvert) {
+        if (result.convertedToJobId) {
+          alert(`This request was already converted to a job.\n\nThe converted job ID is: ${result.convertedToJobId}\n\nYou can view it in the Dashboard.`);
+        } else {
+          alert(`Cannot convert: ${result.reason}`);
+        }
+        return;
+      }
+      
+      // Prepare prefill data for Dashboard
+      const prefillData = {
+        customerName: job.fullName,
+        phone: job.phone,
+        customerEmail: job.email || '',
+        description: job.description,
+        title: job.description?.substring(0, 50) || 'New Job',
+        _sourceRequestId: job._id
+      };
+      
+      // Navigate to Dashboard with state
+      navigate('/app', {
+        state: {
+          convertRequestId: job._id,
+          prefillData
+        }
+      });
+    } catch (error) {
+      alert(`Unable to start conversion. Please try again or contact support if the problem persists.\n\nError: ${error.message}`);
+    } finally {
+      setConvertingId(null);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -168,6 +209,19 @@ export default function IncomingJobs() {
                 <tr key={job._id}>
                   <td className="py-3 whitespace-nowrap">
                     <div className="text-sm font-medium text-white">{job.fullName}</div>
+                    {job.convertedToJobId ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-300 border border-green-500/30 mt-1">
+                        <span className="mr-1">✓</span> Converted to Job
+                      </span>
+                    ) : job.status === 'In Progress' ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 mt-1">
+                        <span className="mr-1">⏳</span> {job.status}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30 mt-1">
+                        <span className="mr-1">●</span> {job.status}
+                      </span>
+                    )}
                   </td>
                   <td className="py-3 whitespace-nowrap">
                     <div className="text-sm text-white">{job.phone}</div>
@@ -214,6 +268,27 @@ export default function IncomingJobs() {
                         <span>👁️</span>
                         View
                       </button>
+                      {job.convertedToJobId ? (
+                        <button
+                          onClick={() => {
+                            // Navigate to Dashboard - the job will be visible in the jobs list
+                            navigate('/app');
+                          }}
+                          className="px-4 py-2 rounded-lg bg-green-600/20 hover:bg-green-600/30 text-green-300 border border-green-500/30 font-medium transition-all duration-200 flex items-center gap-2"
+                        >
+                          <span>�️</span>
+                          View Job
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleConvertToJob(job)}
+                          disabled={convertingId === job._id}
+                          className="px-4 py-2 rounded-lg bg-green-600/20 hover:bg-green-600/30 text-green-300 border border-green-500/30 font-medium transition-all duration-200 flex items-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <span>🔄</span>
+                          {convertingId === job._id ? 'Checking...' : 'Convert to Job'}
+                        </button>
+                      )}
                       <button
                         onClick={() => {
                           if (window.confirm('Are you sure you want to delete this job request?')) {
@@ -363,13 +438,45 @@ export default function IncomingJobs() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">Job ID</label>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">Request ID</label>
                     <div className="px-3 py-2 rounded-lg border border-white/10 text-white text-sm font-mono" style={{ backgroundColor: '#0c1450' }}>
                       {formatJobId(selectedJob._id)}
                     </div>
                   </div>
                 </div>
               </div>
+
+              {/* Conversion Status Section - Show if converted */}
+              {selectedJob.convertedToJobId && (
+                <div className="mt-6 rounded-2xl p-6 border border-green-500/30 bg-green-500/10">
+                  <h4 className="text-lg font-semibold text-green-300 flex items-center gap-2 mb-4">
+                    <span>✓</span> Conversion Status
+                  </h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">Status</label>
+                      <div className="px-3 py-2 rounded-lg border border-green-500/30 text-green-300 text-sm font-medium">
+                        Successfully Converted to Job
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">Converted At</label>
+                      <div className="px-3 py-2 rounded-lg border border-white/10 text-white text-sm">
+                        {selectedJob.convertedAt ? formatDate(selectedJob.convertedAt) : 'N/A'}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        navigate('/app');
+                        setSelectedJob(null);
+                      }}
+                      className="mt-2 px-4 py-2 rounded-lg bg-green-600/30 hover:bg-green-600/50 text-green-300 border border-green-500/30 font-medium transition-all duration-200 flex items-center gap-2 w-full justify-center"
+                    >
+                      <span>👁️</span> View Job in Dashboard
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -14,6 +14,14 @@ export default function Technicians() {
   const [q, setQ] = useState('');
   const [active, setActive] = useState('All'); // All | Active | Inactive
 
+  // Account creation modal state
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const [selectedTech, setSelectedTech] = useState(null);
+  const [accountForm, setAccountForm] = useState({ email: '', password: '', confirmPassword: '' });
+  const [accountLoading, setAccountLoading] = useState(false);
+  const [accountError, setAccountError] = useState('');
+  const [accountSuccess, setAccountSuccess] = useState('');
+
   function blank() {
     return {
       name: '', email: '', phone: '', skills: '',
@@ -100,6 +108,66 @@ export default function Technicians() {
     if (!confirm('Delete this technician?')) return;
     try { await api(`/techs/${id}`, { method: 'DELETE' }); await load(); }
     catch (e) { alert(e.message || 'Delete failed'); }
+  }
+
+  function openAccountModal(tech) {
+    setSelectedTech(tech);
+    setAccountForm({ 
+      email: tech.email || '', 
+      password: '', 
+      confirmPassword: '' 
+    });
+    setAccountError('');
+    setAccountSuccess('');
+    setAccountModalOpen(true);
+  }
+
+  function closeAccountModal() {
+    setAccountModalOpen(false);
+    setSelectedTech(null);
+    setAccountForm({ email: '', password: '', confirmPassword: '' });
+    setAccountError('');
+    setAccountSuccess('');
+  }
+
+  async function createAccount() {
+    if (!selectedTech) return;
+    
+    setAccountError('');
+    setAccountSuccess('');
+
+    if (!accountForm.email || !accountForm.password) {
+      setAccountError('Email and password are required');
+      return;
+    }
+
+    if (accountForm.password.length < 6) {
+      setAccountError('Password must be at least 6 characters');
+      return;
+    }
+
+    if (accountForm.password !== accountForm.confirmPassword) {
+      setAccountError('Passwords do not match');
+      return;
+    }
+
+    setAccountLoading(true);
+    try {
+      await api(`/techs/${selectedTech._id}/create-account`, {
+        method: 'POST',
+        body: {
+          email: accountForm.email,
+          password: accountForm.password
+        }
+      });
+      setAccountSuccess(`Login account created for ${selectedTech.name}`);
+      await load();
+      setTimeout(() => closeAccountModal(), 1500);
+    } catch (e) {
+      setAccountError(e.message || 'Failed to create account');
+    } finally {
+      setAccountLoading(false);
+    }
   }
 
   return (
@@ -259,6 +327,15 @@ export default function Technicians() {
                               <span>✏️</span>
                               Edit
                             </button>
+                            {!technician.hasLoginAccount && (
+                              <button
+                                onClick={() => openAccountModal(technician)}
+                                className="px-4 py-2 bg-green-600/30 hover:bg-green-600/40 text-green-200 border border-green-500/50 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-lg"
+                              >
+                                <span>🔑</span>
+                                Create Login
+                              </button>
+                            )}
                             <button
                               onClick={() => remove(technician._id)}
                               className="px-4 py-2 bg-red-600/30 hover:bg-red-600/40 text-red-200 border border-red-500/50 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-lg"
@@ -407,6 +484,88 @@ export default function Technicians() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {accountModalOpen && selectedTech && (
+        <div
+          className="fixed inset-0 bg-black/60 grid place-items-center p-4 z-50"
+          onClick={(e) => { if (e.target === e.currentTarget) closeAccountModal(); }}
+        >
+          <div className="w-full max-w-md card p-4 bg-[#0e1036] border border-white/10 rounded-2xl">
+            <h3 className="text-lg font-bold mb-1">
+              Create Login Account
+            </h3>
+            <p className="text-slate-400 text-sm mb-4">
+              for {selectedTech.name}
+            </p>
+
+            {accountError && (
+              <div className="bg-red-900/50 border border-red-500/50 rounded-lg p-3 mb-4">
+                <p className="text-red-300 text-sm">{accountError}</p>
+              </div>
+            )}
+
+            {accountSuccess && (
+              <div className="bg-green-900/50 border border-green-500/50 rounded-lg p-3 mb-4">
+                <p className="text-green-300 text-sm">{accountSuccess}</p>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm text-slate-300">Email</label>
+                <input
+                  type="email"
+                  className="input mt-1 w-full"
+                  value={accountForm.email}
+                  onChange={e => setAccountForm(f => ({ ...f, email: e.target.value }))}
+                  placeholder="technician@company.com"
+                  disabled={accountLoading || accountSuccess}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm text-slate-300">Password (min 6 characters)</label>
+                <input
+                  type="password"
+                  className="input mt-1 w-full"
+                  value={accountForm.password}
+                  onChange={e => setAccountForm(f => ({ ...f, password: e.target.value }))}
+                  placeholder="••••••"
+                  disabled={accountLoading || accountSuccess}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm text-slate-300">Confirm Password</label>
+                <input
+                  type="password"
+                  className="input mt-1 w-full"
+                  value={accountForm.confirmPassword}
+                  onChange={e => setAccountForm(f => ({ ...f, confirmPassword: e.target.value }))}
+                  placeholder="••••••"
+                  disabled={accountLoading || accountSuccess}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-5">
+              <button 
+                className="btn-blue" 
+                onClick={closeAccountModal}
+                disabled={accountLoading}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn-primary" 
+                onClick={createAccount}
+                disabled={accountLoading || accountSuccess}
+              >
+                {accountLoading ? 'Creating…' : 'Create Account'}
+              </button>
             </div>
           </div>
         </div>

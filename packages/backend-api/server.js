@@ -63,7 +63,7 @@ function auth(req, res, next) {
   if (!token) return sendErr(res, 401, 'No token');
   try {
     const payload = jwt.verify(token, JWT_SECRET);
-    req.user = payload; // { sub, email, name }
+    req.user = payload; // { sub, email, name, role, techId }
     next();
   } catch {
     return sendErr(res, 401, 'Invalid token');
@@ -78,6 +78,10 @@ const UserSchema = new mongoose.Schema({
   name:         { type: String, default: 'Admin' },
   email:        { type: String, required: true, lowercase: true, trim: true },
   passwordHash: { type: String, required: true },
+  role:         { type: String, enum: ['admin', 'technician'], default: 'admin' },
+  techId:       { type: mongoose.Schema.Types.ObjectId, ref: 'Tech', default: null },
+  // For technician users: links to their Tech record
+  // For admin users: null
 }, { timestamps: true });
 UserSchema.index({ email: 1 }, { unique: true });
 const User = mongoose.models.User || mongoose.model('User', UserSchema);
@@ -169,11 +173,27 @@ const IncomingJobRequestSchema = new mongoose.Schema({
   images: { type: [String], default: [] }, // Array of base64 encoded images
   status: {
     type: String,
-    enum: ['New', 'In Progress', 'Completed', 'Cancelled'],
+    enum: ['New', 'In Progress', 'Completed', 'Cancelled', 'Converted'],
     default: 'New'
   },
   assignedTo: { type: String, default: '' }, // Technician name
   notes: { type: String, default: '' },
+  // Conversion tracking fields
+  convertedToJobId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Job',
+    default: null,
+    index: true 
+  },
+  convertedAt: { 
+    type: Date, 
+    default: null 
+  },
+  convertedBy: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User',
+    default: null 
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 }, { timestamps: true });
@@ -312,21 +332,10 @@ app.post('/api/marketing/job-request', async (req, res) => {
 });
 
 /* ---------- Auth ---------- */
+// Registration disabled - only existing internal users can access the portal
+// Internal users must be created via direct database insertion or admin CLI
 app.post('/api/auth/register', async (req, res) => {
-  try {
-    const name = (req.body.name || 'Admin').trim();
-    const email = (req.body.email || '').toLowerCase().trim();
-    const password = req.body.password || '';
-    if (!email || !password) return sendErr(res, 400, 'Email and password are required');
-
-    const existing = await User.findOne({ email }).lean();
-    if (existing) return sendErr(res, 400, 'Email already registered');
-
-    const passwordHash = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, passwordHash });
-    const token = jwt.sign({ sub: user._id, name: user.name, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user: { _id: user._id, name: user.name, email: user.email } });
-  } catch (e) { return sendErr(res, 400, e.message || 'Registration failed'); }
+  return sendErr(res, 403, 'Registration is disabled. Contact your administrator for access.');
 });
 
 app.post('/api/auth/login', async (req, res) => {
@@ -339,14 +348,30 @@ app.post('/api/auth/login', async (req, res) => {
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) return sendErr(res, 400, 'Invalid credentials');
 
-    const token = jwt.sign({ sub: user._id, name: user.name, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user: { _id: user._id, name: user.name, email: user.email } });
+    const token = jwt.sign({ 
+      sub: user._id, 
+      name: user.name, 
+      email: user.email,
+      role: user.role,
+      techId: user.techId
+    }, JWT_SECRET, { expiresIn: '7d' });
+    
+    res.json({ 
+      token, 
+      user: { 
+        _id: user._id, 
+        name: user.name, 
+        email: user.email,
+        role: user.role,
+        techId: user.techId
+      } 
+    });
   } catch (e) { return sendErr(res, 400, e.message || 'Login failed'); }
 });
 
 app.get('/api/auth/me', auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.sub).select('email name').lean();
+    const user = await User.findById(req.user.sub).select('email name role techId').lean();
     if (!user) return sendErr(res, 404, 'User not found');
     return res.json({ user });
   } catch (e) { return sendErr(res, 500, e.message || 'Failed to fetch user'); }
@@ -393,8 +418,24 @@ app.get('/api/jobs', auth, async (req, res) => {
 // create (+ start/end) with conflict checks
 app.post('/api/jobs', auth, async (req, res) => {
   try {
-    let { title, invoice, priority, status, technician, phone, description, startAt, endAt } = req.body;
+    let { 
+      title, invoice, priority, status, technician, phone, description, 
+      startAt, endAt, sourceRequestId 
+    } = req.body;
     if (!title || !invoice) return sendErr(res, 400, 'Title and Invoice are required');
+
+    // Handle sourceRequestId if provided
+    let sourceRequest = null;
+    if (sourceRequestId) {
+      // Verify the request exists and hasn't been converted
+      sourceRequest = await IncomingJobRequest.findById(sourceRequestId);
+      if (!sourceRequest) {
+        return sendErr(res, 400, 'Source request not found');
+      }
+      if (sourceRequest.convertedToJobId) {
+        return sendErr(res, 400, 'Request already converted to a job');
+      }
+    }
 
     startAt = startAt ? new Date(startAt) : null;
     endAt   = endAt   ? new Date(endAt)   : null;
@@ -410,11 +451,36 @@ app.post('/api/jobs', auth, async (req, res) => {
       });
     }
 
+    // Handle assignment: lookup Tech by name and set assignedTo
+    let assignedTo = null;
+    if (technician && technician.trim()) {
+      const tech = await Tech.findOne({ name: technician.trim(), createdBy: req.user.sub });
+      if (!tech) {
+        return sendErr(res, 400, `Technician "${technician}" not found. Please create the technician record first or check the name.`);
+      }
+      assignedTo = tech._id;
+    }
+
     const job = await Job.create({
-      title, invoice, priority, status, technician, phone, description,
+      title, invoice, priority, status, technician: technician ? technician.trim() : '', phone, description,
       startAt, endAt,
-      owner: req.user.sub
+      owner: req.user.sub,
+      assignedTo,  // proper technician reference (null if no technician)
+      ...(status === 'Assigned' && assignedTo && { assignedAt: new Date() }),  // Set timestamp if assigned
+      ...(sourceRequestId && { sourceRequestId })
     });
+
+    // If this job was created from a request, update the request
+    if (sourceRequest) {
+      await IncomingJobRequest.findByIdAndUpdate(sourceRequestId, {
+        convertedToJobId: job._id,
+        convertedAt: new Date(),
+        convertedBy: req.user.sub,
+        status: 'Converted',
+        updatedAt: new Date()
+      });
+    }
+
     return res.json(job);
   } catch (e) { return sendErr(res, 409, e.message || 'Create failed'); }
 });
@@ -439,6 +505,26 @@ app.put('/api/jobs/:id', auth, async (req, res) => {
         end: update.endAt,
         ignoreId: req.params.id
       });
+    }
+
+    // Handle assignment update: if technician changed, lookup Tech and update assignedTo
+    if ('technician' in update) {
+      if (update.technician && update.technician.trim()) {
+        const tech = await Tech.findOne({ name: update.technician.trim(), createdBy: req.user.sub });
+        if (!tech) {
+          return sendErr(res, 400, `Technician "${update.technician}" not found. Please create the technician record first or check the name.`);
+        }
+        update.assignedTo = tech._id;
+        update.technician = update.technician.trim();
+        // If status is being set to 'Assigned', also set assignedAt
+        if (update.status === 'Assigned' || (!update.status && job.status === 'Assigned')) {
+          update.assignedAt = new Date();
+        }
+      } else {
+        // No technician selected - clear assignment
+        update.assignedTo = null;
+        update.technician = '';
+      }
     }
 
     const updated = await Job.findOneAndUpdate(
@@ -481,6 +567,258 @@ app.post('/api/jobs/:id/notes', auth, async (req, res) => {
     });
     res.json(note);
   } catch (e) { res.status(400).json({ error: e.message || 'Failed to add note' }); }
+});
+
+/* ---------- Technician Workflow Endpoints ---------- */
+
+// GET /api/my-jobs - Get jobs assigned to authenticated technician
+// Only accessible by users with role='technician'
+// Returns jobs where assignedTo matches the user's techId
+app.get('/api/my-jobs', auth, async (req, res) => {
+  try {
+    // Authorization: technician only
+    if (req.user.role !== 'technician') {
+      return sendErr(res, 403, 'Only technicians can access this endpoint');
+    }
+    
+    // Must have a linked Tech record
+    const userTechId = req.user.techId ? req.user.techId.toString() : null;
+    if (!userTechId) {
+      return sendErr(res, 400, 'Technician account not linked to Tech record');
+    }
+    
+    const { status } = req.query;
+    
+    // Query jobs where assignedTo matches the technician's techId
+    const query = { 
+      assignedTo: req.user.techId,  // MongoDB will match ObjectId to string
+      // Don't show closed jobs to technicians
+      status: { $ne: 'Closed' }
+    };
+    
+    // Optional status filter
+    if (status && status !== 'All') {
+      query.status = status;
+    }
+    
+    const jobs = await Job.find(query)
+      .sort({ assignedAt: -1, createdAt: -1 })
+      .lean();
+    
+    return res.json(jobs);
+  } catch (e) { 
+    return sendErr(res, 500, e.message || 'Failed to load my jobs'); 
+  }
+});
+
+// Status transition validation helper
+const VALID_STATUS_TRANSITIONS = {
+  // Admin can transition to any status (except specific rules)
+  'admin': {
+    canTransition: (from, to) => {
+      // Admin can move to/from Closed at any time
+      // Admin can move Completed -> Closed
+      return true; // Admin has full control
+    }
+  },
+  // Technician transitions (progressive workflow)
+  'technician': {
+    allowedTransitions: {
+      'Assigned': ['Accepted'],
+      'Accepted': ['En Route'],
+      'En Route': ['On Site'],
+      'On Site': ['In Progress'],
+      'In Progress': ['Completed']
+    },
+    canTransition: (from, to) => {
+      const allowed = VALID_STATUS_TRANSITIONS.technician.allowedTransitions[from];
+      return allowed && allowed.includes(to);
+    }
+  }
+};
+
+// PUT /api/jobs/:id/status - Update job status with validation
+// Authorization: Only assigned technician or admin can update status
+// Technicians cannot move job to 'Closed' (admin only)
+//
+// NOTE ON TECH NOTES IN STATUS UPDATE:
+// - If a note is provided with status change, it uses same rules as POST /api/jobs/:id/tech-notes
+// - Schema requires createdBy (Tech ref), so job must have assignedTo
+// - Returns 400 if attempting to add note to unassigned job
+//
+app.put('/api/jobs/:id/status', auth, async (req, res) => {
+  try {
+    const { status: newStatus, note } = req.body;
+    
+    if (!newStatus) {
+      return sendErr(res, 400, 'Status is required');
+    }
+    
+    // Find the job
+    const job = await Job.findOne({ _id: req.params.id });
+    if (!job) {
+      return sendErr(res, 404, 'Job not found');
+    }
+    
+    const currentStatus = job.status;
+    
+    // Authorization checks with safe null handling
+    const isAdmin = req.user.role === 'admin';
+    const userTechId = req.user.techId ? req.user.techId.toString() : null;
+    const jobAssignedTo = job.assignedTo ? job.assignedTo.toString() : null;
+    const isAssignedTech = req.user.role === 'technician' && 
+                           jobAssignedTo && 
+                           jobAssignedTo === userTechId;
+    
+    // Only assigned technician or admin can update
+    if (!isAdmin && !isAssignedTech) {
+      return sendErr(res, 403, 'Not authorized to update this job');
+    }
+    
+    // Validate status transition
+    if (!isAdmin) {
+      // Technician rules - can only progress through workflow
+      const allowed = VALID_STATUS_TRANSITIONS.technician.allowedTransitions[currentStatus];
+      if (!allowed || !allowed.includes(newStatus)) {
+        return sendErr(res, 400, `Invalid status transition: ${currentStatus} -> ${newStatus}. Technician can only: ${allowed ? allowed.join(', ') : 'no further actions'}`);
+      }
+      
+      // Technicians cannot close jobs (only complete them)
+      if (newStatus === 'Closed') {
+        return sendErr(res, 403, 'Technicians cannot close jobs. Mark as Completed instead.');
+      }
+    }
+    
+    // Build update with timestamps
+    const update = { status: newStatus };
+    
+    // Set appropriate timestamp based on status
+    switch (newStatus) {
+      case 'Assigned':
+        update.assignedAt = new Date();
+        // When status becomes Assigned, look up Tech by name from job.technician
+        if (job.technician) {
+          const tech = await Tech.findOne({ name: job.technician, createdBy: req.user.sub });
+          if (tech) {
+            update.assignedTo = tech._id;
+          }
+        }
+        break;
+      case 'Accepted':
+        update.acceptedAt = new Date();
+        break;
+      case 'In Progress':
+        update.startedAt = new Date();
+        break;
+      case 'Completed':
+        update.completedAt = new Date();
+        break;
+    }
+    
+    // Add note if provided (tech notes)
+    if (note && note.trim()) {
+      // Cannot add tech note if job has no assigned technician
+      // (Schema requires createdBy which is a Tech reference)
+      if (!job.assignedTo && !update.assignedTo) {
+        return sendErr(res, 400, 'Cannot add tech note: job has no assigned technician. Assign a technician first.');
+      }
+      
+      if (!job.techNotes) job.techNotes = [];
+      job.techNotes.push({
+        note: note.trim(),
+        createdAt: new Date(),
+        // Technicians: use their own techId
+        // Admins: use job's assigned tech (or the new one being assigned)
+        createdBy: isAssignedTech ? req.user.techId : (update.assignedTo || job.assignedTo)
+      });
+      update.techNotes = job.techNotes;
+    }
+    
+    const updated = await Job.findOneAndUpdate(
+      { _id: req.params.id },
+      update,
+      { new: true }
+    ).lean();
+    
+    return res.json(updated);
+  } catch (e) { 
+    return sendErr(res, 500, e.message || 'Failed to update status'); 
+  }
+});
+
+// POST /api/jobs/:id/tech-notes - Add a technician note to a job
+// Authorization: Only assigned technician or admin can add notes
+// 
+// NOTE ON TECH NOTES CONSISTENCY (Phase 1.5):
+// - Job.techNotes.createdBy references 'Tech' model and is REQUIRED
+// - When a technician adds a note: createdBy = their techId (consistent)
+// - When an admin adds a note: we use job.assignedTo (the assigned tech)
+//   because the schema requires a Tech reference, not a User ID
+// - If job is unassigned (no assignedTo), admin CANNOT add tech notes
+//   (returns 400 error)
+// 
+// This is intentional: techNotes are meant for technician communication.
+// Admin can still add regular job notes via POST /api/jobs/:id/notes
+//
+app.post('/api/jobs/:id/tech-notes', auth, async (req, res) => {
+  try {
+    const { note } = req.body || {};
+    
+    if (!note || !note.trim()) {
+      return res.status(400).json({ error: 'Note is required' });
+    }
+    
+    // Find the job
+    const job = await Job.findOne({ _id: req.params.id });
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+    
+    // Authorization checks
+    const isAdmin = req.user.role === 'admin';
+    const userTechId = req.user.techId ? req.user.techId.toString() : null;
+    const jobAssignedTo = job.assignedTo ? job.assignedTo.toString() : null;
+    const isAssignedTech = req.user.role === 'technician' && 
+                           jobAssignedTo && 
+                           jobAssignedTo === userTechId;
+    
+    // Only assigned technician or admin can add notes
+    if (!isAdmin && !isAssignedTech) {
+      return res.status(403).json({ error: 'Not authorized to add notes to this job' });
+    }
+    
+    // Schema requires createdBy (Tech ref) - must have assignedTo
+    if (!job.assignedTo) {
+      return res.status(400).json({ 
+        error: 'Cannot add tech note: job has no assigned technician. Assign a technician first.' 
+      });
+    }
+    
+    // Initialize techNotes array if not exists
+    if (!job.techNotes) {
+      job.techNotes = [];
+    }
+    
+    // Add the note
+    // Technicians: use their own techId
+    // Admins: use the job's assignedTo (the tech they're managing)
+    // Schema requires a valid Tech reference, never null
+    job.techNotes.push({
+      note: note.trim(),
+      createdAt: new Date(),
+      createdBy: isAssignedTech ? req.user.techId : job.assignedTo
+    });
+    
+    await job.save();
+    
+    res.json({ 
+      ok: true, 
+      note: job.techNotes[job.techNotes.length - 1],
+      totalNotes: job.techNotes.length
+    });
+  } catch (e) { 
+    res.status(500).json({ error: e.message || 'Failed to add tech note' }); 
+  }
 });
 
 /* ---------- Invoices ---------- */
@@ -616,6 +954,11 @@ app.get('/api/invoices/:id', auth, async (req, res) => {
 /* ---------- Technicians ---------- */
 // list (+ filters)
 app.get('/api/techs', auth, async (req, res) => {
+  // Only admins can access this endpoint
+  if (req.user.role !== 'admin') {
+    return sendErr(res, 403, 'Admins only');
+  }
+
   const { q = '', active } = req.query;
   const query = {
     createdBy: req.user.sub,
@@ -630,7 +973,19 @@ app.get('/api/techs', auth, async (req, res) => {
     ...(active === 'true' ? { active: true } : active === 'false' ? { active: false } : {}),
   };
   const docs = await Tech.find(query).sort({ name: 1 }).lean();
-  res.json(docs);
+  
+  // Enrich with login account status
+  const techIds = docs.map(t => t._id.toString());
+  const linkedUsers = await User.find({ techId: { $in: techIds } }).select('techId email').lean();
+  const userMap = new Map(linkedUsers.map(u => [u.techId.toString(), u.email]));
+  
+  const enriched = docs.map(t => ({
+    ...t,
+    hasLoginAccount: userMap.has(t._id.toString()),
+    loginEmail: userMap.get(t._id.toString()) || null
+  }));
+  
+  res.json(enriched);
 });
 
 // names for dropdowns
@@ -681,6 +1036,69 @@ app.delete('/api/techs/:id', auth, async (req, res) => {
   const doc = await Tech.findOneAndDelete({ _id: id, createdBy: req.user.sub });
   if (!doc) return res.status(404).json({ error: 'Technician not found' });
   res.json({ ok: true });
+});
+
+// Create login account for technician (admin only)
+app.post('/api/techs/:id/create-account', auth, async (req, res) => {
+  try {
+    // Only admins can create technician accounts
+    if (req.user.role !== 'admin') {
+      return sendErr(res, 403, 'Admins only');
+    }
+
+    const { email, password } = req.body || {};
+    
+    if (!email || !password) {
+      return sendErr(res, 400, 'Email and password are required');
+    }
+    
+    if (password.length < 6) {
+      return sendErr(res, 400, 'Password must be at least 6 characters');
+    }
+
+    // Verify technician exists and belongs to this admin
+    const tech = await Tech.findOne({ _id: req.params.id, createdBy: req.user.sub });
+    if (!tech) {
+      return sendErr(res, 404, 'Technician not found');
+    }
+
+    // Check if technician already has a linked account
+    const existingLinked = await User.findOne({ techId: tech._id });
+    if (existingLinked) {
+      return sendErr(res, 409, 'Technician already has a linked login account');
+    }
+
+    // Check if email is already used by another user
+    const existingEmail = await User.findOne({ email: email.toLowerCase() });
+    if (existingEmail) {
+      return sendErr(res, 409, 'Email address is already registered');
+    }
+
+    // Create the user account
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = await User.create({
+      name: tech.name,
+      email: email.toLowerCase(),
+      passwordHash,
+      role: 'technician',
+      techId: tech._id
+    });
+
+    res.status(201).json({
+      message: 'Login account created successfully',
+      user: {
+        _id: user._id,
+        email: user.email,
+        role: user.role,
+        techId: user.techId
+      }
+    });
+  } catch (e) {
+    if (e.code === 11000) {
+      return sendErr(res, 409, 'Duplicate entry - account may already exist');
+    }
+    return sendErr(res, 500, e.message || 'Failed to create account');
+  }
 });
 
 /* ---- Working hours + time-off (Roster) ---- */
@@ -1020,6 +1438,30 @@ app.delete('/api/incoming-jobs/:id', auth, async (req, res) => {
   } catch (e) {
     console.error('Error deleting job request:', e);
     res.status(500).json({ error: 'Failed to delete job request' });
+  }
+});
+
+// Check if incoming job request can be converted
+app.get('/api/incoming-jobs/:id/convert-check', auth, async (req, res) => {
+  try {
+    const request = await IncomingJobRequest.findById(req.params.id);
+    if (!request) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+    
+    if (request.convertedToJobId) {
+      return res.json({ 
+        canConvert: false, 
+        reason: 'Already converted to job',
+        convertedToJobId: request.convertedToJobId,
+        request 
+      });
+    }
+    
+    res.json({ canConvert: true, request });
+  } catch (e) {
+    console.error('Error checking convert status:', e);
+    res.status(500).json({ error: 'Failed to check convert status' });
   }
 });
 

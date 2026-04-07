@@ -41,4 +41,8 @@ export const incomingJobsApi = {
   getIncomingJob: (id) => api(`/incoming-jobs/${id}`),
   updateIncomingJob: (id, data) => api(`/incoming-jobs/${id}`, { method: 'PUT', body: data }),
   deleteIncomingJob: (id) => api(`/incoming-jobs/${id}`, { method: 'DELETE' }),
+  
+  // Lead-to-job conversion functions
+  convertCheck: (requestId) => api(`/incoming-jobs/${requestId}/convert-check`),
+  getConvertData: (requestId) => api(`/incoming-jobs/${requestId}/convert-check`),
 };

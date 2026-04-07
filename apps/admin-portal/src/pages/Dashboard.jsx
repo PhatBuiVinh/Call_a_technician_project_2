@@ -167,6 +167,25 @@ useEffect(() => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [location.state]);
 
+  // If we were sent here from IncomingJobs with { state: { convertRequestId, prefillData } }, open New Job prefilled
+  useEffect(() => {
+    const convertRequestId = location.state?.convertRequestId;
+    const prefillData = location.state?.prefillData;
+    
+    if (convertRequestId && prefillData) {
+      // Open new job modal with all prefill data from the request
+      openNew({
+        ...prefillData,
+        customerId: prefillData.customerId || generateCustomerCode(),
+        durationMins: 120,
+        additionalMins: 0,
+      });
+
+      // Clear the state so refresh/back won’t reopen the modal
+      nav('/app', { replace: true, state: {} });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   async function load() {
     setLoading(true);
@@ -484,7 +503,8 @@ async function save() {
       })) : [],
       pensionYearDiscount: Boolean(form.pensionYearDiscount),
       socialMediaDiscount: Boolean(form.socialMediaDiscount),
-      troubleshooting: String(form.troubleshooting || '')
+      troubleshooting: String(form.troubleshooting || ''),
+      ...(form._sourceRequestId && { sourceRequestId: form._sourceRequestId })
     };
 
     // 3) Create/Update customer in CRM (always ensure customer exists)
@@ -644,8 +664,16 @@ async function save() {
     }, 100);
   } catch (e) {
     console.error('Save failed:', e);
-    alert(e.message || 'Save failed');
-    // Don't close modal on error - let user fix the issue
+    // Check for duplicate conversion error
+    const errorMsg = e.message || '';
+    if (errorMsg.toLowerCase().includes('already converted') || errorMsg.toLowerCase().includes('already converted to a job')) {
+      alert('This request has already been converted to a job. The page will refresh to show the updated status.');
+      // Refresh to get updated data
+      window.location.reload();
+    } else {
+      alert(e.message || 'Save failed');
+    }
+    // Don't close modal on error - let user fix the issue or navigate away
   }
 }
 
