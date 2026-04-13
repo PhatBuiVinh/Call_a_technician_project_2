@@ -23,7 +23,7 @@ export default function Dashboard() {
 
   // ----- data state -----
   const [jobs, setJobs] = useState([]);
-  const [techNames, setTechNames] = useState([]); // raw list from API
+  const [techs, setTechs] = useState([]); // raw list from API (now has hasLoginAccount)
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
 
@@ -73,10 +73,10 @@ export default function Dashboard() {
     const counts = {
       'Open': 0,
       'In Progress': 0,
-      'Resolved': 0,
+      'Completed': 0,
       'Closed': 0
     };
-    
+
     jobs.forEach(job => {
       const status = job.status || 'Open';
       if (counts.hasOwnProperty(status)) {
@@ -85,7 +85,7 @@ export default function Dashboard() {
         counts['Open']++; // Default to Open if status is unknown
       }
     });
-    
+
     return counts;
   }, [jobs]);
 
@@ -191,12 +191,12 @@ useEffect(() => {
     setLoading(true);
     setErr('');
     try {
-      const [data, names] = await Promise.all([
+      const [data, techData] = await Promise.all([
         api('/jobs'),
-        api('/techs/names').catch(() => []),
+        api('/techs').catch(() => []),
       ]);
       setJobs(Array.isArray(data) ? data : []);
-      setTechNames(Array.isArray(names) ? names : []);
+      setTechs(Array.isArray(techData) ? techData : []);
     } catch (e) {
       setErr(e.message);
       // Add mock data for testing when API fails
@@ -263,8 +263,8 @@ useEffect(() => {
   const techOptions = useMemo(() => {
     const seen = new Set();
     const out = [];
-    for (const t of techNames) {
-      const name = (t?.name || t || '').trim();
+    for (const t of techs) {
+      const name = (t?.name || '').trim();
       if (!name) continue;
       const key = name.toLowerCase();
       if (!seen.has(key)) {
@@ -273,7 +273,23 @@ useEffect(() => {
       }
     }
     return out;
-  }, [techNames]);
+  }, [techs]);
+
+  // Lookup: does selected technician have a login account?
+  const selectedTechHasAccount = useMemo(() => {
+    if (!form.technician) return true; // No tech selected = no issue
+    const tech = techs.find(t => t.name?.trim().toLowerCase() === form.technician.trim().toLowerCase());
+    return tech ? tech.hasLoginAccount : false; // Unknown tech = unsafe (must be in system to verify account status)
+  }, [form.technician, techs]);
+
+  // Is the selected technician known in the system?
+  const isKnownTechnician = useMemo(() => {
+    if (!form.technician) return true; // No tech selected = no issue
+    return techs.some(t => t.name?.trim().toLowerCase() === form.technician.trim().toLowerCase());
+  }, [form.technician, techs]);
+
+  // Track if user has confirmed assignment to tech without account
+  const [confirmedAssignmentWithoutAccount, setConfirmedAssignmentWithoutAccount] = useState(false);
 
   // ----- UI actions -----
   function toggleTheme() {
@@ -313,6 +329,7 @@ useEffect(() => {
     }
 
     setEditingId(null);
+    setConfirmedAssignmentWithoutAccount(false); // Reset confirmation for new job
     setForm({
       ...empty,
       startAt: startIso,
@@ -385,7 +402,8 @@ useEffect(() => {
   }
 
   setEditingId(j._id);
-  
+  setConfirmedAssignmentWithoutAccount(false); // Reset confirmation for edit job
+
   // Create completely safe formData without any potential circular references
   const formData = {
     title: String(j.title || ''),
@@ -445,6 +463,39 @@ async function save() {
     }
     if (!form.phone.trim()) {
       alert('Phone number is required');
+      return;
+    }
+    // Assignment safety: block if tech list failed to load
+    if (form.technician && techs.length === 0) {
+      alert(
+        `Cannot verify technician safety.\n\n` +
+        `Technician list failed to load. Please refresh the page and try again.`
+      );
+      return;
+    }
+
+    // Assignment safety: block if unknown technician (not in system)
+    if (form.technician && techs.length > 0 && !isKnownTechnician && !confirmedAssignmentWithoutAccount) {
+      alert(
+        `Cannot assign job to "${form.technician}".\n\n` +
+        `This technician is not in the system.\n\n` +
+        `Please either:\n` +
+        `1. Create this technician in the Technicians page first, or\n` +
+        `2. Select an existing technician from the dropdown, or\n` +
+        `3. Click "I understand, assign anyway" to confirm.`
+      );
+      return;
+    }
+
+    // Assignment safety: block if tech has no login account and not confirmed
+    if (form.technician && isKnownTechnician && !selectedTechHasAccount && !confirmedAssignmentWithoutAccount) {
+      alert(
+        `Cannot assign job to "${form.technician}".\n\n` +
+        `This technician does not have a login account and cannot access /tech-view.\n\n` +
+        `Please either:\n` +
+        `1. Create a login account for this technician first (go to Technicians page → Create Login), or\n` +
+        `2. Click "I understand, assign anyway" to confirm.`
+      );
       return;
     }
     if (!form.customerAddress.trim()) {
@@ -1310,7 +1361,8 @@ async function save() {
       total: jobs.length,
       open: jobs.filter((j) => j.status === 'Open').length,
       progress: jobs.filter((j) => j.status === 'In Progress').length,
-      done: jobs.filter((j) => j.status === 'Closed').length,
+      completed: jobs.filter((j) => j.status === 'Completed').length,
+      closed: jobs.filter((j) => j.status === 'Closed').length,
     }),
     [jobs]
   );
@@ -1343,11 +1395,12 @@ async function save() {
         </div>
 
         {/* KPIs */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
           <Card label="Total Jobs" value={kpi.total} />
           <Card label="Open" value={kpi.open} />
           <Card label="In Progress" value={kpi.progress} />
-          <Card label="Resolved" value={kpi.done} />
+          <Card label="Completed" value={kpi.completed} />
+          <Card label="Closed" value={kpi.closed} />
         </div>
 
         {/* Enhanced Recent Jobs Section */}
@@ -1391,7 +1444,8 @@ async function save() {
                 const statusColors = {
                   'Open': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
                   'In Progress': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-                  'Closed': 'bg-green-500/20 text-green-300 border-green-500/30'
+                  'Completed': 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+                  'Closed': 'bg-slate-500/20 text-slate-400 border-slate-500/30'
                 };
 
                 return (
@@ -1428,6 +1482,7 @@ async function save() {
                           
                           {/* Status Badge */}
                           <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColors[j.status] || statusColors['Open']}`}>
+                            {j.status === 'Closed' && <span className="mr-1">🔒</span>}
                             {j.status}
                           </span>
 
@@ -1527,7 +1582,8 @@ async function save() {
                     <div className="flex items-center gap-2 text-sm text-slate-300">
                       <span className="px-2 py-1 bg-blue-500/20 text-blue-300 rounded-full">Open: {jobCounts['Open']}</span>
                       <span className="px-2 py-1 bg-yellow-500/20 text-yellow-300 rounded-full">In Progress: {jobCounts['In Progress']}</span>
-                      <span className="px-2 py-1 bg-green-500/20 text-green-300 rounded-full">Resolved: {jobCounts['Resolved'] + jobCounts['Closed']}</span>
+                      <span className="px-2 py-1 bg-purple-500/20 text-purple-300 rounded-full">Completed: {jobCounts['Completed']}</span>
+                      <span className="px-2 py-1 bg-slate-500/20 text-slate-300 rounded-full">Closed: {jobCounts['Closed']}</span>
                     </div>
                   </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1756,15 +1812,54 @@ async function save() {
 
                     {/* Status */}
                   <Field label="Status">
-                    <select
-                      className="w-full px-3 py-2 rounded-lg bg-transparent border border-white/10"
-                      value={form.status}
-                      onChange={(e) => setForm({ ...form, status: e.target.value })}
-                    >
-                      <option>Open</option>
-                      <option>In Progress</option>
-                      <option>Closed</option>
-                    </select>
+                    <div className="flex items-center gap-2">
+                      <select
+                        className="flex-1 px-3 py-2 rounded-lg bg-transparent border border-white/10"
+                        value={form.status}
+                        onChange={(e) => setForm({ ...form, status: e.target.value })}
+                        disabled={form.status === 'Closed'}
+                      >
+                        <option>Open</option>
+                        <option>In Progress</option>
+                        <option>Completed</option>
+                        {/* Closed is not in dropdown - use Close Job button */}
+                      </select>
+                      {/* Close Job button - only for Completed jobs */}
+                      {form.status === 'Completed' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm('Close this job? It will be archived. You can reopen it later if needed.')) {
+                              setForm({ ...form, status: 'Closed' });
+                            }
+                          }}
+                          className="px-3 py-2 bg-green-600/30 hover:bg-green-600/40 text-green-200 text-sm rounded border border-green-500/30 transition-colors whitespace-nowrap"
+                        >
+                          Close Job
+                        </button>
+                      )}
+                      {/* Reopen Job button - only for Closed jobs */}
+                      {form.status === 'Closed' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm('Reopen this job? It will return to Completed status.')) {
+                              setForm({ ...form, status: 'Completed' });
+                            }
+                          }}
+                          className="px-3 py-2 bg-blue-600/30 hover:bg-blue-600/40 text-blue-200 text-sm rounded border border-blue-500/30 transition-colors whitespace-nowrap"
+                        >
+                          Reopen Job
+                        </button>
+                      )}
+                    </div>
+                    {/* Closed status indicator */}
+                    {form.status === 'Closed' && (
+                      <div className="mt-2 p-2 rounded bg-green-500/10 border border-green-500/30 text-green-200 text-xs flex items-center gap-2">
+                        <span>🔒</span>
+                        <span>Job is closed and archived</span>
+                      </div>
+                    )}
                   </Field>
 
                     {/* Technician */}
@@ -1773,7 +1868,10 @@ async function save() {
                       list="techList"
                       className="w-full px-3 py-2 rounded-lg bg-transparent border border-white/10"
                       value={form.technician}
-                      onChange={(e) => setForm({ ...form, technician: e.target.value })}
+                      onChange={(e) => {
+                        setForm({ ...form, technician: e.target.value });
+                        setConfirmedAssignmentWithoutAccount(false); // Reset confirmation when tech changes
+                      }}
                         placeholder="Assign technician..."
                       autoComplete="off"
                     />
@@ -1782,6 +1880,74 @@ async function save() {
                         <option key={name} value={name} />
                       ))}
                     </datalist>
+                    {/* Tech list load failure warning */}
+                    {techs.length === 0 && form.technician && (
+                      <div className="mt-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-200 text-sm">
+                        <div className="flex items-start gap-2">
+                          <span className="text-red-400">⚠️</span>
+                          <div>
+                            <p className="font-medium">Technician account safety data unavailable</p>
+                            <p className="text-red-300/80 text-xs mt-1">
+                              Could not load technician list. Assignment safety checks are disabled.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Warning: unknown technician (not in system) */}
+                    {form.technician && techs.length > 0 && !isKnownTechnician && (
+                      <div className="mt-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-200 text-sm">
+                        <div className="flex items-start gap-2">
+                          <span className="text-red-400">⚠️</span>
+                          <div>
+                            <p className="font-medium">Unknown technician</p>
+                            <p className="text-red-300/80 text-xs mt-1">
+                              "{form.technician}" is not in the technician list. Please create this technician first or select an existing one.
+                            </p>
+                            {!confirmedAssignmentWithoutAccount && (
+                              <button
+                                type="button"
+                                onClick={() => setConfirmedAssignmentWithoutAccount(true)}
+                                className="mt-2 px-3 py-1 bg-red-600/30 hover:bg-red-600/40 text-red-200 text-xs rounded border border-red-500/30 transition-colors"
+                              >
+                                I understand, assign anyway
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Warning: known technician has no login account */}
+                    {form.technician && isKnownTechnician && !selectedTechHasAccount && (
+                      <div className="mt-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-200 text-sm">
+                        <div className="flex items-start gap-2">
+                          <span className="text-amber-400">⚠️</span>
+                          <div>
+                            <p className="font-medium">This technician does not have a login account</p>
+                            <p className="text-amber-300/80 text-xs mt-1">
+                              They will not be able to access /tech-view until an admin creates a login account for them.
+                            </p>
+                            {!confirmedAssignmentWithoutAccount && (
+                              <button
+                                type="button"
+                                onClick={() => setConfirmedAssignmentWithoutAccount(true)}
+                                className="mt-2 px-3 py-1 bg-amber-600/30 hover:bg-amber-600/40 text-amber-200 text-xs rounded border border-amber-500/30 transition-colors"
+                              >
+                                I understand, assign anyway
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {/* Confirmation shown when acknowledged */}
+                    {form.technician && !selectedTechHasAccount && confirmedAssignmentWithoutAccount && (
+                      <div className="mt-2 text-xs text-amber-400 flex items-center gap-1">
+                        <span>✓</span> Assignment to technician without account confirmed
+                      </div>
+                    )}
                   </Field>
 
                     {/* Job Description */}

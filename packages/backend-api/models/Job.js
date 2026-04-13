@@ -24,6 +24,7 @@ const JobSchema = new mongoose.Schema(
     acceptedAt: { type: Date, default: null },
     startedAt: { type: Date, default: null },  // When marked "In Progress"
     completedAt: { type: Date, default: null },
+    closedAt: { type: Date, default: null },  // Admin closeout timestamp
     
     // NEW: Technician notes array
     techNotes: [{

@@ -613,12 +613,22 @@ app.get('/api/my-jobs', auth, async (req, res) => {
 
 // Status transition validation helper
 const VALID_STATUS_TRANSITIONS = {
-  // Admin can transition to any status (except specific rules)
+  // Admin closeout rules:
+  // - Only Completed jobs can be Closed
+  // - Closed jobs can only be reopened to Completed
+  // - Technicians cannot close jobs (handled separately)
   'admin': {
     canTransition: (from, to) => {
-      // Admin can move to/from Closed at any time
-      // Admin can move Completed -> Closed
-      return true; // Admin has full control
+      // Closing: only Completed -> Closed allowed
+      if (to === 'Closed') {
+        return from === 'Completed';
+      }
+      // Reopening: only Closed -> Completed allowed
+      if (from === 'Closed') {
+        return to === 'Completed';
+      }
+      // All other transitions allowed for admin
+      return true;
     }
   },
   // Technician transitions (progressive workflow)
@@ -687,8 +697,20 @@ app.put('/api/jobs/:id/status', auth, async (req, res) => {
       if (newStatus === 'Closed') {
         return sendErr(res, 403, 'Technicians cannot close jobs. Mark as Completed instead.');
       }
+    } else {
+      // Admin transition validation
+      const canTransition = VALID_STATUS_TRANSITIONS.admin.canTransition(currentStatus, newStatus);
+      if (!canTransition) {
+        if (newStatus === 'Closed') {
+          return sendErr(res, 400, 'Only Completed jobs can be Closed');
+        }
+        if (currentStatus === 'Closed') {
+          return sendErr(res, 400, 'Closed jobs can only be reopened to Completed');
+        }
+        return sendErr(res, 400, `Invalid status transition: ${currentStatus} -> ${newStatus}`);
+      }
     }
-    
+
     // Build update with timestamps
     const update = { status: newStatus };
     
@@ -712,6 +734,13 @@ app.put('/api/jobs/:id/status', auth, async (req, res) => {
         break;
       case 'Completed':
         update.completedAt = new Date();
+        // Clear closedAt when reopening from Closed
+        if (currentStatus === 'Closed') {
+          update.closedAt = null;
+        }
+        break;
+      case 'Closed':
+        update.closedAt = new Date();
         break;
     }
     
@@ -1051,7 +1080,13 @@ app.post('/api/techs/:id/create-account', auth, async (req, res) => {
     if (!email || !password) {
       return sendErr(res, 400, 'Email and password are required');
     }
-    
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return sendErr(res, 400, 'Invalid email format');
+    }
+
     if (password.length < 6) {
       return sendErr(res, 400, 'Password must be at least 6 characters');
     }
