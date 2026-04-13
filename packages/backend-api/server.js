@@ -15,6 +15,10 @@ const bcrypt    = require('bcrypt');
 const jwt       = require('jsonwebtoken');
 const dns       = require('node:dns');
 
+// Email notification service
+const { sendEmail } = require('./services/email');
+const templates = require('./services/emailTemplates');
+
 const app  = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'change_me_in_env';
@@ -312,6 +316,22 @@ app.post('/api/marketing/job-request', async (req, res) => {
     });
 
     console.log('Job request created successfully:', jobRequest._id);
+
+    // Send customer confirmation email (best-effort, non-blocking)
+    if (email && email.includes('@')) {
+      const template = templates.customerRequestConfirmation({
+        fullName: fullName.trim(),
+        description: description.trim(),
+        requestId: jobRequest._id
+      });
+      sendEmail(email.trim(), template.subject, template.text, template.html)
+        .then(result => {
+          if (!result.sent) {
+            console.log('[EMAIL] Customer confirmation not sent:', result.reason || result.error);
+          }
+        });
+    }
+
     res.status(201).json({ 
       success: true, 
       message: 'Job request submitted successfully',
@@ -527,12 +547,46 @@ app.put('/api/jobs/:id', auth, async (req, res) => {
       }
     }
 
+    // Check if technician is being changed (for notification)
+    const oldTechName = job.technician || '';
+    const newTechName = update.technician !== undefined ? update.technician : oldTechName;
+    const techChanged = 'technician' in update && newTechName !== oldTechName && newTechName.trim() !== '';
+
     const updated = await Job.findOneAndUpdate(
       { _id: req.params.id, owner: req.user.sub },
       update,
       { new: true }
     ).lean();
     if (!updated) return sendErr(res, 404, 'Not found');
+
+    // Send technician assignment email (best-effort, non-blocking)
+    if (techChanged && updated.assignedTo) {
+      try {
+        const techUser = await User.findOne({ techId: updated.assignedTo });
+        if (techUser?.email) {
+          const template = templates.technicianAssigned({
+            techName: newTechName,
+            jobTitle: updated.title,
+            jobDescription: updated.description || 'No description provided',
+            customerName: updated.customerName || 'Unknown',
+            customerPhone: updated.phone || 'N/A',
+            customerAddress: updated.customerAddress || 'N/A',
+            jobId: updated._id
+          });
+          sendEmail(techUser.email, template.subject, template.text, template.html)
+            .then(result => {
+              if (!result.sent) {
+                console.log('[EMAIL] Tech assignment not sent:', result.reason || result.error);
+              }
+            });
+        } else {
+          console.log('[EMAIL] Tech assigned but no linked user email found for tech:', updated.assignedTo);
+        }
+      } catch (emailErr) {
+        console.error('[EMAIL] Failed to send tech assignment notification:', emailErr.message);
+      }
+    }
+
     return res.json(updated);
   } catch (e) { return sendErr(res, 409, e.message || 'Update failed'); }
 });
@@ -768,10 +822,38 @@ app.put('/api/jobs/:id/status', auth, async (req, res) => {
       update,
       { new: true }
     ).lean();
-    
+
+    // Send admin notification when job is marked Completed by technician (best-effort, non-blocking)
+    if (newStatus === 'Completed' && currentStatus !== 'Completed' && isAssignedTech) {
+      try {
+        const admin = await User.findOne({ _id: job.owner });
+        if (admin?.email) {
+          const tech = await Tech.findOne({ _id: req.user.techId });
+          const template = templates.jobCompletedAdmin({
+            adminName: admin.name || 'Admin',
+            jobTitle: updated.title,
+            jobId: updated._id,
+            techName: tech?.name || 'Technician',
+            completedAt: new Date().toLocaleString(),
+            customerName: updated.customerName || 'Unknown'
+          });
+          sendEmail(admin.email, template.subject, template.text, template.html)
+            .then(result => {
+              if (!result.sent) {
+                console.log('[EMAIL] Admin completion not sent:', result.reason || result.error);
+              }
+            });
+        } else {
+          console.log('[EMAIL] Job completed but no admin email found for owner:', job.owner);
+        }
+      } catch (emailErr) {
+        console.error('[EMAIL] Failed to send admin completion notification:', emailErr.message);
+      }
+    }
+
     return res.json(updated);
-  } catch (e) { 
-    return sendErr(res, 500, e.message || 'Failed to update status'); 
+  } catch (e) {
+    return sendErr(res, 500, e.message || 'Failed to update status');
   }
 });
 
