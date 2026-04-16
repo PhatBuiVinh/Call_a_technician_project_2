@@ -351,9 +351,9 @@ useEffect(() => {
     setOpen(true);
   }
 
-  function openEdit(j) {
-  // Refresh jobs data to ensure accurate counts
-  load();
+  async function openEdit(j) {
+  // Refresh jobs data to ensure accurate counts (MUST await to prevent race condition)
+  await load();
   
   // Create a safe copy without circular references
   const safeJobData = {

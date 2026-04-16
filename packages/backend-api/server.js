@@ -656,6 +656,10 @@ app.put('/api/jobs/:id', auth, async (req, res) => {
       });
     }
 
+    // Fetch the existing job first (needed for comparison and validation)
+    const job = await Job.findOne({ _id: req.params.id, owner: req.user.sub });
+    if (!job) return sendErr(res, 404, 'Job not found');
+
     // Handle assignment update: if technician changed, lookup Tech and update assignedTo
     if ('technician' in update) {
       if (update.technician && update.technician.trim()) {
