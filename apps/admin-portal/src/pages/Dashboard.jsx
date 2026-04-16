@@ -55,7 +55,10 @@ export default function Dashboard() {
     pensionYearDiscount: false, // 10% discount
     socialMediaDiscount: false, // 5% discount
     // Troubleshooting (admin/technician only)
-    troubleshooting: ''
+    troubleshooting: '',
+    // Completion evidence (read-only, populated when viewing completed jobs)
+    completionForm: null,
+    completionPhotos: []
   };
   const [form, setForm] = useState(empty);
 
@@ -442,9 +445,13 @@ useEffect(() => {
     socialMediaDiscount: Boolean(j.socialMediaDiscount),
 
     // troubleshooting
-    troubleshooting: String(j.troubleshooting || '')
+    troubleshooting: String(j.troubleshooting || ''),
+
+    // completion evidence (read-only in admin view)
+    completionForm: j.completionForm || null,
+    completionPhotos: j.completionPhotos || []
   };
-  
+
   // Form data created safely without circular references
   
   setForm(formData);
@@ -2274,6 +2281,91 @@ async function save() {
                   </Field>
                   </div>
                 </div>
+
+                {/* Completion Evidence Section (Read-only - shown when job is completed) */}
+                {editingId && form.status === 'Completed' && (
+                  <div className="mb-8 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-3xl p-8 border border-green-500/20 shadow-soft">
+                    <h4 className="text-2xl font-bold text-green-400 mb-6 flex items-center gap-3">
+                      <span>📋</span> Completion Evidence
+                      <span className="text-xs bg-green-600/20 text-green-300 px-2 py-1 rounded">Technician Submitted</span>
+                    </h4>
+
+                    {!form._id ? (
+                      <div className="text-slate-400 italic">Loading completion data...</div>
+                    ) : (
+                      <div className="space-y-4">
+                        {/* Show a note that this is read-only */}
+                        <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/30 text-green-200 text-sm mb-4">
+                          <span className="font-medium">Review before closing:</span> This evidence was submitted by the technician when marking the job complete. It cannot be edited.
+                        </div>
+
+                        {/* Work Performed */}
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-2">Work Performed</label>
+                          <div className="p-3 bg-white/5 rounded-lg border border-white/10 text-slate-200 whitespace-pre-wrap">
+                            {form.completionForm?.workPerformed || (
+                              <span className="text-slate-500 italic">No completion form submitted</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Parts Used */}
+                        {form.completionForm?.partsUsed && (
+                          <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">Parts/Materials Used</label>
+                            <div className="p-3 bg-white/5 rounded-lg border border-white/10 text-slate-200">
+                              {form.completionForm.partsUsed}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Follow-up Required */}
+                        {form.completionForm?.followUpRequired && (
+                          <div className="p-4 bg-amber-500/10 rounded-lg border border-amber-500/30">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-amber-400 text-lg">⚠️</span>
+                              <span className="font-medium text-amber-400">Follow-up Required</span>
+                            </div>
+                            <p className="text-slate-300">{form.completionForm.followUpNotes}</p>
+                          </div>
+                        )}
+
+                        {/* Photos */}
+                        {form.completionPhotos && form.completionPhotos.length > 0 && (
+                          <div>
+                            <label className="block text-sm font-medium text-slate-300 mb-2">
+                              Evidence Photos ({form.completionPhotos.length})
+                            </label>
+                            <div className="flex gap-3 flex-wrap">
+                              {form.completionPhotos.map((photo, idx) => (
+                                <a
+                                  key={idx}
+                                  href={photo.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="w-24 h-24 rounded-lg overflow-hidden border border-slate-600 hover:border-green-400 transition"
+                                >
+                                  <img
+                                    src={photo.url}
+                                    alt={`Evidence ${idx + 1}`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Submitted Info */}
+                        {form.completionForm?.submittedAt && (
+                          <p className="text-slate-500 text-xs pt-2 border-t border-white/10">
+                            Submitted: {new Date(form.completionForm.submittedAt).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* sticky footer */}

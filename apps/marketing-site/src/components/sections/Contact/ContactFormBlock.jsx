@@ -42,6 +42,9 @@ export default function ContactFormBlock() {
   const [serverError, setServerError] = useState("");
   const [jobRef, setJobRef] = useState(""); // NEW: show job reference if backend returns it
 
+  // Anti-spam: track form load time (3 second minimum)
+  const formLoadTime = useRef(Date.now());
+
   // validators
   const emailOk = (s) => /^\S+@\S+\.\S+$/.test(s);
   const phoneOk = (s) => /^(\+?61|0)?[2-478]\d{8}$/.test(s.replace(/\s/g, ""));
@@ -186,6 +189,29 @@ export default function ContactFormBlock() {
     setSubmitting(true);
     setServerError("");
 
+    // Anti-spam: 3 second minimum form fill time
+    const timeSinceLoad = Date.now() - formLoadTime.current;
+    if (timeSinceLoad < 3000) {
+      setSubmitting(false);
+      setServerError("Please take a moment to fill out the form properly.");
+      return;
+    }
+
+    // Anti-spam: reCAPTCHA v3 verification
+    let recaptchaToken = null;
+    try {
+      if (window.grecaptcha) {
+        await new Promise((resolve) => window.grecaptcha.ready(resolve));
+        recaptchaToken = await window.grecaptcha.execute(
+          '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI',
+          { action: 'submit_job_request' }
+        );
+      }
+    } catch (recaptchaErr) {
+      console.error('reCAPTCHA error:', recaptchaErr);
+      // Continue without token - backend will reject if required
+    }
+
     try {
       // Basic validation
       if (!values.name?.trim() || !values.phone?.trim()) {
@@ -211,6 +237,7 @@ export default function ContactFormBlock() {
         email: (values.email || '').trim(),
         description: descriptionParts.join('\n'),
         images: base64Images, // Now includes converted base64 images
+        recaptchaToken, // Anti-spam: reCAPTCHA v3 token
       };
 
       const res = await portal.submitJobRequest(payload);

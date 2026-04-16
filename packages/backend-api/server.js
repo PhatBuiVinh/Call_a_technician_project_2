@@ -31,6 +31,95 @@ const ALWAYS_OPEN = (process.env.ALWAYS_OPEN ?? 'true') === 'true';
 // If you want to forbid cross-midnight jobs, set ENFORCE_SAME_DAY=true
 const ENFORCE_SAME_DAY = (process.env.ENFORCE_SAME_DAY ?? 'false') === 'true';
 
+/* ------------------------ ANTI-SPAM RATE LIMITING ------------------- */
+// Simple in-memory rate limiter for job request submissions
+// Limits: 5 per hour per IP, 10 per day per email
+// NOTE: For production scale, replace with Redis
+const rateLimitStore = new Map(); // key -> { count, resetTime }
+
+function checkRateLimit(key, windowMs, maxRequests) {
+  const now = Date.now();
+  const record = rateLimitStore.get(key);
+
+  if (!record || now > record.resetTime) {
+    // New window
+    rateLimitStore.set(key, { count: 1, resetTime: now + windowMs });
+    return { allowed: true, remaining: maxRequests - 1 };
+  }
+
+  if (record.count >= maxRequests) {
+    return {
+      allowed: false,
+      retryAfter: Math.ceil((record.resetTime - now) / 1000),
+      message: `Rate limit exceeded. Try again in ${Math.ceil((record.resetTime - now) / 60000)} minutes.`
+    };
+  }
+
+  record.count++;
+  return { allowed: true, remaining: maxRequests - record.count };
+}
+
+// Clean up old entries every hour (prevent memory leak)
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, record] of rateLimitStore.entries()) {
+    if (now > record.resetTime) {
+      rateLimitStore.delete(key);
+    }
+  }
+}, 3600000);
+
+/* ------------------------ reCAPTCHA v3 VERIFICATION ------------------- */
+const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET_KEY;
+const RECAPTCHA_MIN_SCORE = parseFloat(process.env.RECAPTCHA_MIN_SCORE || '0.5');
+
+/**
+ * Verify reCAPTCHA v3 token with Google
+ * @param {string} token - The token from frontend
+ * @param {string} action - Expected action name
+ * @returns {Promise<{success: boolean, score?: number, error?: string}>}
+ */
+async function verifyRecaptcha(token, action) {
+  if (!RECAPTCHA_SECRET) {
+    console.warn('[RECAPTCHA] Secret key not configured, skipping verification');
+    return { success: true, score: 1.0 }; // Allow if not configured
+  }
+
+  if (!token) {
+    return { success: false, error: 'Missing reCAPTCHA token' };
+  }
+
+  try {
+    const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        secret: RECAPTCHA_SECRET,
+        response: token,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!data.success) {
+      return { success: false, error: 'Invalid reCAPTCHA token' };
+    }
+
+    if (data.action !== action) {
+      return { success: false, error: 'Action mismatch' };
+    }
+
+    if (data.score < RECAPTCHA_MIN_SCORE) {
+      return { success: false, score: data.score, error: `Low score: ${data.score}` };
+    }
+
+    return { success: true, score: data.score };
+  } catch (err) {
+    console.error('[RECAPTCHA] Verification error:', err.message);
+    return { success: false, error: 'Verification failed' };
+  }
+}
+
 /* ------------------------ DNS (Atlas SRV) ------------------- */
 // On some Windows/VPN/AV setups, Node's SRV lookup can fail with ECONNREFUSED while Compass works.
 // Allow overriding resolvers to make mongodb+srv:// connections reliable.
@@ -289,20 +378,60 @@ app.get('/api/health', (req, res) => res.json({ ok: true }));
 // Submit job request from marketing site (no auth required)
 app.post('/api/marketing/job-request', async (req, res) => {
   try {
+    const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || 'unknown';
+    const { email } = req.body;
+
     console.log('Received job request:', {
       fullName: req.body.fullName,
       phone: req.body.phone,
       email: req.body.email,
       description: req.body.description,
-      imagesCount: req.body.images ? req.body.images.length : 0
+      imagesCount: req.body.images ? req.body.images.length : 0,
+      ip: clientIp
     });
 
-    const { fullName, phone, email, description, images } = req.body;
-    
+    // Anti-spam: Rate limit by IP (5 per hour)
+    const ipLimit = checkRateLimit(`ip:${clientIp}`, 3600000, 5);
+    if (!ipLimit.allowed) {
+      console.warn(`[RATE LIMIT] IP blocked: ${clientIp}`);
+      return res.status(429).json({
+        error: 'Too many requests.',
+        message: ipLimit.message,
+        retryAfter: ipLimit.retryAfter
+      });
+    }
+
+    // Anti-spam: Rate limit by email (10 per day) if email provided
+    if (email && email.includes('@')) {
+      const emailLimit = checkRateLimit(`email:${email.toLowerCase()}`, 86400000, 10);
+      if (!emailLimit.allowed) {
+        console.warn(`[RATE LIMIT] Email blocked: ${email}`);
+        return res.status(429).json({
+          error: 'Too many requests from this email.',
+          message: emailLimit.message,
+          retryAfter: emailLimit.retryAfter
+        });
+      }
+    }
+
+    // Anti-spam: reCAPTCHA v3 verification
+    const { recaptchaToken } = req.body;
+    const recaptchaResult = await verifyRecaptcha(recaptchaToken, 'submit_job_request');
+    if (!recaptchaResult.success) {
+      console.warn(`[RECAPTCHA] Blocked: ${recaptchaResult.error}`, { ip: clientIp, score: recaptchaResult.score });
+      return res.status(403).json({
+        error: 'Security verification failed.',
+        message: 'Please try again or contact us directly.'
+      });
+    }
+    console.log(`[RECAPTCHA] Verified: score=${recaptchaResult.score}`, { ip: clientIp });
+
+    const { fullName, phone, description, images } = req.body;
+
     if (!fullName || !phone || !description) {
       console.log('Validation failed:', { fullName, phone, description });
-      return res.status(400).json({ 
-        error: 'Full name, phone, and description are required' 
+      return res.status(400).json({
+        error: 'Full name, phone, and description are required'
       });
     }
 
@@ -816,7 +945,79 @@ app.put('/api/jobs/:id/status', auth, async (req, res) => {
       });
       update.techNotes = job.techNotes;
     }
-    
+
+    // Handle completion form and photos when marking job as Completed
+    const { completionForm, photos } = req.body;
+    if (newStatus === 'Completed' && currentStatus !== 'Completed') {
+      // Validate completion form if provided (optional but validated if present)
+      if (completionForm) {
+        // Check if completion form already exists (no editing after completion)
+        if (job.completionForm && job.completionForm.submittedAt) {
+          return sendErr(res, 400, 'Completion form already submitted. Cannot modify.');
+        }
+
+        // Validate required fields
+        if (!completionForm.workPerformed || completionForm.workPerformed.trim().length < 10) {
+          return sendErr(res, 400, 'Work performed is required (minimum 10 characters)');
+        }
+        if (completionForm.workPerformed.length > 2000) {
+          return sendErr(res, 400, 'Work performed is too long (maximum 2000 characters)');
+        }
+
+        // Validate follow-up notes if follow-up required
+        if (completionForm.followUpRequired) {
+          if (!completionForm.followUpNotes || completionForm.followUpNotes.trim().length === 0) {
+            return sendErr(res, 400, 'Follow-up notes are required when follow-up is flagged');
+          }
+          if (completionForm.followUpNotes.length > 1000) {
+            return sendErr(res, 400, 'Follow-up notes are too long (maximum 1000 characters)');
+          }
+        }
+
+        // Save completion form
+        update.completionForm = {
+          workPerformed: completionForm.workPerformed.trim(),
+          partsUsed: (completionForm.partsUsed || '').trim(),
+          followUpRequired: !!completionForm.followUpRequired,
+          followUpNotes: (completionForm.followUpNotes || '').trim(),
+          submittedAt: new Date(),
+          submittedBy: isAssignedTech ? req.user.techId : job.assignedTo
+        };
+      }
+
+      // Handle photos if provided (optional)
+      if (photos && Array.isArray(photos) && photos.length > 0) {
+        if (photos.length > 3) {
+          return sendErr(res, 400, 'Maximum 3 photos allowed');
+        }
+
+        // Validate each photo (base64 format and size)
+        const validatedPhotos = [];
+        for (let i = 0; i < photos.length; i++) {
+          const photo = photos[i];
+          if (!photo || typeof photo !== 'string') {
+            return sendErr(res, 400, `Photo ${i + 1} is invalid`);
+          }
+
+          // Check base64 size (rough estimate: base64 is ~4/3 of binary size)
+          const base64Data = photo.replace(/^data:image\/\w+;base64,/, '');
+          const estimatedSizeMB = (base64Data.length * 0.75) / (1024 * 1024);
+          if (estimatedSizeMB > 5) {
+            return sendErr(res, 400, `Photo ${i + 1} is too large (max 5MB)`);
+          }
+
+          validatedPhotos.push({
+            url: photo,
+            caption: '',
+            uploadedAt: new Date(),
+            uploadedBy: isAssignedTech ? req.user.techId : job.assignedTo
+          });
+        }
+
+        update.completionPhotos = validatedPhotos;
+      }
+    }
+
     const updated = await Job.findOneAndUpdate(
       { _id: req.params.id },
       update,

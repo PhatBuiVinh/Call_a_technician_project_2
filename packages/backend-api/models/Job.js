@@ -32,7 +32,25 @@ const JobSchema = new mongoose.Schema(
       createdAt: { type: Date, default: Date.now },
       createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Tech', required: true }
     }],
-    
+
+    // NEW: Job completion evidence (submitted when tech marks job Completed)
+    completionForm: {
+      workPerformed: { type: String, default: '' },
+      partsUsed: { type: String, default: '' },
+      followUpRequired: { type: Boolean, default: false },
+      followUpNotes: { type: String, default: '' },
+      submittedAt: { type: Date, default: null },
+      submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Tech', default: null }
+    },
+
+    // NEW: Technician evidence photos (submitted on completion)
+    completionPhotos: [{
+      url: { type: String, required: true },
+      caption: { type: String, default: '' },
+      uploadedAt: { type: Date, default: Date.now },
+      uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Tech', required: true }
+    }],
+
     phone: { type: String, default: '' },
     description: { type: String, default: '' },
 
