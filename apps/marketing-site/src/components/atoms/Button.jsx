@@ -10,30 +10,22 @@ export default function Button({
   ...props
 }) {
   const base =
-    "inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
+    "inline-flex items-center justify-center rounded-lg px-5 py-2.5 text-sm font-semibold shadow-sm motion-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
 
   const styles = {
-  primary: "bg-brand-green text-brand-navy hover:brightness-95 focus:ring-brand-lightblue",
-  secondary: "border border-brand-green text-brand-green hover:bg-brand-green hover:text-brand-navy focus:ring-brand-lightblue",
-  accent: "bg-brand-blue text-white hover:brightness-95 focus:ring-brand-lightblue",
-  ghost: "text-brand-blue hover:bg-brand-lightblue/20 focus:ring-brand-lightblue",
-};
+    primary: "bg-brand-green text-brand-navy hover:brightness-95 hover:-translate-y-[1px] focus-visible:ring-brand-lightblue/70",
+    secondary: "border border-brand-blue/45 text-brand-blue bg-white hover:bg-brand-lightblue/20 hover:border-brand-blue focus-visible:ring-brand-lightblue/70",
+    accent: "bg-brand-blue text-white hover:bg-brand-navy hover:-translate-y-[1px] focus-visible:ring-brand-lightblue/70",
+    ghost: "text-brand-blue shadow-none hover:bg-brand-lightblue/20 focus-visible:ring-brand-lightblue/70",
+  };
 
-  const buttonContent = (
-    <button
-      type={type}
-      className={`${base} ${styles[variant]} ${className}`}
-      {...props}
-    >
-      {children}
-    </button>
-  );
+  const classNames = `${base} ${styles[variant] || styles.primary} ${className}`.trim();
 
   // If 'to' prop is provided, render as Link for internal navigation
   if (to) {
     return (
-      <Link to={to} className="inline-block">
-        {buttonContent}
+      <Link to={to} className={classNames} {...props}>
+        {children}
       </Link>
     );
   }
@@ -41,12 +33,16 @@ export default function Button({
   // If 'href' prop is provided, render as anchor tag
   if (href) {
     return (
-      <a href={href} className="inline-block">
-        {buttonContent}
+      <a href={href} className={classNames} {...props}>
+        {children}
       </a>
     );
   }
 
   // Default: render as button
-  return buttonContent;
+  return (
+    <button type={type} className={classNames} {...props}>
+      {children}
+    </button>
+  );
 }

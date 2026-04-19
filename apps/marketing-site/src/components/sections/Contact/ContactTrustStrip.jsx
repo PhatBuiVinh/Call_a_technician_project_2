@@ -1,5 +1,5 @@
 import Section from "../../layout/Section";
-import { H2 } from "../../ui/Heading";
+import { H2 } from "../../UI/Heading";
 import { Send, PhoneCall, CalendarCheck } from "lucide-react";
 
 const STEPS = [

@@ -1,44 +1,56 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import { useAuth } from '../context/AuthProvider';
 
-export default function Shell({ children }){
+export default function Shell({ children, title = 'Technician Portal', subtitle = 'Daily Work Queue' }){
   const [open, setOpen] = useState(false);
   const nav = useNavigate();
   const loc = useLocation();
+  const { user, logout } = useAuth();
 
   // close the drawer when route changes
   useEffect(()=>{ setOpen(false); }, [loc.pathname, loc.search]);
 
-  // theme toggle
-  const toggleTheme = () => {
-    const root = document.documentElement;
-    root.classList.toggle('theme-light');
-  };
+  const displayName = user?.name || user?.email?.split('@')[0] || 'Technician';
 
   return (
-    <div className="min-h-full flex">
+    <div className="min-h-screen flex bg-brand-bg text-white">
       <Sidebar open={open} onClose={()=>setOpen(false)} />
 
       <div className="flex-1 flex flex-col">
-        {/* Top bar */}
-        <header className="sticky top-0 z-20 surface border-b border-surf">
+        <header className="sticky top-0 z-20 border-b border-white/10 bg-brand-bg/90 backdrop-blur">
           <div className="container-app h-16 flex items-center gap-3">
-            <button className="lg:hidden btn-ghost" onClick={()=>setOpen(true)}>☰</button>
+            <button className="lg:hidden btn-ghost" onClick={()=>setOpen(true)} aria-label="Open menu">Menu</button>
 
-            <div className="relative flex-1">
-              <input className="input pl-10" placeholder="Search jobs by title, invoice, status..." />
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">🔎</span>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-sm sm:text-base font-semibold truncate">{title}</h1>
+              <p className="text-xs text-slate-400 truncate">{subtitle}</p>
             </div>
 
-            <button className="btn-ghost" onClick={toggleTheme}>🟣 Theme</button>
-            <button className="btn-primary" onClick={()=>nav('/app?new=1')}>➕ New Job</button>
-            <button className="btn-ghost">⬇️ Export</button>
-            <button className="btn-ghost">⬆️ Import</button>
+            {loc.pathname !== '/tech-view' && (
+              <button className="btn-ghost hidden sm:inline-flex" onClick={() => nav('/tech-view')}>
+                All Jobs
+              </button>
+            )}
+
+            <div className="hidden md:flex items-center text-sm text-slate-300">
+              {displayName}
+            </div>
+
+            <button
+              className="btn-ghost"
+              onClick={() => {
+                logout();
+                nav('/');
+              }}
+            >
+              Log out
+            </button>
           </div>
         </header>
 
-        <main className="container-app py-6">
+        <main className="container-app py-6 md:py-8">
           {children}
         </main>
       </div>

@@ -29,6 +29,7 @@ const JobSchema = new mongoose.Schema(
     // NEW: Technician notes array
     techNotes: [{
       note: { type: String, required: true },
+      isAdminOnly: { type: Boolean, default: false },
       createdAt: { type: Date, default: Date.now },
       createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Tech', required: true }
     }],
@@ -49,6 +50,27 @@ const JobSchema = new mongoose.Schema(
       caption: { type: String, default: '' },
       uploadedAt: { type: Date, default: Date.now },
       uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Tech', required: true }
+    }],
+
+    // Job events timeline (admin-facing chronological audit)
+    events: [{
+      type: {
+        type: String,
+        enum: [
+          'job_created',
+          'status_changed',
+          'technician_assigned',
+          'note_added',
+          'completion_submitted',
+          'job_closed'
+        ],
+        required: true
+      },
+      timestamp: { type: Date, default: Date.now },
+      actorName: { type: String, default: 'System' },
+      actorRole: { type: String, default: 'system' },
+      actorId: { type: String, default: '' },
+      details: { type: mongoose.Schema.Types.Mixed, default: {} }
     }],
 
     phone: { type: String, default: '' },

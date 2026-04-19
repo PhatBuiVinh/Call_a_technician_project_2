@@ -1,6 +1,6 @@
 import { Tab } from "@headlessui/react";
 import Section from "../../layout/Section";
-import ServiceCard from "../../ui/ServiceCard";
+import ServiceCard from "../../UI/ServiceCard";
 
 function cls(...xs) { return xs.filter(Boolean).join(" "); }
 

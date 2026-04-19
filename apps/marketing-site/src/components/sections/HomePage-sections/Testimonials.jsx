@@ -6,7 +6,7 @@ import { Star } from "lucide-react";
 
 
 import Section from "../../layout/Section";
-import { H2 } from "../../ui/Heading";
+import { H2 } from "../../UI/Heading";
 
 const TESTIMONIALS = [
   {

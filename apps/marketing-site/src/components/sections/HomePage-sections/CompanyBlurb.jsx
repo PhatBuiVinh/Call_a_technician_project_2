@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import Section from "../../layout/Section";
-import { H2 } from "../../ui/Heading";
+import { H2 } from "../../UI/Heading";
 import Button from "../../atoms/Button";
 import { MapPin, Rocket, Users } from "lucide-react";
 

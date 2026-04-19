@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getBlogPosts, getCategories, urlFor } from '../lib/sanityClient'
+import blogDemoImage from '../assets/blog/blogdemo.jpg'
 
 export function useBlogPosts() {
   const [posts, setPosts] = useState([])
@@ -21,11 +22,11 @@ export function useBlogPosts() {
         const transformedPosts = postsData.map(post => {
           // Handle image - could be 'image' or 'mainImage'
           const imageField = post.mainImage || post.image
-          let imageUrl = '/src/assets/blog/blogdemo.jpg'
+          let imageUrl = blogDemoImage
           if (imageField && urlFor) {
             try {
               const urlBuilder = urlFor(imageField)
-              imageUrl = urlBuilder ? urlBuilder.url() : '/src/assets/blog/blogdemo.jpg'
+              imageUrl = urlBuilder ? urlBuilder.url() : blogDemoImage
             } catch (error) {
               console.error('Error building image URL:', error)
             }

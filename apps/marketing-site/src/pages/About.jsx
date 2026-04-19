@@ -1,8 +1,11 @@
 import Section from "../components/layout/Section";
-import { H2 } from "../components/ui/Heading";
+import { H2 } from "../components/UI/Heading";
 import Button from "../components/atoms/Button";
 import { motion, useInView } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import aboutTeamImg from "../assets/about/team.jpg";
+import caseStudyImg from "../assets/about/casestudy.jpg";
+import founderImg from "../assets/about/people.jpg";
 
 export default function About() {
   return (
@@ -32,7 +35,7 @@ export default function About() {
           {/* Image (replace src later) */}
           <div className="rounded-xl overflow-hidden border bg-white">
             <img
-              src="/src/assets/about/team.jpg"
+              src={aboutTeamImg}
               alt="Our team at work"
               className="w-full h-64 md:h-80 object-cover"
             />
@@ -105,7 +108,7 @@ export default function About() {
       </div>
       <div className="rounded-2xl overflow-hidden border bg-white">
         <img
-          src="/src/assets/about/casestudy.jpg"
+          src={caseStudyImg}
           alt="Classroom rollout"
           className="h-full w-full object-cover md:h-full"
           loading="lazy"
@@ -165,7 +168,7 @@ export default function About() {
 
             <div className="mt-8 flex justify-center">
               <div className="rounded-2xl overflow-hidden border bg-white shadow-lg max-w-sm">
-                <img src="/src/assets/about/people.jpg" alt="Alex T. - Founder" className="h-56 w-full object-cover" />
+                <img src={founderImg} alt="Alex T. - Founder" className="h-56 w-full object-cover" />
                 <div className="p-6 text-center">
                   <div className="text-xl font-semibold text-brand-navy">Alex T.</div>
                   <div className="text-brand-blue font-medium">Founder & Lead Technician</div>

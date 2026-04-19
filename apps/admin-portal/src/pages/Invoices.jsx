@@ -311,19 +311,19 @@ export default function Invoices() {
         {/* Enhanced KPIs */}
         <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-brand-panel rounded-3xl p-6 border border-brand-border shadow-soft">
-            <div className="text-brand-sky text-sm font-medium mb-2">📄 Total Invoices</div>
+            <div className="text-brand-sky text-sm font-medium mb-2">Total Invoices</div>
             <div className="text-3xl font-bold text-white">{kpi.total}</div>
           </div>
           <div className="bg-brand-panel rounded-3xl p-6 border border-brand-border shadow-soft">
-            <div className="text-brand-green text-sm font-medium mb-2">💰 Unpaid Total</div>
+            <div className="text-brand-green text-sm font-medium mb-2">Unpaid Total</div>
             <div className="text-3xl font-bold text-white">{currency.format(kpi.unpaid)}</div>
           </div>
           <div className="bg-brand-panel rounded-3xl p-6 border border-brand-border shadow-soft">
-            <div className="text-brand-sky text-sm font-medium mb-2">✅ Paid Total</div>
+            <div className="text-brand-sky text-sm font-medium mb-2">Paid Total</div>
             <div className="text-3xl font-bold text-white">{currency.format(kpi.paid)}</div>
           </div>
           <div className="bg-brand-panel rounded-3xl p-6 border border-brand-border shadow-soft">
-            <div className="text-red-400 text-sm font-medium mb-2">⚠️ Overdue Count</div>
+            <div className="text-red-400 text-sm font-medium mb-2">Overdue Count</div>
             <div className="text-3xl font-bold text-white">{kpi.overdue}</div>
           </div>
         </section>
@@ -333,7 +333,6 @@ export default function Invoices() {
           <div className="bg-brand-bg px-8 py-6 border-b border-brand-border">
             <div className="flex flex-col lg:flex-row lg:items-center gap-4 w-full">
               <h2 className="text-3xl font-bold text-white flex items-center gap-4">
-                <span className="text-4xl">📄</span>
                 Invoices
                 <span className="text-sm font-normal text-brand-sky bg-brand-blue/20 px-4 py-2 rounded-full border border-brand-border">
                   {filtered.length} {filtered.length === 1 ? 'invoice' : 'invoices'}
@@ -361,16 +360,9 @@ export default function Invoices() {
 
               <div className="flex flex-col sm:flex-row gap-3 min-w-0">
                 <button 
-                  className="px-6 py-3 bg-brand-bg hover:bg-brand-panel-hover text-text-primary border border-brand-border rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 whitespace-nowrap"
-                  onClick={exportFilteredCSV}
-                >
-                  📊 Export CSV
-                </button>
-                <button 
                   className="px-6 py-3 bg-brand-teal hover:bg-brand-teal/90 text-text-primary rounded-xl font-medium transition-all duration-200 shadow-soft flex items-center justify-center gap-2 whitespace-nowrap"
                   onClick={openCreate}
                 >
-                  <span className="text-lg">➕</span>
                   New Invoice
                 </button>
               </div>
@@ -379,14 +371,12 @@ export default function Invoices() {
 
           {loading && (
             <div className="p-8 text-center">
-              <div className="text-4xl mb-4">⏳</div>
               <p className="text-slate-300">Loading invoices...</p>
             </div>
           )}
           
           {error && (
             <div className="p-8 text-center">
-              <div className="text-4xl mb-4">❌</div>
               <p className="text-rose-300">{error}</p>
             </div>
           )}
@@ -424,17 +414,17 @@ export default function Invoices() {
                           </div>
                           {inv.customerPhone && (
                             <div className="text-xs text-slate-300">
-                              📞 {inv.customerPhone}
+                              Phone: {inv.customerPhone}
                             </div>
                           )}
                           {inv.customerEmail && (
                             <div className="text-xs text-slate-300">
-                              ✉️ {inv.customerEmail}
+                              Email: {inv.customerEmail}
                             </div>
                           )}
                           {inv.customerAddress && (
                             <div className="text-xs text-slate-300 max-w-xs truncate">
-                              📍 {inv.customerAddress}
+                              Address: {inv.customerAddress}
                             </div>
                           )}
                         </div>
@@ -452,14 +442,12 @@ export default function Invoices() {
                             className="px-4 py-2 rounded-lg bg-brand-sky/20 hover:bg-brand-sky/30 text-brand-sky border border-brand-sky/30 font-medium transition-all duration-200 flex items-center gap-2"
                             onClick={() => openEdit(inv)}
                           >
-                            <span>✏️</span>
                             Edit
                           </button>
                           <button
                             className="px-4 py-2 rounded-lg bg-red-600/30 hover:bg-red-600/40 text-red-200 border border-red-500/50 font-medium transition-colors flex items-center gap-2 shadow-lg"
                             onClick={() => remove(inv._id)}
                           >
-                            <span>🗑️</span>
                             Delete
                           </button>
                         </div>
@@ -486,16 +474,7 @@ export default function Invoices() {
           className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50"
           onClick={e => {
             if (e.target === e.currentTarget) {
-              console.log('Modal closed by backdrop click');
-              // Comment out auto-close for now to prevent accidental closing
-              // setOpen(false);
-            }
-          }}
-          onKeyDown={(e) => {
-            // Prevent accidental closing with Escape key - comment out for now
-            if (e.key === 'Escape') {
-              console.log('Escape key pressed - modal closing disabled');
-              // setOpen(false);
+              setOpen(false);
             }
           }}
         >
@@ -507,10 +486,7 @@ export default function Invoices() {
             {/* header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-brand-border flex-shrink-0 rounded-t-2xl" style={{ backgroundColor: '#0c1450' }}>
               <h3 className="text-xl font-bold text-white">{editingId ? 'Edit Invoice' : 'New Invoice'}</h3>
-              <button onClick={() => {
-                console.log('Modal closed by close button');
-                setOpen(false);
-              }} className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors">
+              <button onClick={() => setOpen(false)} className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors">
                 Close
               </button>
             </div>
@@ -521,9 +497,7 @@ export default function Invoices() {
               {/* Invoice Details Section */}
               <div className="mb-6 rounded-2xl p-6 border border-brand-sky/20" style={{ backgroundColor: '#0c1450' }}>
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-brand-sky flex items-center gap-2">
-                    <span>📄</span> Invoice Details
-                  </h4>
+                  <h4 className="text-lg font-semibold text-brand-sky">Invoice Details</h4>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field
@@ -558,9 +532,7 @@ export default function Invoices() {
               {/* Customer Details Section */}
               <div className="mb-6 rounded-2xl p-6 border border-brand-sky/20" style={{ backgroundColor: '#0c1450' }}>
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-brand-sky flex items-center gap-2">
-                    <span>👤</span> Customer Details
-                  </h4>
+                  <h4 className="text-lg font-semibold text-brand-sky">Customer Details</h4>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Field
@@ -600,9 +572,7 @@ export default function Invoices() {
 
               {/* Job Details Section */}
               <div className="bg-white/5 rounded-xl p-4">
-                <h4 className="text-lg font-semibold mb-4 text-brand-blue flex items-center gap-2">
-                  <span>🔧</span> Job Details
-                </h4>
+                <h4 className="text-lg font-semibold mb-4 text-brand-blue">Job Details</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Field
                     label="Job Title *"
@@ -625,9 +595,7 @@ export default function Invoices() {
 
               {/* Pricing Section */}
               <div className="bg-white/5 rounded-xl p-4">
-                <h4 className="text-lg font-semibold mb-4 text-brand-blue flex items-center gap-2">
-                  <span>💰</span> Pricing Details
-                </h4>
+                <h4 className="text-lg font-semibold mb-4 text-brand-blue">Pricing Details</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Field label="Base Time">
                 <input className="input mt-1" value="2 hours" readOnly />
@@ -676,7 +644,7 @@ export default function Invoices() {
                 
                 {/* Detailed Pricing Breakdown */}
                 <div className="mt-4 p-4 bg-white/5 rounded-lg">
-                  <h5 className="text-sm font-semibold text-brand-blue mb-3">💰 Pricing Breakdown</h5>
+                  <h5 className="text-sm font-semibold text-brand-blue mb-3">Pricing Breakdown</h5>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-slate-300">Base Price (2 hours):</span>
@@ -720,9 +688,7 @@ export default function Invoices() {
 
               {/* Software Section */}
               <div className="bg-white/5 rounded-xl p-4">
-                <h4 className="text-lg font-semibold mb-4 text-brand-blue flex items-center gap-2">
-                  <span>💻</span> Software & Licenses
-                </h4>
+                <h4 className="text-lg font-semibold mb-4 text-brand-blue">Software and Licenses</h4>
                 
                 {/* Add New Software */}
                 <div className="mb-4 p-3 bg-white/5 rounded-lg">

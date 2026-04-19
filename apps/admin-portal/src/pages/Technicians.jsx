@@ -180,7 +180,6 @@ export default function Technicians() {
           <div className="bg-brand-bg px-6 py-4 border-b border-brand-border">
             <div className="flex flex-wrap items-center gap-4 w-full">
               <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                <span className="text-3xl">👨‍🔧</span>
                 Technicians
                 <span className="text-sm font-normal text-text-secondary bg-brand-blue/20 px-3 py-1 rounded-full border border-brand-border">
                   {filtered.length} {filtered.length === 1 ? 'technician' : 'technicians'}
@@ -210,7 +209,6 @@ export default function Technicians() {
                 className="px-6 py-3 bg-brand-blue hover:bg-brand-blue/90 text-text-primary rounded-xl font-medium transition-all duration-200 shadow-soft flex items-center gap-2"
                 onClick={openCreate}
               >
-                <span>➕</span>
                 New Technician
               </button>
             </div>
@@ -218,14 +216,12 @@ export default function Technicians() {
 
           {loading && (
             <div className="p-8 text-center">
-              <div className="text-4xl mb-4">⏳</div>
               <p className="text-slate-300">Loading technicians...</p>
             </div>
           )}
           
           {error && (
             <div className="p-8 text-center">
-              <div className="text-4xl mb-4">❌</div>
               <p className="text-rose-300">{error}</p>
             </div>
           )}
@@ -234,7 +230,6 @@ export default function Technicians() {
             <>
               {filtered.length === 0 ? (
                 <div className="p-8 text-center">
-                  <div className="text-6xl mb-4">👨‍🔧</div>
                   <h3 className="text-lg font-semibold text-white mb-2">No Technicians Found</h3>
                   <p className="text-slate-400 mb-4">
                     {q.trim() ? 'No technicians match your search criteria.' : 'Add your first technician to get started!'}
@@ -256,8 +251,8 @@ export default function Technicians() {
                         {/* Left Section - Technician Info */}
                         <div className="flex-1">
                           <div className="flex items-center gap-4 mb-3">
-                            <div className="w-12 h-12 bg-brand-blue/20 rounded-xl flex items-center justify-center text-xl">
-                              👨‍🔧
+                            <div className="w-12 h-12 bg-brand-blue/20 rounded-xl flex items-center justify-center text-sm font-semibold text-brand-sky uppercase">
+                              {(technician.name || 'T').slice(0, 2)}
                             </div>
                             <div>
                               <h3 className="text-xl font-bold text-white group-hover:text-brand-sky transition-colors flex items-center gap-2">
@@ -269,13 +264,11 @@ export default function Technicians() {
                                 )}
                               </h3>
                               <div className="flex items-center gap-4 text-sm text-text-secondary">
-                                <span className="flex items-center gap-1">
-                                  <span>📧</span>
-                                  {technician.email || 'No email'}
+                                <span>
+                                  Email: {technician.email || 'No email'}
                                 </span>
-                                <span className="flex items-center gap-1">
-                                  <span>📞</span>
-                                  {technician.phone || 'No phone'}
+                                <span>
+                                  Phone: {technician.phone || 'No phone'}
                                 </span>
                               </div>
                             </div>
@@ -288,13 +281,13 @@ export default function Technicians() {
                                 ? 'bg-gradient-green text-white border-brand-green/50' 
                                 : 'bg-gradient-to-r from-red-500/20 to-red-600/20 text-red-300 border-red-500/30'
                             }`}>
-                              {technician.active ? '✅ Active' : '❌ Inactive'}
+                              {technician.active ? 'Active' : 'Inactive'}
                             </span>
 
                             {/* Preferred Suburb Badge - More Prominent */}
                             {technician.preferredSuburb && (
                               <span className="px-4 py-2 rounded-full text-sm font-bold bg-brand-blue/20 text-brand-sky border border-brand-sky/50 shadow-lg">
-                                📍 Preferred: {technician.preferredSuburb}
+                                Preferred Suburb: {technician.preferredSuburb}
                               </span>
                             )}
                           </div>
@@ -304,14 +297,14 @@ export default function Technicians() {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-brand-sky/80">
                             {technician.address && (
                               <div className="flex items-start gap-3">
-                                <span className="text-lg">🏠</span>
+                                <span>Address:</span>
                                 <span>{technician.address}</span>
                               </div>
                             )}
                             {technician.emergencyContact && (
                               <div className="flex items-start gap-3">
-                                <span className="text-lg">🚨</span>
-                                <span>Emergency: {technician.emergencyContact}</span>
+                                <span>Emergency:</span>
+                                <span>{technician.emergencyContact}</span>
                               </div>
                             )}
                           </div>
@@ -324,7 +317,6 @@ export default function Technicians() {
                               onClick={() => openEdit(technician)}
                               className="px-4 py-2 bg-brand-blue/20 hover:bg-brand-blue/30 text-brand-sky border border-brand-sky/30 rounded-xl font-medium transition-all duration-200 flex items-center gap-2"
                             >
-                              <span>✏️</span>
                               Edit
                             </button>
                             {!technician.hasLoginAccount && (
@@ -332,7 +324,6 @@ export default function Technicians() {
                                 onClick={() => openAccountModal(technician)}
                                 className="px-4 py-2 bg-green-600/30 hover:bg-green-600/40 text-green-200 border border-green-500/50 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-lg"
                               >
-                                <span>🔑</span>
                                 Create Login
                               </button>
                             )}
@@ -340,7 +331,6 @@ export default function Technicians() {
                               onClick={() => remove(technician._id)}
                               className="px-4 py-2 bg-red-600/30 hover:bg-red-600/40 text-red-200 border border-red-500/50 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-lg"
                             >
-                              <span className="text-lg">🗑️</span>
                               Delete
                             </button>
                           </div>
@@ -360,16 +350,7 @@ export default function Technicians() {
           className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50"
           onClick={(e) => { 
             if (e.target === e.currentTarget) {
-              console.log('Modal closed by backdrop click');
-              // Comment out auto-close for now to prevent accidental closing
-              // setOpen(false);
-            }
-          }}
-          onKeyDown={(e) => {
-            // Prevent accidental closing with Escape key - comment out for now
-            if (e.key === 'Escape') {
-              console.log('Escape key pressed - modal closing disabled');
-              // setOpen(false);
+              setOpen(false);
             }
           }}
         >
@@ -381,10 +362,7 @@ export default function Technicians() {
             {/* header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-brand-border flex-shrink-0 rounded-t-2xl" style={{ backgroundColor: '#0c1450' }}>
               <h3 className="text-xl font-bold text-white">{editingId ? 'Edit Technician' : 'New Technician'}</h3>
-              <button onClick={() => {
-                console.log('Modal closed by close button');
-                setOpen(false);
-              }} className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors">
+              <button onClick={() => setOpen(false)} className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors">
                 Close
               </button>
             </div>
@@ -395,9 +373,7 @@ export default function Technicians() {
               {/* Personal Details Section */}
               <div className="mb-6 rounded-2xl p-6 border border-brand-sky/20" style={{ backgroundColor: '#0c1450' }}>
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-brand-sky flex items-center gap-2">
-                    <span>👤</span> Personal Details
-                  </h4>
+                  <h4 className="text-lg font-semibold text-brand-sky">Personal Details</h4>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Field label="Name *" value={form.name}
@@ -418,9 +394,7 @@ export default function Technicians() {
               {/* Additional Information Section */}
               <div className="mb-6 rounded-2xl p-6 border border-brand-sky/20" style={{ backgroundColor: '#0c1450' }}>
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-brand-sky flex items-center gap-2">
-                    <span>📍</span> Additional Information
-                  </h4>
+                  <h4 className="text-lg font-semibold text-brand-sky">Additional Information</h4>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Field label="Address" value={form.address}
@@ -469,10 +443,7 @@ export default function Technicians() {
                 <div className="flex gap-3">
                   <button 
                     className="px-6 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium transition-all duration-200"
-                    onClick={() => {
-                      console.log('Modal closed by cancel button');
-                      setOpen(false);
-                    }}
+                    onClick={() => setOpen(false)}
                   >
                     Cancel
                   </button>

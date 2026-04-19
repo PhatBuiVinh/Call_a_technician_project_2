@@ -86,6 +86,53 @@ Call-a-Technician Admin`;
 }
 
 /**
+ * Customer notification - technician assigned
+ */
+function customerTechnicianAssigned(data) {
+  const { customerName, techName, jobTitle, scheduledWindow } = data;
+
+  const safeCustomerName = customerName || 'Customer';
+  const safeTechName = techName || 'your technician';
+  const safeScheduledWindow = scheduledWindow || 'To be confirmed';
+
+  const subject = `Technician assigned: ${jobTitle}`;
+
+  const text = `Hello ${safeCustomerName},
+
+Good news, a technician has now been assigned to your service request.
+
+Technician: ${safeTechName}
+Job: ${jobTitle}
+Scheduled appointment: ${safeScheduledWindow}
+
+Next steps:
+- Your technician will arrive within the scheduled window.
+- Please keep your phone available in case they need to contact you.
+
+If you need to update anything before the appointment, please contact our support team.
+
+Best regards,
+Call-a-Technician Team`;
+
+  const html = `<p>Hello ${safeCustomerName},</p>
+<p>Good news, a technician has now been <strong>assigned</strong> to your service request.</p>
+<table style="background:#f5f5f5;padding:15px;margin:15px 0;">
+  <tr><td><strong>Technician:</strong></td><td>${safeTechName}</td></tr>
+  <tr><td><strong>Job:</strong></td><td>${jobTitle}</td></tr>
+  <tr><td><strong>Scheduled appointment:</strong></td><td>${safeScheduledWindow}</td></tr>
+</table>
+<p><strong>Next steps:</strong></p>
+<ul>
+  <li>Your technician will arrive within the scheduled window.</li>
+  <li>Please keep your phone available in case they need to contact you.</li>
+</ul>
+<p>If you need to update anything before the appointment, please contact our support team.</p>
+<p>Best regards,<br>Call-a-Technician Team</p>`;
+
+  return { subject, text, html };
+}
+
+/**
  * Job completed - notification to admin
  */
 function jobCompletedAdmin(data) {
@@ -126,5 +173,6 @@ Call-a-Technician System`;
 module.exports = {
   customerRequestConfirmation,
   technicianAssigned,
+  customerTechnicianAssigned,
   jobCompletedAdmin,
 };

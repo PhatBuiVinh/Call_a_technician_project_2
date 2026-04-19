@@ -1,8 +1,9 @@
+import { Suspense, lazy } from "react";
 import Section from "../../layout/Section";
-import { H2 } from "../../ui/Heading";
-import Card from "../../ui/Card";
-import ServiceMap from "../../maps/ServiceMap";        // <-- import
-import { SA_MARKERS } from "../../../data/home";       // <-- if you created it
+import { H2 } from "../../UI/Heading";
+import { SA_MARKERS } from "../../../data/Home";       // <-- if you created it
+
+const ServiceMap = lazy(() => import("../../maps/ServiceMap"));
 
 export default function ServiceAreas({ suburbs }) {
   return (
@@ -16,11 +17,13 @@ export default function ServiceAreas({ suburbs }) {
         {/* Sidebar map (desktop) */}
         <aside className="hidden lg:block sticky top-24 self-start">
           <div className="card-soft overflow-hidden">
-            <ServiceMap markers={SA_MARKERS} height={360} />
+            <Suspense fallback={<div className="h-[360px] grid place-items-center text-slate-500 text-sm">Loading map...</div>}>
+              <ServiceMap markers={SA_MARKERS} height={360} />
+            </Suspense>
           </div>
           <div className="mt-4 text-sm text-slate-600">
             Unsure if we cover your area?{" "}
-            <a className="underline text-brand4 hover:text-brand2" href="tel:1300551350">
+            <a className="underline text-brand-blue hover:text-brand-lightblue" href="tel:1300551350">
               Call 1300 551 350
             </a>
           </div>
@@ -30,8 +33,8 @@ export default function ServiceAreas({ suburbs }) {
         <div className="lg:col-span-2">
           {/* Header strip */}
           <div className="card-soft p-0 overflow-hidden">
-            <div className="bg-gradient-to-r from-brand1/40 via-brand2/30 to-brand3/30 px-5 py-3 flex items-center justify-between">
-              <div className="font-semibold text-brand4">South Australia</div>
+            <div className="bg-gradient-to-r from-brand-navy/10 via-brand-blue/15 to-brand-lightblue/20 px-5 py-3 flex items-center justify-between">
+              <div className="font-semibold text-brand-navy">South Australia</div>
               <span className="chip">{suburbs.length} suburbs</span>
             </div>
 
@@ -44,7 +47,7 @@ export default function ServiceAreas({ suburbs }) {
               <div className="my-4 divider" />
 
               {/* Multi-column brand list */}
-              <ul className="text-sm muted grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1 list-brand marker:text-brand4">
+              <ul className="text-sm muted grid sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1 list-brand marker:text-brand-blue">
                 {suburbs.map((s) => (
                   <li key={s}>{s}</li>
                 ))}
@@ -53,9 +56,9 @@ export default function ServiceAreas({ suburbs }) {
           </div>
 
           {/* Info callout */}
-          <div className="mt-6 rounded-xl border bg-brand1/10 p-4 text-sm text-slate-700">
+          <div className="mt-6 rounded-xl border bg-brand-lightblue/10 p-4 text-sm text-slate-700">
             Can’t find your suburb? We can often help remotely or arrange a special visit.{" "}
-            <a className="underline text-brand4 hover:text-brand2" href="/contact">
+            <a className="underline text-brand-blue hover:text-brand-lightblue" href="/contact">
               Contact us
             </a>.
           </div>

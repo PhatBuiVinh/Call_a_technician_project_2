@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import Shell from '../components/Shell';
@@ -12,6 +12,13 @@ const STATUS_WORKFLOW = {
   'In Progress': { next: 'Completed', label: 'Complete Job', color: 'btn-green' }
 };
 
+const EMPTY_COMPLETION_FORM = {
+  workPerformed: '',
+  partsUsed: '',
+  followUpRequired: false,
+  followUpNotes: ''
+};
+
 export default function TechJobDetail() {
   const { id } = useParams();
   const nav = useNavigate();
@@ -22,17 +29,127 @@ export default function TechJobDetail() {
   const [actionLoading, setActionLoading] = useState(false);
   const [newNote, setNewNote] = useState('');
   const [noteLoading, setNoteLoading] = useState(false);
+  const [isAdminOnlyNote, setIsAdminOnlyNote] = useState(false);
 
   // Completion modal state
   const [showCompletionModal, setShowCompletionModal] = useState(false);
-  const [completionForm, setCompletionForm] = useState({
-    workPerformed: '',
-    partsUsed: '',
-    followUpRequired: false,
-    followUpNotes: ''
-  });
+  const [completionForm, setCompletionForm] = useState(EMPTY_COMPLETION_FORM);
   const [completionPhotos, setCompletionPhotos] = useState([]);
   const [photoLoading, setPhotoLoading] = useState(false);
+  const [draftSavedAt, setDraftSavedAt] = useState('');
+  const [showRestoreDraftPrompt, setShowRestoreDraftPrompt] = useState(false);
+  const [draftToRestore, setDraftToRestore] = useState(null);
+
+  const completionFormRef = useRef(completionForm);
+  const lastDraftSerializedRef = useRef('');
+
+  const draftStorageKey = `tech-completion-draft:${id}`;
+
+  useEffect(() => {
+    completionFormRef.current = completionForm;
+  }, [completionForm]);
+
+  function getDraftPayload(formData) {
+    return {
+      workPerformed: String(formData?.workPerformed || ''),
+      partsUsed: String(formData?.partsUsed || ''),
+      followUpRequired: Boolean(formData?.followUpRequired),
+      followUpNotes: String(formData?.followUpNotes || ''),
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  function hasDraftContent(formData) {
+    return Boolean(
+      String(formData?.workPerformed || '').trim() ||
+      String(formData?.partsUsed || '').trim() ||
+      String(formData?.followUpNotes || '').trim() ||
+      Boolean(formData?.followUpRequired)
+    );
+  }
+
+  function clearCompletionDraft() {
+    localStorage.removeItem(draftStorageKey);
+    lastDraftSerializedRef.current = '';
+    setDraftSavedAt('');
+    setShowRestoreDraftPrompt(false);
+    setDraftToRestore(null);
+  }
+
+  function handleRestoreDraft(restore) {
+    if (!restore) {
+      clearCompletionDraft();
+      return;
+    }
+
+    if (!draftToRestore) {
+      setShowRestoreDraftPrompt(false);
+      return;
+    }
+
+    setCompletionForm({
+      ...EMPTY_COMPLETION_FORM,
+      workPerformed: String(draftToRestore.workPerformed || ''),
+      partsUsed: String(draftToRestore.partsUsed || ''),
+      followUpRequired: Boolean(draftToRestore.followUpRequired),
+      followUpNotes: String(draftToRestore.followUpNotes || '')
+    });
+
+    if (draftToRestore.updatedAt) {
+      setDraftSavedAt(draftToRestore.updatedAt);
+    }
+
+    setShowRestoreDraftPrompt(false);
+    setDraftToRestore(null);
+  }
+
+  useEffect(() => {
+    if (!showCompletionModal) return;
+
+    try {
+      const raw = localStorage.getItem(draftStorageKey);
+      if (!raw) {
+        setShowRestoreDraftPrompt(false);
+        setDraftToRestore(null);
+        return;
+      }
+
+      const parsed = JSON.parse(raw);
+      if (!hasDraftContent(parsed)) {
+        clearCompletionDraft();
+        return;
+      }
+
+      setDraftToRestore(parsed);
+      setShowRestoreDraftPrompt(true);
+      lastDraftSerializedRef.current = raw;
+      if (parsed.updatedAt) {
+        setDraftSavedAt(parsed.updatedAt);
+      }
+    } catch {
+      clearCompletionDraft();
+    }
+  }, [showCompletionModal, draftStorageKey]);
+
+  useEffect(() => {
+    if (!showCompletionModal) return;
+
+    const interval = window.setInterval(() => {
+      const currentForm = completionFormRef.current;
+      if (!hasDraftContent(currentForm)) return;
+
+      const payload = getDraftPayload(currentForm);
+      const serialized = JSON.stringify(payload);
+
+      if (serialized === lastDraftSerializedRef.current) return;
+
+      localStorage.setItem(draftStorageKey, serialized);
+      lastDraftSerializedRef.current = serialized;
+      setDraftSavedAt(payload.updatedAt);
+    }, 3000);
+
+    return () => window.clearInterval(interval);
+  }, [showCompletionModal, draftStorageKey]);
 
   const loadJob = useCallback(async () => {
     try {
@@ -89,10 +206,14 @@ export default function TechJobDetail() {
       setNoteLoading(true);
       await api(`/jobs/${id}/tech-notes`, {
         method: 'POST',
-        body: { note: newNote.trim() }
+        body: {
+          note: newNote.trim(),
+          isAdminOnly: isAdminOnlyNote
+        }
       });
 
       setNewNote('');
+      setIsAdminOnlyNote(false);
       await loadJob();
     } catch (err) {
       setError(err?.message || 'Failed to add note');
@@ -186,14 +307,11 @@ export default function TechJobDetail() {
         }
       });
 
+      clearCompletionDraft();
+
       // Reset and close modal
       setShowCompletionModal(false);
-      setCompletionForm({
-        workPerformed: '',
-        partsUsed: '',
-        followUpRequired: false,
-        followUpNotes: ''
-      });
+      setCompletionForm(EMPTY_COMPLETION_FORM);
       setCompletionPhotos([]);
 
       // Refresh job data
@@ -213,19 +331,19 @@ export default function TechJobDetail() {
 
   function getStatusColor(status) {
     switch (status) {
-      case 'Assigned': return 'bg-blue-500/20 text-blue-300';
-      case 'Accepted': return 'bg-purple-500/20 text-purple-300';
-      case 'En Route': return 'bg-yellow-500/20 text-yellow-300';
-      case 'On Site': return 'bg-orange-500/20 text-orange-300';
-      case 'In Progress': return 'bg-pink-500/20 text-pink-300';
-      case 'Completed': return 'bg-green-500/20 text-green-300';
-      default: return 'bg-slate-500/20 text-slate-300';
+      case 'Assigned': return 'bg-blue-500/20 text-blue-200 border border-blue-400/40';
+      case 'Accepted': return 'bg-indigo-500/20 text-indigo-200 border border-indigo-400/40';
+      case 'En Route': return 'bg-amber-500/20 text-amber-200 border border-amber-400/40';
+      case 'On Site': return 'bg-orange-500/20 text-orange-200 border border-orange-400/40';
+      case 'In Progress': return 'bg-fuchsia-500/20 text-fuchsia-200 border border-fuchsia-400/40';
+      case 'Completed': return 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/40';
+      default: return 'bg-slate-500/20 text-slate-200 border border-slate-400/40';
     }
   }
 
   if (loading) {
     return (
-      <Shell title="Job Details">
+      <Shell title="Job Details" subtitle="Loading assigned job">
         <div className="text-center py-12 text-slate-400">Loading job...</div>
       </Shell>
     );
@@ -233,12 +351,12 @@ export default function TechJobDetail() {
 
   if (error && !job) {
     return (
-      <Shell title="Job Details">
+      <Shell title="Job Details" subtitle="Unable to load this job">
         <div className="p-4 bg-rose-500/20 text-rose-300 rounded-xl mb-4">
           {error}
         </div>
         <button onClick={() => nav('/tech-view')} className="btn btn-ghost">
-          ← Back to My Jobs
+          Back to My Jobs
         </button>
       </Shell>
     );
@@ -250,94 +368,97 @@ export default function TechJobDetail() {
   const isCompleted = job.status === 'Completed';
 
   return (
-    <Shell title={job.title}>
-      <div className="space-y-4">
-        {/* Back button */}
-        <button onClick={() => nav('/tech-view')} className="btn btn-ghost text-sm">
-          ← Back to My Jobs
-        </button>
+    <Shell title={job.title} subtitle="Review details and update progress">
+      <div className="space-y-5">
+        <div className="flex items-center justify-between gap-3">
+          <button onClick={() => nav('/tech-view')} className="btn btn-ghost text-sm">
+            Back to My Jobs
+          </button>
+          <div className="text-xs text-slate-400">{job.invoice || 'No invoice assigned'}</div>
+        </div>
 
         {error && (
-          <div className="p-3 bg-rose-500/20 text-rose-300 rounded-xl text-sm">
+          <div className="p-3 bg-rose-500/20 border border-rose-400/30 text-rose-200 rounded-xl text-sm">
             {error}
           </div>
         )}
 
-        {/* Job Info Card */}
-        <div className="surface p-4 rounded-xl">
-          <div className="flex items-center gap-2 mb-4">
+        <div className="surface p-5 rounded-xl">
+          <div className="flex items-center gap-2 mb-4 flex-wrap">
             <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(job.status)}`}>
               {job.status}
             </span>
-            <span className="text-slate-400 text-sm">{job.invoice}</span>
+            {job.priority && (
+              <span className="px-3 py-1 rounded-full text-xs font-medium bg-white/5 border border-white/10 text-slate-200">
+                Priority: {job.priority}
+              </span>
+            )}
           </div>
 
-          <div className="grid gap-3 text-sm">
-            <div className="flex items-start gap-3">
-              <span className="text-slate-500">👤</span>
+          <div className="grid gap-3 text-sm sm:grid-cols-2">
+            <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Customer</p>
               <div>
-                <div className="text-slate-300">{job.customerName || 'No customer name'}</div>
-                <div className="text-slate-500">{job.phone || 'No phone'}</div>
+                <div className="text-slate-200 mt-1">{job.customerName || 'No customer name'}</div>
+                <div className="text-slate-400">{job.phone || 'No phone'}</div>
               </div>
             </div>
 
-            <div className="flex items-start gap-3">
-              <span className="text-slate-500">📍</span>
-              <div className="text-slate-300">{job.customerAddress || 'No address'}</div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <span className="text-slate-500">🕐</span>
-              <div className="text-slate-300">
+            <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Schedule</p>
+              <div className="text-slate-200 mt-1">
                 {formatDate(job.startAt)}
-                {job.endAt && ` → ${formatDate(job.endAt)}`}
+                {job.endAt && ` to ${formatDate(job.endAt)}`}
               </div>
+            </div>
+
+            <div className="rounded-xl bg-white/5 border border-white/10 p-3 sm:col-span-2">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Service Address</p>
+              <div className="text-slate-200 mt-1">{job.customerAddress || 'No address provided'}</div>
             </div>
 
             {job.description && (
-              <div className="flex items-start gap-3 mt-2">
-                <span className="text-slate-500">📝</span>
-                <div className="text-slate-300 whitespace-pre-wrap">{job.description}</div>
+              <div className="rounded-xl bg-white/5 border border-white/10 p-3 sm:col-span-2">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Job Description</p>
+                <div className="text-slate-200 whitespace-pre-wrap mt-1">{job.description}</div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Action Button */}
         {!isCompleted && workflowStep && job.status !== 'In Progress' && (
           <div className="surface p-4 rounded-xl">
-            <h3 className="font-medium mb-3">Update Status</h3>
+            <h3 className="font-medium mb-1">Next Step</h3>
+            <p className="text-sm text-slate-400 mb-3">Move this job to the next workflow stage.</p>
             <button
               onClick={handleStatusUpdate}
               disabled={actionLoading}
               className={`btn ${workflowStep.color} w-full ${actionLoading ? 'opacity-60' : ''}`}
             >
               {actionLoading ? 'Updating...' : workflowStep.label}
-              {!actionLoading && ` → ${workflowStep.next}`}
+              {!actionLoading && ` to ${workflowStep.next}`}
             </button>
           </div>
         )}
 
-        {/* Complete Job Button - opens completion modal */}
         {job.status === 'In Progress' && (
           <div className="surface p-4 rounded-xl">
-            <h3 className="font-medium mb-3">Update Status</h3>
+            <h3 className="font-medium mb-1">Completion Evidence</h3>
+            <p className="text-sm text-slate-400 mb-3">Submit final work notes and optional photos before closing this task.</p>
             <button
               onClick={() => setShowCompletionModal(true)}
               disabled={actionLoading}
               className="btn btn-green w-full"
             >
-              Complete Job →
+              Complete Job
             </button>
           </div>
         )}
 
-        {/* Completion Summary - shown after job is completed */}
-        {isCompleted && job.completionForm && (
+        {isCompleted && job.completionForm?.submittedAt && (
           <div className="surface p-4 rounded-xl bg-green-500/10">
-            <div className="flex items-center gap-2 text-green-400 mb-3">
-              <span>✅</span>
-              <span className="font-medium">Job Completed</span>
+            <div className="flex items-center gap-2 text-green-300 mb-3">
+              <span className="font-medium">Completion Summary</span>
             </div>
             <div className="space-y-3 text-sm">
               <div>
@@ -352,14 +473,14 @@ export default function TechJobDetail() {
               )}
               {job.completionForm.followUpRequired && (
                 <div className="p-2 bg-amber-500/10 rounded-lg border border-amber-500/30">
-                  <span className="text-amber-400 font-medium">⚠️ Follow-up Required</span>
+                  <span className="text-amber-300 font-medium">Follow-up Required</span>
                   <p className="text-slate-300 mt-1">{job.completionForm.followUpNotes}</p>
                 </div>
               )}
               {job.completionPhotos && job.completionPhotos.length > 0 && (
                 <div>
                   <span className="text-slate-400">Photos ({job.completionPhotos.length}):</span>
-                  <div className="flex gap-2 mt-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
                     {job.completionPhotos.map((photo, idx) => (
                       <a
                         key={idx}
@@ -381,27 +502,24 @@ export default function TechJobDetail() {
           </div>
         )}
 
-        {/* Simple completed indicator (no form submitted) */}
-        {isCompleted && !job.completionForm && (
-          <div className="surface p-4 rounded-xl bg-green-500/10">
-            <div className="flex items-center gap-2 text-green-400">
-              <span>✅</span>
-              <span>Job completed</span>
-            </div>
-          </div>
-        )}
-
-        {/* Tech Notes */}
         <div className="surface p-4 rounded-xl">
-          <h3 className="font-medium mb-3">Technician Notes</h3>
-          
-          {/* Existing Notes */}
+          <h3 className="font-medium mb-1">Work Notes</h3>
+          <p className="text-sm text-slate-400 mb-3">Track progress details for internal reference.</p>
+
           <div className="space-y-2 mb-4">
             {notes.length === 0 ? (
               <p className="text-slate-500 text-sm italic">No notes yet</p>
             ) : (
               notes.map((note, idx) => (
-                <div key={idx} className="p-3 bg-white/5 rounded-lg text-sm">
+                <div
+                  key={idx}
+                  className={`p-3 rounded-lg text-sm border ${note.isAdminOnly ? 'bg-amber-500/10 border-amber-500/40' : 'bg-white/5 border-white/10'}`}
+                >
+                  {note.isAdminOnly && (
+                    <span className="inline-flex items-center mb-2 px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/20 text-amber-200 border border-amber-500/40">
+                      Admin-Only
+                    </span>
+                  )}
                   <p className="text-slate-300">{note.note}</p>
                   <p className="text-slate-500 text-xs mt-1">
                     {formatDate(note.createdAt)}
@@ -411,16 +529,24 @@ export default function TechJobDetail() {
             )}
           </div>
 
-          {/* Add Note Form - hidden for completed jobs */}
           {!isCompleted && (
             <form onSubmit={handleAddNote} className="space-y-2">
               <textarea
                 value={newNote}
                 onChange={(e) => setNewNote(e.target.value)}
-                placeholder="Add a note..."
+                placeholder="Add a work note"
                 className="input w-full text-sm"
                 rows={2}
               />
+              <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={isAdminOnlyNote}
+                  onChange={(e) => setIsAdminOnlyNote(e.target.checked)}
+                  className="w-5 h-5 rounded border-slate-600"
+                />
+                Make this note admin-only
+              </label>
               <button
                 type="submit"
                 disabled={noteLoading || !newNote.trim()}
@@ -432,15 +558,35 @@ export default function TechJobDetail() {
           )}
         </div>
 
-        {/* Completion Modal */}
         {showCompletionModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div className="surface w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl p-6">
               <h2 className="text-xl font-semibold mb-4">Complete Job</h2>
               <p className="text-slate-400 text-sm mb-4">{job.title}</p>
 
+              {showRestoreDraftPrompt && (
+                <div className="mb-4 p-3 rounded-lg border border-amber-500/40 bg-amber-500/10">
+                  <p className="text-sm text-amber-200 mb-2">Restore previous draft?</p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-ghost text-sm"
+                      onClick={() => handleRestoreDraft(false)}
+                    >
+                      No
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-blue text-sm"
+                      onClick={() => handleRestoreDraft(true)}
+                    >
+                      Yes
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <form onSubmit={handleCompleteJob} className="space-y-4">
-                {/* Work Performed */}
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     Work Performed <span className="text-rose-400">*</span>
@@ -460,7 +606,6 @@ export default function TechJobDetail() {
                   </p>
                 </div>
 
-                {/* Parts Used */}
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     Parts/Materials Used <span className="text-slate-500">(optional)</span>
@@ -475,13 +620,11 @@ export default function TechJobDetail() {
                   />
                 </div>
 
-                {/* Photos */}
                 <div>
                   <label className="block text-sm font-medium mb-2">
                     Evidence Photos <span className="text-slate-500">(optional, max 3)</span>
                   </label>
 
-                  {/* Photo Previews */}
                   {completionPhotos.length > 0 && (
                     <div className="flex gap-2 mb-3 flex-wrap">
                       {completionPhotos.map((photo, idx) => (
@@ -494,7 +637,7 @@ export default function TechJobDetail() {
                           <button
                             type="button"
                             onClick={() => removePhoto(idx)}
-                            className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-rose-600"
+                            className="absolute -top-2 -right-2 w-7 h-7 bg-rose-500 text-white rounded-full text-sm flex items-center justify-center hover:bg-rose-600"
                           >
                             ×
                           </button>
@@ -503,14 +646,13 @@ export default function TechJobDetail() {
                     </div>
                   )}
 
-                  {/* Add Photo Button */}
                   {completionPhotos.length < 3 && (
                     <label className="inline-flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg cursor-pointer transition">
-                      <span>📷</span>
-                      <span className="text-sm">{photoLoading ? 'Processing...' : 'Add Photo'}</span>
+                      <span className="text-sm">{photoLoading ? 'Processing...' : 'Upload Photo'}</span>
                       <input
                         type="file"
                         accept="image/*"
+                        capture="environment"
                         onChange={handlePhotoSelect}
                         disabled={photoLoading}
                         className="hidden"
@@ -522,14 +664,13 @@ export default function TechJobDetail() {
                   </p>
                 </div>
 
-                {/* Follow-up Required */}
                 <div className="pt-2 border-t border-slate-700">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={completionForm.followUpRequired}
                       onChange={(e) => setCompletionForm(prev => ({ ...prev, followUpRequired: e.target.checked }))}
-                      className="w-4 h-4 rounded border-slate-600"
+                      className="w-5 h-5 rounded border-slate-600"
                     />
                     <span className="text-sm font-medium">Follow-up Required</span>
                   </label>
@@ -552,7 +693,12 @@ export default function TechJobDetail() {
                   )}
                 </div>
 
-                {/* Actions */}
+                {draftSavedAt && (
+                  <p className="text-xs text-slate-400">
+                    Draft saved ({new Date(draftSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })})
+                  </p>
+                )}
+
                 <div className="flex gap-3 pt-4">
                   <button
                     type="button"

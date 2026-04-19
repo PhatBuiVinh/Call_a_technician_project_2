@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CheckCircle2, ShieldCheck, Clock3 } from "lucide-react";
 import Section from "../../layout/Section";
 import Input from "../../atoms/Input";
 import Textarea from "../../atoms/Textarea";
 import Button from "../../atoms/Button";
 import { portal } from "../../../lib/portal"; // NEW: API helper import
+import { getRecaptchaToken } from "../../../lib/recaptcha";
+import techVisitImg from "../../../assets/tech-visit.jpg";
 
 // Minimal SA suburbs list (add more anytime)
 const SA_SUBURBS = [
@@ -75,6 +78,7 @@ export default function ContactFormBlock() {
     message: useRef(null),
     preferredAt: useRef(null),
   };
+  const fileZoneRef = useRef(null);
 
   // -------- Enhancements --------
   // A) Draft autosave/restore
@@ -186,6 +190,22 @@ export default function ContactFormBlock() {
   // SUBMIT: replaced to call Portal API (no more fake demo delay)
   async function onSubmit(e) {
     e.preventDefault();
+
+    // Reveal validation errors and move focus to the first problem field.
+    setTouched((t) => ({
+      ...t,
+      name: true,
+      phone: true,
+      email: true,
+      message: true,
+      preferredAt: true,
+    }));
+
+    if (hasErrors) {
+      focusFirstError();
+      return;
+    }
+
     setSubmitting(true);
     setServerError("");
 
@@ -198,19 +218,7 @@ export default function ContactFormBlock() {
     }
 
     // Anti-spam: reCAPTCHA v3 verification
-    let recaptchaToken = null;
-    try {
-      if (window.grecaptcha) {
-        await new Promise((resolve) => window.grecaptcha.ready(resolve));
-        recaptchaToken = await window.grecaptcha.execute(
-          '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI',
-          { action: 'submit_job_request' }
-        );
-      }
-    } catch (recaptchaErr) {
-      console.error('reCAPTCHA error:', recaptchaErr);
-      // Continue without token - backend will reject if required
-    }
+    const recaptchaToken = await getRecaptchaToken('submit_job_request');
 
     try {
       // Basic validation
@@ -259,30 +267,69 @@ export default function ContactFormBlock() {
     }
   }
 
+  function focusFirstError() {
+    const order = [
+      ["name", refs.name],
+      ["phone", refs.phone],
+      ["email", refs.email],
+      ["preferredAt", refs.preferredAt],
+      ["message", refs.message],
+    ];
+
+    for (const [key, ref] of order) {
+      if (!errors[key]) continue;
+      ref.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const target = ref.current?.querySelector("input, textarea");
+      target?.focus();
+      return;
+    }
+
+    if (errors.files) {
+      fileZoneRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const fileInput = fileZoneRef.current?.querySelector("input[type='file']");
+      fileInput?.focus();
+    }
+  }
+
   return (
     <Section>
       <div className="container-app grid lg:grid-cols-2 gap-8 items-start">
         {/* Form card */}
-        <div className="rounded-2xl border bg-white p-6 md:p-8">
-          <h2 className="text-xl font-semibold text-brand-navy">Tell us a bit about the issue</h2>
-          <p className="text-sm text-slate-600 mt-1">
+        <div className="card-spotlight p-6 md:p-8">
+          <h2 className="h2">Tell us a bit about the issue</h2>
+          <p className="text-sm text-slate-600 mt-2">
             We’ll get back to you within business hours (usually sooner).
           </p>
 
+          <div className="mt-4 grid sm:grid-cols-3 gap-2">
+            <div className="rounded-lg border border-brand-blue/20 bg-white/80 px-3 py-2 text-xs text-slate-700 inline-flex items-center gap-2">
+              <Clock3 className="h-4 w-4 text-brand-blue" />
+              Quick response
+            </div>
+            <div className="rounded-lg border border-brand-blue/20 bg-white/80 px-3 py-2 text-xs text-slate-700 inline-flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-brand-blue" />
+              Private and secure
+            </div>
+            <div className="rounded-lg border border-brand-blue/20 bg-white/80 px-3 py-2 text-xs text-slate-700 inline-flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-brand-blue" />
+              No Fix, No Fee
+            </div>
+          </div>
+
           {/* Success banner (now real, not demo) */}
           {success && (
-            <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status" aria-live="polite">
               Thanks! Your request was submitted. We’ll contact you shortly.
               {jobRef ? <div className="mt-1 text-emerald-700">{jobRef}</div> : null}
             </div>
           )}
           {serverError && (
-            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
               {serverError}
             </div>
           )}
 
-          <form onSubmit={onSubmit} className="mt-6 grid gap-4" noValidate>
+          <form onSubmit={onSubmit} className="mt-6 grid gap-5" noValidate>
             {/* Honeypot */}
             <div className="hidden">
               <label>
@@ -296,6 +343,7 @@ export default function ContactFormBlock() {
                 <Input
                   label="Full name"
                   placeholder="Your name"
+                  autoComplete="name"
                   required
                   value={values.name}
                   onChange={onChange("name")}
@@ -310,6 +358,8 @@ export default function ContactFormBlock() {
                 <Input
                   label="Phone"
                   placeholder="e.g., 04xx xxx xxx"
+                  autoComplete="tel"
+                  inputMode="tel"
                   required
                   value={values.phone}
                   onChange={onChange("phone")}
@@ -326,6 +376,7 @@ export default function ContactFormBlock() {
                 label="Email (optional)"
                 type="email"
                 placeholder="you@example.com"
+                autoComplete="email"
                 value={values.email}
                 onChange={onChange("email")}
                 aria-invalid={!!(touched.email && errors.email)}
@@ -341,7 +392,7 @@ export default function ContactFormBlock() {
                   Suburb
                   <input
                     list="sa-suburbs"
-                    className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-lightblue/60"
+                    className="mt-1 w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm bg-white motion-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:border-brand-blue hover:border-slate-400"
                     placeholder="e.g., Glenelg"
                     value={values.suburb}
                     onChange={onChange("suburb")}
@@ -366,7 +417,7 @@ export default function ContactFormBlock() {
                 Preferred date & time (optional)
                 <input
                   type="datetime-local"
-                  className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-lightblue/60"
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm bg-white motion-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:border-brand-blue hover:border-slate-400"
                   value={values.preferredAt}
                   onChange={onChange("preferredAt")}
                   min={getLocalNowForInput()}
@@ -398,10 +449,11 @@ export default function ContactFormBlock() {
 
             {/* Drop zone + file input */}
             <div
+              ref={fileZoneRef}
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
               onDrop={onDrop}
-              className={`rounded-lg border p-4 ${dragOver ? "border-brand-blue bg-brand-lightblue/10" : "border-slate-200 bg-white"}`}
+              className={`rounded-lg border p-4 motion-standard ${dragOver ? "border-brand-blue bg-brand-lightblue/10" : "border-slate-200 bg-white"}`}
               title="Drag and drop screenshots here"
             >
               <label className="block text-sm text-slate-700">
@@ -439,7 +491,7 @@ export default function ContactFormBlock() {
             </div>
 
             <div className="flex items-center justify-between gap-3">
-              <label className="text-xs text-slate-500">
+              <label className="text-xs text-slate-500 max-w-[70%]">
                 We’ll never share your details. By submitting, you agree to be contacted about your request.
               </label>
 
@@ -461,10 +513,10 @@ export default function ContactFormBlock() {
         </div>
 
         {/* Right column remains the same */}
-        <div className="rounded-2xl overflow-hidden border bg-white">
+        <div className="card overflow-hidden">
           <div className="aspect-[4/3] md:aspect-[5/4] relative">
             <img
-              src="/src/assets/tech-visit.jpg"
+              src={techVisitImg}
               alt="Call-a-Technician on-site visit"
               className="absolute inset-0 w-full h-full object-cover"
               loading="lazy"
@@ -475,8 +527,8 @@ export default function ContactFormBlock() {
             <h3 className="font-semibold text-brand-navy">Prefer to call?</h3>
             <p className="text-sm text-slate-600 mt-1">Speak with a technician now. Same-day availability across Adelaide.</p>
             <div className="mt-3 flex flex-wrap gap-3">
-              <a href="tel:1300551350" className="rounded-md bg-brand-blue text-white px-4 py-2 text-sm font-semibold hover:bg-brand-navy">Call 1300 551 350</a>
-              <a href="mailto:hello@call-a-technician.example" className="rounded-md border px-4 py-2 text-sm font-semibold hover:bg-slate-50">Email us</a>
+              <Button href="tel:1300551350" variant="accent">Call 1300 551 350</Button>
+              <Button href="mailto:hello@call-a-technician.example" variant="secondary">Email us</Button>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
               <div className="rounded-lg bg-brand-lightblue/10 p-3">

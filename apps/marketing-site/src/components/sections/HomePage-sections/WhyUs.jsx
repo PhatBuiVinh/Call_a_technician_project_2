@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { CheckCircle, MinusCircle } from "lucide-react";
 import Section from "../../layout/Section";
-import { H2 } from "../../ui/Heading";
+import { H2 } from "../../UI/Heading";
 
 export default function WhyUs() {
   return (

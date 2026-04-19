@@ -6,21 +6,22 @@ import CompanyBlurb from "../components/sections/HomePage-sections/CompanyBlurb"
 import ServiceAreas from "../components/sections/HomePage-sections/ServiceAreas";
 import RequestCallForm from "../components/sections/HomePage-sections/RequestCallForm";
 import Testimonials from "../components/sections/HomePage-sections/Testimonials";
-import { SERVICES, WHY, SUBURBS_SA } from "../data/home";
+import { SERVICES, WHY, SUBURBS_SA } from "../data/Home";
 import LogosCarousel from "../components/sections/HomePage-sections/LogosCarousel";
 import FAQ from "../components/sections/HomePage-sections/FAQ";
+import teamImg from "../assets/team.jpg";
 
 export default function Home() {
   return (
     <div className="text-slate-800">
-      <Hero imageUrl="/assets/hero-team.jpg" />
+      <Hero />
       <StatsBar />
       <LogosCarousel />  {/* ✅ new trust logos strip */}
       <WhyUs items={WHY} />
       <ServicesGrid items={SERVICES} />
       <Testimonials /> {/* ✅ new testimonials carousel */}
       <FAQ /> 
-      <CompanyBlurb imageUrl="/src/assets/team.jpg" />
+      <CompanyBlurb imageUrl={teamImg} />
       <ServiceAreas suburbs={SUBURBS_SA} />
       <RequestCallForm />
     </div>

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import blogDemoImage from "../../assets/blog/blogdemo.jpg";
 
 export default function PostCard({ post }) {
   // Defensive rendering to ensure all displayed values are strings
@@ -9,7 +10,7 @@ export default function PostCard({ post }) {
     author: String(post.author || 'Anonymous'),
     readMins: Number(post.readMins) || 5,
     date: String(post.date || new Date().toISOString()),
-    image: String(post.image || '/src/assets/blog/blogdemo.jpg')
+    image: String(post.image || blogDemoImage)
   }
 
   return (

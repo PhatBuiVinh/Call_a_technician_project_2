@@ -166,6 +166,44 @@ function auth(req, res, next) {
 /* ------------------------ MODELS ---------------------------- */
 const Job = require('./models/Job'); // must have fields: owner, title, invoice, technician, startAt, endAt, etc.
 
+function getActorName(user) {
+  if (user?.name && String(user.name).trim()) return String(user.name).trim();
+  if (user?.email && String(user.email).trim()) return String(user.email).trim();
+  if (user?.role === 'technician') return 'Technician';
+  if (user?.role === 'admin') return 'Admin';
+  return 'System';
+}
+
+function makeJobEvent(req, type, details = {}) {
+  return {
+    type,
+    timestamp: new Date(),
+    actorName: getActorName(req?.user),
+    actorRole: req?.user?.role || 'system',
+    actorId: req?.user?.sub ? String(req.user.sub) : '',
+    details,
+  };
+}
+
+async function appendJobEvents(jobId, events) {
+  if (!jobId || !Array.isArray(events) || events.length === 0) return;
+  try {
+    await Job.updateOne(
+      { _id: jobId },
+      { $push: { events: { $each: events } } }
+    );
+  } catch (e) {
+    console.error('[EVENTS] Failed to append job events:', e.message);
+  }
+}
+
+function makeNotePreview(text) {
+  return String(text || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .slice(0, 140);
+}
+
 // User
 const UserSchema = new mongoose.Schema({
   name:         { type: String, default: 'Admin' },
@@ -610,12 +648,28 @@ app.post('/api/jobs', auth, async (req, res) => {
       assignedTo = tech._id;
     }
 
+    const initialEvents = [
+      makeJobEvent(req, 'job_created', {
+        title: title.trim(),
+        status: status || 'Open'
+      })
+    ];
+
+    if (assignedTo && technician && technician.trim()) {
+      initialEvents.push(
+        makeJobEvent(req, 'technician_assigned', {
+          techName: technician.trim()
+        })
+      );
+    }
+
     const job = await Job.create({
       title, invoice, priority, status, technician: technician ? technician.trim() : '', phone, description,
       startAt, endAt,
       owner: req.user.sub,
       assignedTo,  // proper technician reference (null if no technician)
       ...(status === 'Assigned' && assignedTo && { assignedAt: new Date() }),  // Set timestamp if assigned
+      events: initialEvents,
       ...(sourceRequestId && { sourceRequestId })
     });
 
@@ -685,15 +739,46 @@ app.put('/api/jobs/:id', auth, async (req, res) => {
     const newTechName = update.technician !== undefined ? update.technician : oldTechName;
     const techChanged = 'technician' in update && newTechName !== oldTechName && newTechName.trim() !== '';
 
-    const updated = await Job.findOneAndUpdate(
+    const eventsToAppend = [];
+    if ('status' in update && update.status && update.status !== job.status) {
+      eventsToAppend.push(
+        makeJobEvent(req, 'status_changed', {
+          fromStatus: job.status,
+          toStatus: update.status
+        })
+      );
+      if (update.status === 'Closed') {
+        eventsToAppend.push(
+          makeJobEvent(req, 'job_closed', {
+            fromStatus: job.status
+          })
+        );
+      }
+    }
+
+    if (techChanged) {
+      eventsToAppend.push(
+        makeJobEvent(req, 'technician_assigned', {
+          techName: newTechName
+        })
+      );
+    }
+
+    let updated = await Job.findOneAndUpdate(
       { _id: req.params.id, owner: req.user.sub },
       update,
       { new: true }
     ).lean();
     if (!updated) return sendErr(res, 404, 'Not found');
 
-    // Send technician assignment email (best-effort, non-blocking)
+    if (eventsToAppend.length > 0) {
+      await appendJobEvents(updated._id, eventsToAppend);
+      updated = await Job.findById(updated._id).lean() || updated;
+    }
+
+    // Send assignment emails (best-effort, non-blocking)
     if (techChanged && updated.assignedTo) {
+      // Technician notification
       try {
         const techUser = await User.findOne({ techId: updated.assignedTo });
         if (techUser?.email) {
@@ -717,6 +802,45 @@ app.put('/api/jobs/:id', auth, async (req, res) => {
         }
       } catch (emailErr) {
         console.error('[EMAIL] Failed to send tech assignment notification:', emailErr.message);
+      }
+
+      // Customer notification
+      try {
+        const customerEmail = (updated.customerEmail || '').trim();
+        if (customerEmail && customerEmail.includes('@')) {
+          let scheduledWindow = 'To be confirmed';
+          if (updated.startAt) {
+            const start = new Date(updated.startAt);
+            if (!Number.isNaN(start.getTime())) {
+              if (updated.endAt) {
+                const end = new Date(updated.endAt);
+                if (!Number.isNaN(end.getTime())) {
+                  scheduledWindow = `${start.toLocaleString()} to ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                } else {
+                  scheduledWindow = start.toLocaleString();
+                }
+              } else {
+                scheduledWindow = start.toLocaleString();
+              }
+            }
+          }
+
+          const template = templates.customerTechnicianAssigned({
+            customerName: updated.customerName || 'Customer',
+            techName: newTechName,
+            jobTitle: updated.title || 'Your service request',
+            scheduledWindow
+          });
+
+          sendEmail(customerEmail, template.subject, template.text, template.html)
+            .then(result => {
+              if (!result.sent) {
+                console.log('[EMAIL] Customer assignment not sent:', result.reason || result.error);
+              }
+            });
+        }
+      } catch (emailErr) {
+        console.error('[EMAIL] Failed to send customer assignment notification:', emailErr.message);
       }
     }
 
@@ -746,12 +870,21 @@ app.post('/api/jobs/:id/notes', auth, async (req, res) => {
   try {
     const { text } = req.body || {};
     if (!text || !text.trim()) return res.status(400).json({ error: 'Note text is required' });
+    const authorName = getActorName(req.user);
     const note = await JobNote.create({
       job: req.params.id,
       text: text.trim(),
-      author: (req.user?.name || req.user?.email || 'Admin'),
+      author: authorName,
       owner: req.user.sub
     });
+
+    await appendJobEvents(req.params.id, [
+      makeJobEvent(req, 'note_added', {
+        notePreview: makeNotePreview(text),
+        author: authorName
+      })
+    ]);
+
     res.json(note);
   } catch (e) { res.status(400).json({ error: e.message || 'Failed to add note' }); }
 });
@@ -1022,11 +1155,62 @@ app.put('/api/jobs/:id/status', auth, async (req, res) => {
       }
     }
 
-    const updated = await Job.findOneAndUpdate(
+    const eventsToAppend = [];
+    if (currentStatus !== newStatus) {
+      eventsToAppend.push(
+        makeJobEvent(req, 'status_changed', {
+          fromStatus: currentStatus,
+          toStatus: newStatus
+        })
+      );
+      if (newStatus === 'Closed') {
+        eventsToAppend.push(
+          makeJobEvent(req, 'job_closed', {
+            fromStatus: currentStatus
+          })
+        );
+      }
+    }
+
+    if (note && note.trim()) {
+      eventsToAppend.push(
+        makeJobEvent(req, 'note_added', {
+          notePreview: makeNotePreview(note),
+          author: getActorName(req.user)
+        })
+      );
+    }
+
+    if (update.completionForm?.submittedAt) {
+      eventsToAppend.push(
+        makeJobEvent(req, 'completion_submitted', {
+          techName: job.technician || getActorName(req.user)
+        })
+      );
+    }
+
+    if (newStatus === 'Assigned' && job.technician) {
+      eventsToAppend.push(
+        makeJobEvent(req, 'technician_assigned', {
+          techName: job.technician
+        })
+      );
+    }
+
+    let updated = await Job.findOneAndUpdate(
       { _id: req.params.id },
       update,
       { new: true }
     ).lean();
+
+    if (!updated) {
+      return sendErr(res, 404, 'Job not found');
+    }
+
+    if (eventsToAppend.length > 0) {
+      await appendJobEvents(updated._id, eventsToAppend);
+      updated = await Job.findById(updated._id).lean() || updated;
+    }
 
     // Send admin notification when job is marked Completed by technician (best-effort, non-blocking)
     if (newStatus === 'Completed' && currentStatus !== 'Completed' && isAssignedTech) {
@@ -1078,7 +1262,7 @@ app.put('/api/jobs/:id/status', auth, async (req, res) => {
 //
 app.post('/api/jobs/:id/tech-notes', auth, async (req, res) => {
   try {
-    const { note } = req.body || {};
+    const { note, isAdminOnly = false } = req.body || {};
     
     if (!note || !note.trim()) {
       return res.status(400).json({ error: 'Note is required' });
@@ -1121,9 +1305,20 @@ app.post('/api/jobs/:id/tech-notes', auth, async (req, res) => {
     // Schema requires a valid Tech reference, never null
     job.techNotes.push({
       note: note.trim(),
+      isAdminOnly: Boolean(isAdminOnly),
       createdAt: new Date(),
       createdBy: isAssignedTech ? req.user.techId : job.assignedTo
     });
+
+    if (!job.events) {
+      job.events = [];
+    }
+    job.events.push(
+      makeJobEvent(req, 'note_added', {
+        notePreview: makeNotePreview(note),
+        author: getActorName(req.user)
+      })
+    );
     
     await job.save();
     

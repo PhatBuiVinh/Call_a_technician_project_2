@@ -2,48 +2,85 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Base font */
 @layer base {
-  html { font-family: "Poppins", system-ui, Avenir, Helvetica, Arial, sans-serif; }
-  h1, h2 { font-style: italic; font-weight: 500; }
+  :root {
+    --ease-standard: cubic-bezier(0.2, 0.65, 0.2, 1);
+    --dur-fast: 180ms;
+    --dur-base: 240ms;
+  }
+
+  html {
+    font-family: "Poppins", system-ui, Avenir, Helvetica, Arial, sans-serif;
+  }
+
+  body {
+    @apply antialiased text-slate-800 bg-white;
+  }
+
+  h1, h2, h3, h4 {
+    @apply tracking-[-0.01em] text-brand-navy;
+    font-style: normal;
+  }
 }
 
-/* Shared components */
 @layer components {
   .container-app { @apply max-w-6xl mx-auto px-4; }
-  .section { @apply py-14; }
+  .section { @apply py-12 md:py-16; }
+  .section-tight { @apply py-10 md:py-12; }
+  .section-feature { @apply py-16 md:py-20; }
+  .section-lead { @apply mt-2 text-slate-600 max-w-2xl; }
+  .h1 { @apply text-3xl md:text-5xl font-semibold leading-tight; }
+  .h2 { @apply text-2xl md:text-4xl font-semibold leading-tight; }
 
-  /* 🔄 was bg-brand1/10; now use lightblue from the new palette */
   .section-muted { @apply bg-brand-lightblue/10; }
 
-  .btn-primary     { @apply bg-brand-green text-brand-navy rounded-md px-4 py-2 font-semibold hover:brightness-95 transition; }
-  .btn-secondary   { @apply border border-brand-green text-brand-green rounded-md px-4 py-2 font-semibold hover:bg-brand-green hover:text-brand-navy transition; }
-  .btn-accent      { @apply bg-brand-blue text-white rounded-md px-4 py-2 font-semibold hover:brightness-95 transition; }
+  .btn-primary {
+    @apply bg-brand-green text-brand-navy rounded-lg px-5 py-2.5 font-semibold shadow-sm;
+    @apply hover:brightness-95 hover:-translate-y-[1px] active:translate-y-0;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:ring-offset-2;
+    transition: transform var(--dur-fast) var(--ease-standard), filter var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard);
+  }
+
+  .btn-secondary {
+    @apply border border-brand-blue/45 text-brand-blue rounded-lg px-5 py-2.5 font-semibold bg-white;
+    @apply hover:bg-brand-lightblue/20 hover:border-brand-blue active:translate-y-0;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:ring-offset-2;
+    transition: background-color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
+  }
+
+  .btn-accent {
+    @apply bg-brand-blue text-white rounded-lg px-5 py-2.5 font-semibold shadow-sm;
+    @apply hover:bg-brand-navy hover:-translate-y-[1px] active:translate-y-0;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:ring-offset-2;
+    transition: background-color var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
+  }
 
   .muted { @apply text-slate-600; }
-  .card  { @apply rounded-lg border bg-white p-5; }
-  .card-soft { @apply rounded-xl border bg-white shadow-sm; }
+  .card { @apply rounded-xl border border-slate-200/90 bg-white p-5 shadow-sm; }
+  .card-soft { @apply rounded-xl border border-slate-200/90 bg-white shadow-sm; }
+  .card-spotlight {
+    @apply rounded-2xl border border-brand-lightblue/30 bg-gradient-to-b from-white to-brand-lightblue/10;
+    @apply shadow-[0_14px_40px_rgba(26,88,211,0.12)];
+  }
   .chip { @apply text-xs rounded-full bg-brand-lightblue/40 text-brand-blue px-2 py-0.5; }
   .divider { @apply h-px bg-slate-200/70; }
   .list-brand { @apply list-disc list-inside; }
 }
 
 @layer utilities {
-  /* subtle dot grid that uses currentColor for the dots */
   .bg-dot-grid {
     background-image: radial-gradient(currentColor 0.6px, transparent 0.6px);
-    background-size: 22px 22px;       /* spacing between dots */
-    opacity: 0.25;                    /* keep it subtle */
-    pointer-events: none;             /* purely decorative */
+    background-size: 22px 22px;
+    opacity: 0.25;
+    pointer-events: none;
   }
 
-  /* gentle fade at the bottom so dots don't clash with the divider */
   .mask-fade-b {
     -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent);
             mask-image: linear-gradient(to bottom, black 70%, transparent);
   }
 
-.line-clamp-2 {
+  .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
@@ -57,4 +94,8 @@
     overflow: hidden;
   }
 
+  .motion-standard {
+    transition-duration: var(--dur-base);
+    transition-timing-function: var(--ease-standard);
+  }
 }

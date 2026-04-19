@@ -1,5 +1,6 @@
 import { createClient } from '@sanity/client'
 import imageUrlBuilder from '@sanity/image-url'
+import blogDemoImage from '../assets/blog/blogdemo.jpg'
 
 // Check if Sanity is configured
 const projectId = import.meta.env.VITE_SANITY_PROJECT_ID
@@ -30,7 +31,7 @@ const mockPosts = [
     author: 'Admin',
     date: new Date().toISOString(),
     readMins: 1,
-    image: '/src/assets/blog/blogdemo.jpg',
+    image: blogDemoImage,
     featured: true,
     content: [
       { type: 'p', text: 'Please configure Sanity CMS to see blog posts here.' }

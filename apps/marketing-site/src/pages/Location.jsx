@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
 import Section from "../components/layout/Section";
-import { H2 } from "../components/ui/Heading";
+import { H2 } from "../components/UI/Heading";
 import Button from "../components/atoms/Button";
 import { SA_MARKERS } from "../data/Home"; // <-- adjust path if needed
 

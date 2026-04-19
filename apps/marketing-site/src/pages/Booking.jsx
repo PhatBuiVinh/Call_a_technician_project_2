@@ -13,6 +13,7 @@ export default function Booking() {
     description: "",
   });
   const [errors, setErrors] = useState({});
+  const [statusMsg, setStatusMsg] = useState("");
 
   const onChange = (e) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
@@ -31,8 +32,7 @@ export default function Booking() {
     setErrors(eobj);
     if (Object.keys(eobj).length) return;
 
-    // TODO: replace with API call later
-    alert("Booking submitted (mock). We'll wire to backend next.");
+    setStatusMsg("Booking flow is being connected. Please use Contact for immediate scheduling.");
     setForm({
       service_type: "",
       name: "",
@@ -104,6 +104,7 @@ export default function Booking() {
             Cancel
           </Button>
         </div>
+        {statusMsg && <p className="text-sm text-slate-600">{statusMsg}</p>}
       </form>
     </div>
   );

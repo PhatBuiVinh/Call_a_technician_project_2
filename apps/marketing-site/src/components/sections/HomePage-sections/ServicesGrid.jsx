@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import Section from "../../layout/Section";
-import { H2 } from "../../ui/Heading";
+import { H2 } from "../../UI/Heading";
+import Button from "../../atoms/Button";
 
 export default function ServicesGrid({ items = [] }) {
   // Guard against bad input
@@ -89,12 +90,7 @@ export default function ServicesGrid({ items = [] }) {
 
         {/* view all CTA (optional) */}
         <div className="mt-6 flex justify-center">
-          <a
-            href="/services"
-            className="inline-flex items-center gap-2 rounded-md border bg-white px-4 py-2 text-sm font-medium text-brand-navy hover:bg-slate-50"
-          >
-            View all services →
-          </a>
+          <Button to="/services" variant="secondary">View all services</Button>
         </div>
       </div>
     </Section>

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import PostCard from "../../UI/PostCard";
+import blogDemoImage from "../../../assets/blog/blogdemo.jpg";
 
 const PAGE_SIZE = 6;
 
@@ -18,7 +19,7 @@ export default function BlogGrid({ posts = [], onPickCategory }) {
     author: String(featured.author || 'Anonymous'),
     readMins: Number(featured.readMins) || 5,
     date: String(featured.date || new Date().toISOString()),
-    image: String(featured.image || '/src/assets/blog/blogdemo.jpg')
+    image: String(featured.image || blogDemoImage)
   } : null;
 
   const filtered = useMemo(() => {

@@ -3,7 +3,7 @@ import { Disclosure } from "@headlessui/react";
 import { ChevronDown, HelpCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Section from "../../layout/Section";
-import { H2 } from "../../ui/Heading";
+import { H2 } from "../../UI/Heading";
 
 const FAQS = [
   { q: "Do you offer same-day service in Adelaide?", a: "Yes. Most appointments can be arranged the same day depending on your location and time of enquiry." },

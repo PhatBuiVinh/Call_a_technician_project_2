@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Section from "../../layout/Section";
-import { H2 } from "../../ui/Heading";
+import { H2 } from "../../UI/Heading";
 import Input from "../../atoms/Input";
 import Textarea from "../../atoms/Textarea";
 import Button from "../../atoms/Button";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import { portal } from "../../../lib/portal";
+import { getRecaptchaToken } from "../../../lib/recaptcha";
+import supportTeamImg from "../../../assets/Smiling Businesswoman with Tablet _ Premium…-Photoroom.png";
 
 export default function RequestCallForm() {
+  const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -102,18 +104,12 @@ export default function RequestCallForm() {
         images: images || [] // Ensure images is always an array
       };
 
-      const response = await fetch(`${API_BASE_URL}/api/marketing/job-request`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(submitData),
+      const recaptchaToken = await getRecaptchaToken('submit_job_request');
+      await portal.submitJobRequest({
+        ...submitData,
+        recaptchaToken,
       });
 
-      let responseData = null;
-      try { responseData = await response.json(); } catch { responseData = null; }
-
-      if (response.ok) {
         setSubmitStatus('success');
         setFormData({
           fullName: '',
@@ -125,11 +121,7 @@ export default function RequestCallForm() {
         setImagePreviews([]);
         
         // Reset the file input
-        const fileInput = document.querySelector('input[type="file"]');
-        if (fileInput) fileInput.value = '';
-      } else {
-        throw new Error((responseData && responseData.error) || `Server error: ${response.status}`);
-      }
+        if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (error) {
       console.error('Error submitting form:', error);
       setSubmitStatus('error');
@@ -202,6 +194,7 @@ export default function RequestCallForm() {
                   Upload Images (Optional - up to 5 images, max 5MB each)
                 </label>
                 <input
+                  ref={fileInputRef}
                   type="file"
                   accept="image/*"
                   multiple
@@ -212,7 +205,7 @@ export default function RequestCallForm() {
                     file:rounded-full file:border-0
                     file:text-sm file:font-semibold
                     file:bg-brand-navy file:text-white
-                    hover:file:bg-brand-royal
+                    hover:file:bg-brand-blue
                     cursor-pointer disabled:opacity-50"
                 />
                 
@@ -278,7 +271,7 @@ export default function RequestCallForm() {
           {/* Right: visual */}
           <div className="aspect-video flex items-center justify-center p-6 bg-transparent">
   <img
-    src={"/src/assets/Smiling Businesswoman with Tablet _ Premium…-Photoroom.png"}
+    src={supportTeamImg}
     alt="Support team"
     className="max-h-max w-auto object-contain drop-shadow-xl"
     style={{ maxWidth: "100%" }}

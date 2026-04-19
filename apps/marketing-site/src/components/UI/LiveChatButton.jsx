@@ -7,6 +7,7 @@ import { MessageCircle, X } from "lucide-react";
  */
 export default function LiveChatButton() {
   const [open, setOpen] = useState(false);
+  const [notice, setNotice] = useState("");
 
   return (
     <>
@@ -72,7 +73,7 @@ export default function LiveChatButton() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                alert("💬 Demo only — connect this to backend later.");
+                setNotice("Live chat is coming soon. Please call 1300 551 350 for immediate help.");
               }}
               className="border-t p-3 flex gap-2"
             >
@@ -88,6 +89,9 @@ export default function LiveChatButton() {
                 Send
               </button>
             </form>
+            {notice && (
+              <div className="px-3 pb-3 text-xs text-slate-600">{notice}</div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

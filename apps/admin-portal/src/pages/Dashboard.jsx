@@ -58,7 +58,9 @@ export default function Dashboard() {
     troubleshooting: '',
     // Completion evidence (read-only, populated when viewing completed jobs)
     completionForm: null,
-    completionPhotos: []
+    completionPhotos: [],
+    // Job events timeline (read-only in admin modal)
+    events: []
   };
   const [form, setForm] = useState(empty);
 
@@ -91,6 +93,15 @@ export default function Dashboard() {
 
     return counts;
   }, [jobs]);
+
+  const timelineEvents = useMemo(() => {
+    if (!Array.isArray(form.events)) return [];
+    return [...form.events].sort((a, b) => {
+      const tsA = new Date(a?.timestamp || a?.createdAt || 0).getTime();
+      const tsB = new Date(b?.timestamp || b?.createdAt || 0).getTime();
+      return tsB - tsA;
+    });
+  }, [form.events]);
 
   // Real-time price calculation effect
   useEffect(() => {
@@ -449,7 +460,10 @@ useEffect(() => {
 
     // completion evidence (read-only in admin view)
     completionForm: j.completionForm || null,
-    completionPhotos: j.completionPhotos || []
+    completionPhotos: j.completionPhotos || [],
+
+    // timeline events (read-only in admin view)
+    events: Array.isArray(j.events) ? j.events : []
   };
 
   // Form data created safely without circular references
@@ -747,8 +761,158 @@ async function save() {
     }
   }
 
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function downloadCompletionReport() {
+    if (!editingId) return;
+    if (!form.completionForm?.submittedAt) {
+      alert('No completion submission found for this job yet.');
+      return;
+    }
+
+    const reportWindow = window.open('', '_blank', 'noopener,noreferrer,width=980,height=1100');
+    if (!reportWindow) {
+      alert('Could not open report window. Please allow pop-ups and try again.');
+      return;
+    }
+
+    const submittedAt = new Date(form.completionForm.submittedAt).toLocaleString();
+    const technicianName = form.technician || 'Unknown technician';
+    const photos = Array.isArray(form.completionPhotos) ? form.completionPhotos : [];
+
+    const photoHtml = photos.length > 0
+      ? photos.map((photo, idx) => {
+          const safeUrl = escapeHtml(photo?.url || '');
+          return `
+            <div class="photo-item">
+              <a href="${safeUrl}" target="_blank" rel="noopener noreferrer">
+                <img src="${safeUrl}" alt="Evidence Photo ${idx + 1}" />
+              </a>
+              <div class="photo-caption">Photo ${idx + 1} - <a href="${safeUrl}" target="_blank" rel="noopener noreferrer">Open original</a></div>
+            </div>
+          `;
+        }).join('')
+      : '<p class="muted">No evidence photos submitted.</p>';
+
+    const html = `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Job Completion Report - ${escapeHtml(form.invoice || '')}</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, sans-serif;
+        color: #0f172a;
+        margin: 24px;
+        line-height: 1.45;
+      }
+      h1 { margin: 0 0 8px 0; font-size: 26px; }
+      h2 { margin: 24px 0 8px 0; font-size: 18px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; }
+      .muted { color: #64748b; }
+      .meta-grid {
+        display: grid;
+        grid-template-columns: 180px 1fr;
+        gap: 6px 14px;
+        margin-top: 12px;
+      }
+      .meta-key { color: #334155; font-weight: 600; }
+      .box {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px;
+        white-space: pre-wrap;
+        background: #f8fafc;
+      }
+      .photo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+        gap: 12px;
+      }
+      .photo-item {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 8px;
+      }
+      .photo-item img {
+        width: 100%;
+        height: 130px;
+        object-fit: cover;
+        border-radius: 6px;
+        border: 1px solid #cbd5e1;
+      }
+      .photo-caption { margin-top: 6px; font-size: 12px; color: #475569; }
+      @media print {
+        body { margin: 14mm; }
+        a { color: #0f172a; text-decoration: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Job Completion Report</h1>
+    <div class="muted">Generated ${escapeHtml(new Date().toLocaleString())}</div>
+
+    <h2>Job Details</h2>
+    <div class="meta-grid">
+      <div class="meta-key">Job Title</div><div>${escapeHtml(form.title || '')}</div>
+      <div class="meta-key">Customer</div><div>${escapeHtml(form.customerName || '')}</div>
+      <div class="meta-key">Invoice</div><div>${escapeHtml(form.invoice || '')}</div>
+      <div class="meta-key">Technician</div><div>${escapeHtml(technicianName)}</div>
+      <div class="meta-key">Submitted At</div><div>${escapeHtml(submittedAt)}</div>
+    </div>
+
+    <h2>Completion Form</h2>
+    <div class="meta-grid" style="margin-bottom:8px;">
+      <div class="meta-key">Follow-up Required</div><div>${form.completionForm?.followUpRequired ? 'Yes' : 'No'}</div>
+    </div>
+    <div class="meta-key" style="margin-bottom:4px;">Work Performed</div>
+    <div class="box">${escapeHtml(form.completionForm?.workPerformed || 'N/A')}</div>
+
+    <div class="meta-key" style="margin-top:12px; margin-bottom:4px;">Parts Used</div>
+    <div class="box">${escapeHtml(form.completionForm?.partsUsed || 'N/A')}</div>
+
+    <div class="meta-key" style="margin-top:12px; margin-bottom:4px;">Follow-up Notes</div>
+    <div class="box">${escapeHtml(form.completionForm?.followUpNotes || 'N/A')}</div>
+
+    <h2>Attachments</h2>
+    <div class="photo-grid">${photoHtml}</div>
+
+    <script>
+      window.onload = function () {
+        window.print();
+      };
+    </script>
+  </body>
+</html>`;
+
+    reportWindow.document.open();
+    reportWindow.document.write(html);
+    reportWindow.document.close();
+  }
+
   function exportCSV() {
-    const header = ['Title', 'Invoice', 'Priority', 'Status', 'Technician', 'Phone', 'Created'];
+    const header = [
+      'Title',
+      'Invoice',
+      'Priority',
+      'Status',
+      'Technician',
+      'Phone',
+      'Created',
+      'Work Performed',
+      'Parts Used',
+      'Follow Up Required',
+      'Follow Up Notes',
+      'Completion Submitted At',
+      'Completion Technician Name'
+    ];
     const rows = jobs.map((j) => [
       j.title,
       j.invoice,
@@ -757,6 +921,12 @@ async function save() {
       j.technician,
       j.phone,
       j.createdAt ? new Date(j.createdAt).toLocaleString() : '',
+      j.completionForm?.workPerformed || '',
+      j.completionForm?.partsUsed || '',
+      j.completionForm?.followUpRequired ? 'Yes' : 'No',
+      j.completionForm?.followUpNotes || '',
+      j.completionForm?.submittedAt ? new Date(j.completionForm.submittedAt).toLocaleString() : '',
+      j.technician || '',
     ]);
     const csv = [header, ...rows]
       .map((r) => r.map((x) => `"${(x ?? '').toString().replace(/"/g, '""')}"`).join(','))
@@ -829,6 +999,95 @@ async function save() {
   while (existingIds.has(id));
   return id;
 }
+
+  function formatRelativeTime(isoLike) {
+    if (!isoLike) return 'Unknown time';
+    const ts = new Date(isoLike).getTime();
+    if (Number.isNaN(ts)) return 'Unknown time';
+
+    const diffMs = Date.now() - ts;
+    const minutes = Math.floor(diffMs / 60000);
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days} day${days === 1 ? '' : 's'} ago`;
+
+    const weeks = Math.floor(days / 7);
+    if (weeks < 5) return `${weeks} week${weeks === 1 ? '' : 's'} ago`;
+
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months} month${months === 1 ? '' : 's'} ago`;
+
+    const years = Math.floor(days / 365);
+    return `${years} year${years === 1 ? '' : 's'} ago`;
+  }
+
+  function getEventMeta(type) {
+    const map = {
+      job_created: {
+        label: 'Job Created',
+        badgeClass: 'text-green-300 border-green-500/40 bg-green-500/10',
+        dotClass: 'bg-green-400/30 border-green-400'
+      },
+      status_changed: {
+        label: 'Status Changed',
+        badgeClass: 'text-sky-300 border-sky-500/40 bg-sky-500/10',
+        dotClass: 'bg-sky-400/30 border-sky-400'
+      },
+      technician_assigned: {
+        label: 'Technician Assigned',
+        badgeClass: 'text-cyan-300 border-cyan-500/40 bg-cyan-500/10',
+        dotClass: 'bg-cyan-400/30 border-cyan-400'
+      },
+      note_added: {
+        label: 'Note Added',
+        badgeClass: 'text-amber-300 border-amber-500/40 bg-amber-500/10',
+        dotClass: 'bg-amber-400/30 border-amber-400'
+      },
+      completion_submitted: {
+        label: 'Completion Submitted',
+        badgeClass: 'text-emerald-300 border-emerald-500/40 bg-emerald-500/10',
+        dotClass: 'bg-emerald-400/30 border-emerald-400'
+      },
+      job_closed: {
+        label: 'Job Closed',
+        badgeClass: 'text-rose-300 border-rose-500/40 bg-rose-500/10',
+        dotClass: 'bg-rose-400/30 border-rose-400'
+      }
+    };
+    return map[type] || {
+      label: 'Event',
+      badgeClass: 'text-slate-300 border-slate-500/40 bg-slate-500/10',
+      dotClass: 'bg-slate-400/30 border-slate-400'
+    };
+  }
+
+  function renderEventDetails(event) {
+    const details = event?.details || {};
+    switch (event?.type) {
+      case 'status_changed':
+        return `Status changed: ${details.fromStatus || 'Unknown'} -> ${details.toStatus || 'Unknown'}`;
+      case 'technician_assigned':
+        return `Assigned technician: ${details.techName || 'Unknown technician'}`;
+      case 'note_added': {
+        const author = details.author || event?.actorName || 'Unknown';
+        const preview = details.notePreview ? ` "${details.notePreview}"` : '';
+        return `Note added by ${author}.${preview}`;
+      }
+      case 'completion_submitted':
+        return `Completion evidence submitted by ${details.techName || event?.actorName || 'Technician'}`;
+      case 'job_closed':
+        return 'Job was moved to Closed status';
+      case 'job_created':
+        return 'Job record was created';
+      default:
+        return 'Job activity recorded';
+    }
+  }
 
   // Generate customer ID starting from 10000
   function generateCustomerCode() {
@@ -1380,24 +1639,17 @@ async function save() {
 
       <main className="max-w-6xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-extrabold text-white">
-            Welcome, <span className="text-brand-sky">{who}</span> 👋
-          </h1>
+          <div>
+            <h1 className="text-3xl font-extrabold text-white">
+              Welcome, <span className="text-brand-sky">{who}</span>
+            </h1>
+            <p className="text-sm text-slate-400 mt-1">Operations Dashboard</p>
+          </div>
 
           <div className="flex gap-3">
-            <button onClick={toggleTheme} className="px-4 py-2 rounded-xl bg-brand-sky/20 hover:bg-brand-sky/30 text-brand-sky border border-brand-sky/30">
-              Theme
-            </button>
             <button onClick={() => openNew()} className="px-4 py-2 rounded-xl bg-brand-blue hover:bg-brand-blue/90 text-white font-medium shadow-lg">
               New Job
             </button>
-            <button onClick={exportCSV} className="px-4 py-2 rounded-xl bg-brand-blue hover:bg-brand-blue/90 text-white font-medium shadow-lg">
-              Export
-            </button>
-            <button onClick={importClick} className="px-4 py-2 rounded-xl bg-brand-blue hover:bg-brand-blue/90 text-white font-medium shadow-lg">
-              Import
-            </button>
-            <input ref={fileRef} type="file" accept=".csv" hidden onChange={onImport} />
           </div>
         </div>
 
@@ -1414,7 +1666,6 @@ async function save() {
         <div className="bg-brand-panel rounded-2xl border border-brand-border overflow-hidden">
           <div className="bg-brand-bg px-6 py-4 border-b border-brand-border">
             <h2 className="text-xl font-bold text-white flex items-center gap-3">
-              <span className="text-2xl">📋</span>
               Recent Jobs
               <span className="text-sm font-normal text-text-secondary bg-brand-blue/20 px-3 py-1 rounded-full">
                 {jobs.length} {jobs.length === 1 ? 'job' : 'jobs'}
@@ -1424,7 +1675,6 @@ async function save() {
 
           {jobs.length === 0 ? (
             <div className="p-8 text-center">
-              <div className="text-6xl mb-4">📝</div>
               <h3 className="text-lg font-semibold text-white mb-2">No Jobs Yet</h3>
               <p className="text-slate-400 mb-4">
                 {loading ? 'Loading jobs...' : err ? `Error: ${err}` : 'Create your first job to get started!'}
@@ -1546,18 +1796,8 @@ async function save() {
             <div
               className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50"
               onClick={(e) => { 
-                // Only close if clicking on the backdrop itself, not on child elements
                 if (e.target === e.currentTarget) {
-                  console.log('Modal closed by backdrop click');
-                  // Comment out auto-close for now to prevent accidental closing
-                  // setOpen(false);
-                }
-              }}
-              onKeyDown={(e) => {
-                // Prevent accidental closing with Escape key - comment out for now
-                if (e.key === 'Escape') {
-                  console.log('Escape key pressed - modal closing disabled');
-                  // setOpen(false);
+                  setOpen(false);
                 }
               }}
             >
@@ -1570,10 +1810,7 @@ async function save() {
               {/* header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-brand-border flex-shrink-0 rounded-t-2xl" style={{ backgroundColor: '#0c1450' }}>
                 <h3 className="text-xl font-bold text-white">{editingId ? 'Edit Job' : 'New Job'}</h3>
-                <button onClick={() => {
-                  console.log('Modal closed by close button');
-                  setOpen(false);
-                }} className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors">
+                <button onClick={() => setOpen(false)} className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors">
                   Close
                 </button>
               </div>
@@ -1583,15 +1820,7 @@ async function save() {
                 {/* Customer Details Section */}
                 <div className="mb-6 rounded-2xl p-6 border border-brand-sky/20" style={{ backgroundColor: '#0c1450' }}>
                   <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-lg font-semibold text-brand-sky flex items-center gap-2">
-                      <span>👤</span> Customer Details
-                    </h4>
-                    <div className="flex items-center gap-2 text-sm text-slate-300">
-                      <span className="px-2 py-1 bg-blue-500/20 text-blue-300 rounded-full">Open: {jobCounts['Open']}</span>
-                      <span className="px-2 py-1 bg-yellow-500/20 text-yellow-300 rounded-full">In Progress: {jobCounts['In Progress']}</span>
-                      <span className="px-2 py-1 bg-purple-500/20 text-purple-300 rounded-full">Completed: {jobCounts['Completed']}</span>
-                      <span className="px-2 py-1 bg-slate-500/20 text-slate-300 rounded-full">Closed: {jobCounts['Closed']}</span>
-                    </div>
+                    <h4 className="text-lg font-semibold text-brand-sky">Customer Details</h4>
                   </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Customer Name with Auto-suggestions */}
@@ -1767,17 +1996,7 @@ async function save() {
                 {/* Job Details Section */}
                 <div className="mb-6 rounded-2xl p-6 border border-brand-sky/20" style={{ backgroundColor: '#0c1450' }}>
                   <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-lg font-semibold text-brand-sky flex items-center gap-2">
-                      <span>🛠️</span> Job Details
-                    </h4>
-                    <div className="flex items-center gap-2">
-                      <button className="px-2 py-1 rounded text-xs bg-white/10 hover:bg-white/20 text-white transition-colors">
-                        Ed
-                      </button>
-                      <button className="px-2 py-1 rounded text-xs bg-red-500/20 hover:bg-red-500/30 text-red-300 transition-colors">
-                        🗑️
-                      </button>
-                    </div>
+                    <h4 className="text-lg font-semibold text-brand-sky">Job Details</h4>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Job Title */}
@@ -2282,88 +2501,154 @@ async function save() {
                   </div>
                 </div>
 
-                {/* Completion Evidence Section (Read-only - shown when job is completed) */}
-                {editingId && form.status === 'Completed' && (
-                  <div className="mb-8 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-3xl p-8 border border-green-500/20 shadow-soft">
-                    <h4 className="text-2xl font-bold text-green-400 mb-6 flex items-center gap-3">
-                      <span>📋</span> Completion Evidence
-                      <span className="text-xs bg-green-600/20 text-green-300 px-2 py-1 rounded">Technician Submitted</span>
+                {/* Job Events Timeline (Read-only) */}
+                {editingId && (
+                  <div className="mb-8 bg-gradient-to-br from-slate-500/5 to-sky-500/5 rounded-3xl p-8 border border-slate-500/20 shadow-soft">
+                    <h4 className="text-2xl font-bold text-sky-300 mb-6 flex items-center gap-3">
+                      <span>Job Events Timeline</span>
+                      <span className="text-xs bg-slate-600/30 text-slate-200 px-2 py-1 rounded">
+                        {timelineEvents.length} {timelineEvents.length === 1 ? 'event' : 'events'}
+                      </span>
                     </h4>
 
-                    {!form._id ? (
-                      <div className="text-slate-400 italic">Loading completion data...</div>
+                    {timelineEvents.length === 0 ? (
+                      <div className="p-4 rounded-lg border border-white/10 bg-white/5 text-slate-300 text-sm">
+                        No timeline events recorded yet for this job.
+                      </div>
                     ) : (
-                      <div className="space-y-4">
-                        {/* Show a note that this is read-only */}
-                        <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/30 text-green-200 text-sm mb-4">
-                          <span className="font-medium">Review before closing:</span> This evidence was submitted by the technician when marking the job complete. It cannot be edited.
+                      <div className="max-h-80 overflow-y-auto pr-2">
+                        <div className="space-y-4">
+                          {timelineEvents.map((event, idx) => {
+                            const meta = getEventMeta(event?.type);
+                            const eventTs = event?.timestamp || event?.createdAt;
+                            const fullTimestamp = eventTs ? new Date(eventTs).toLocaleString() : 'Unknown time';
+
+                            return (
+                              <div key={`${event?.type || 'event'}-${eventTs || idx}-${idx}`} className="relative pl-7">
+                                {idx < timelineEvents.length - 1 && (
+                                  <span className="absolute left-[7px] top-6 bottom-[-14px] w-px bg-white/10" />
+                                )}
+                                <span className={`absolute left-0 top-1 h-4 w-4 rounded-full border ${meta.dotClass}`} />
+
+                                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className={`text-xs px-2 py-1 rounded-full border ${meta.badgeClass}`}>
+                                          {meta.label}
+                                        </span>
+                                        <span className="text-sm text-slate-200 font-medium">
+                                          {event?.actorName || 'System'}
+                                        </span>
+                                      </div>
+                                      <p className="text-sm text-slate-300 mt-2 break-words">
+                                        {renderEventDetails(event)}
+                                      </p>
+                                    </div>
+                                    <span
+                                      className="text-xs text-slate-400 whitespace-nowrap"
+                                      title={fullTimestamp}
+                                    >
+                                      {formatRelativeTime(eventTs)}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
-
-                        {/* Work Performed */}
-                        <div>
-                          <label className="block text-sm font-medium text-slate-300 mb-2">Work Performed</label>
-                          <div className="p-3 bg-white/5 rounded-lg border border-white/10 text-slate-200 whitespace-pre-wrap">
-                            {form.completionForm?.workPerformed || (
-                              <span className="text-slate-500 italic">No completion form submitted</span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Parts Used */}
-                        {form.completionForm?.partsUsed && (
-                          <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">Parts/Materials Used</label>
-                            <div className="p-3 bg-white/5 rounded-lg border border-white/10 text-slate-200">
-                              {form.completionForm.partsUsed}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Follow-up Required */}
-                        {form.completionForm?.followUpRequired && (
-                          <div className="p-4 bg-amber-500/10 rounded-lg border border-amber-500/30">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="text-amber-400 text-lg">⚠️</span>
-                              <span className="font-medium text-amber-400">Follow-up Required</span>
-                            </div>
-                            <p className="text-slate-300">{form.completionForm.followUpNotes}</p>
-                          </div>
-                        )}
-
-                        {/* Photos */}
-                        {form.completionPhotos && form.completionPhotos.length > 0 && (
-                          <div>
-                            <label className="block text-sm font-medium text-slate-300 mb-2">
-                              Evidence Photos ({form.completionPhotos.length})
-                            </label>
-                            <div className="flex gap-3 flex-wrap">
-                              {form.completionPhotos.map((photo, idx) => (
-                                <a
-                                  key={idx}
-                                  href={photo.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="w-24 h-24 rounded-lg overflow-hidden border border-slate-600 hover:border-green-400 transition"
-                                >
-                                  <img
-                                    src={photo.url}
-                                    alt={`Evidence ${idx + 1}`}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </a>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Submitted Info */}
-                        {form.completionForm?.submittedAt && (
-                          <p className="text-slate-500 text-xs pt-2 border-t border-white/10">
-                            Submitted: {new Date(form.completionForm.submittedAt).toLocaleString()}
-                          </p>
-                        )}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Completion Evidence Section (Read-only - shown when technician actually submitted evidence) */}
+                {editingId && form.completionForm?.submittedAt && (
+                  <div className="mb-8 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-3xl p-8 border border-green-500/20 shadow-soft">
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                      <h4 className="text-2xl font-bold text-green-400 flex items-center gap-3">
+                        <span>📋</span> Completion Evidence
+                        <span className="text-xs bg-green-600/20 text-green-300 px-2 py-1 rounded">Technician Submitted</span>
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={downloadCompletionReport}
+                        className="px-4 py-2 rounded-lg bg-green-600/20 hover:bg-green-600/30 text-green-200 border border-green-500/40 text-sm font-medium transition-all duration-200"
+                      >
+                        Download Report
+                      </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      {/* Show a note that this is read-only */}
+                      <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/30 text-green-200 text-sm mb-4">
+                        <span className="font-medium">Review before closing:</span> This evidence was submitted by the technician when marking the job complete. It cannot be edited.
+                      </div>
+
+                      {/* Work Performed */}
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Work Performed</label>
+                        <div className="p-3 bg-white/5 rounded-lg border border-white/10 text-slate-200 whitespace-pre-wrap">
+                          {form.completionForm?.workPerformed || (
+                            <span className="text-slate-500 italic">No completion form submitted</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Parts Used */}
+                      {form.completionForm?.partsUsed && (
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-2">Parts/Materials Used</label>
+                          <div className="p-3 bg-white/5 rounded-lg border border-white/10 text-slate-200">
+                            {form.completionForm.partsUsed}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Follow-up Required */}
+                      {form.completionForm?.followUpRequired && (
+                        <div className="p-4 bg-amber-500/10 rounded-lg border border-amber-500/30">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-amber-400 text-lg">⚠️</span>
+                            <span className="font-medium text-amber-400">Follow-up Required</span>
+                          </div>
+                          <p className="text-slate-300">{form.completionForm.followUpNotes}</p>
+                        </div>
+                      )}
+
+                      {/* Photos */}
+                      {form.completionPhotos && form.completionPhotos.length > 0 && (
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-2">
+                            Evidence Photos ({form.completionPhotos.length})
+                          </label>
+                          <div className="flex gap-3 flex-wrap">
+                            {form.completionPhotos.map((photo, idx) => (
+                              <a
+                                key={idx}
+                                href={photo.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-24 h-24 rounded-lg overflow-hidden border border-slate-600 hover:border-green-400 transition"
+                              >
+                                <img
+                                  src={photo.url}
+                                  alt={`Evidence ${idx + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Submitted Info */}
+                      {form.completionForm?.submittedAt && (
+                        <p className="text-slate-500 text-xs pt-2 border-t border-white/10">
+                          Submitted: {new Date(form.completionForm.submittedAt).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -2377,17 +2662,13 @@ async function save() {
                         onClick={() => removeJob(editingId)}
                         className="px-4 py-2 rounded-lg bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 font-medium transition-all duration-200 flex items-center gap-2"
                       >
-                        <span>🗑️</span>
                         Delete Job
                       </button>
                     )}
                   </div>
                   <div className="flex gap-3">
                     <button
-                      onClick={() => {
-                        console.log('Modal closed by cancel button');
-                        setOpen(false);
-                      }}
+                      onClick={() => setOpen(false)}
                       className="px-6 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium transition-all duration-200"
                     >
                       Cancel
@@ -2396,7 +2677,7 @@ async function save() {
                       onClick={save}
                       className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium transition-all duration-200 shadow-lg"
                     >
-                      Create - {currency.format(
+                      {editingId ? 'Save Job' : 'Create Job'} - {currency.format(
                         form.amount || (BASE_PRICE + getExtraPrice(Number(form.additionalMins)||0))
                       )}
                     </button>
