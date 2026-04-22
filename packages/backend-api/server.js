@@ -163,6 +163,52 @@ function auth(req, res, next) {
   }
 }
 
+function requireAdmin(req, res, next) {
+  if (req.user?.role !== 'admin') return sendErr(res, 403, 'Admins only');
+  return next();
+}
+
+function parseDateOnlyUTC(value, fieldName) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new Error(`${fieldName} must be YYYY-MM-DD`);
+  }
+
+  const [year, month, day] = value.split('-').map(Number);
+  const dt = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+
+  // Catch invalid dates like 2026-02-30
+  if (
+    Number.isNaN(dt.getTime()) ||
+    dt.getUTCFullYear() !== year ||
+    dt.getUTCMonth() !== month - 1 ||
+    dt.getUTCDate() !== day
+  ) {
+    throw new Error(`${fieldName} is not a valid date`);
+  }
+
+  return dt;
+}
+
+function buildUtcDateRange(from, to) {
+  const start = parseDateOnlyUTC(from, 'from');
+  const toStart = parseDateOnlyUTC(to, 'to');
+  const endExclusive = new Date(toStart.getTime() + 24 * 60 * 60 * 1000);
+
+  if (start >= endExclusive) {
+    throw new Error('from must be before or equal to to');
+  }
+
+  return { from, to, start, endExclusive };
+}
+
+const WORKFLOW_STATUSES = ['Assigned', 'Accepted', 'En Route', 'On Site', 'In Progress'];
+const ASSIGNMENT_FALLBACK_STATUSES = ['Assigned', 'Accepted', 'En Route', 'On Site', 'In Progress', 'Completed', 'Closed'];
+const OPEN_WORKLOAD_EXCLUDED_STATUSES = ['Completed', 'Closed'];
+
+function round2(value) {
+  return Math.round(value * 100) / 100;
+}
+
 /* ------------------------ MODELS ---------------------------- */
 const Job = require('./models/Job'); // must have fields: owner, title, invoice, technician, startAt, endAt, etc.
 
@@ -411,6 +457,359 @@ async function assertSchedulable({ ownerId, technicianName, start, end, ignoreId
 /* ------------------------ ROUTES ---------------------------- */
 // Health check
 app.get('/api/health', (req, res) => res.json({ ok: true }));
+
+/* ---------- Reports (Admin) ---------- */
+
+// Dashboard KPI summary
+app.get('/api/reports/dashboard-summary', auth, requireAdmin, async (req, res) => {
+  try {
+    const owner = req.user.sub;
+
+    const now = new Date();
+    const last30dStart = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+
+    const [
+      jobStatusRows,
+      incoming30d,
+      converted30d,
+      techDocs,
+    ] = await Promise.all([
+      Job.aggregate([
+        { $match: { owner } },
+        { $group: { _id: '$status', count: { $sum: 1 } } }
+      ]),
+      IncomingJobRequest.countDocuments({
+        createdAt: { $gte: last30dStart, $lt: now }
+      }),
+      IncomingJobRequest.countDocuments({
+        convertedAt: { $gte: last30dStart, $lt: now },
+        convertedToJobId: { $ne: null },
+        convertedBy: owner
+      }),
+      Tech.find({ createdBy: owner }).select('_id active').lean(),
+    ]);
+
+    let total = 0;
+    let open = 0;
+    let inWorkflow = 0;
+    let completed = 0;
+    let closed = 0;
+    let other = 0;
+
+    for (const row of jobStatusRows) {
+      const status = String(row?._id || '');
+      const count = Number(row?.count || 0);
+      total += count;
+
+      if (status === 'Open') open += count;
+      else if (WORKFLOW_STATUSES.includes(status)) inWorkflow += count;
+      else if (status === 'Completed') completed += count;
+      else if (status === 'Closed') closed += count;
+      else other += count;
+    }
+
+    const activeTechCount = techDocs.filter(t => t.active !== false).length;
+    const techIds = techDocs.map(t => t._id).filter(Boolean);
+    const linkedTechIds = techIds.length
+      ? await User.distinct('techId', { techId: { $in: techIds } })
+      : [];
+
+    const conversionRate = incoming30d > 0
+      ? round2((converted30d / incoming30d) * 100)
+      : 0;
+
+    return res.json({
+      jobs: {
+        total,
+        open,
+        inWorkflow,
+        completed,
+        closed
+      },
+      requests30d: {
+        incoming: incoming30d,
+        converted: converted30d,
+        conversionRate
+      },
+      technicians: {
+        active: activeTechCount,
+        withLoginAccounts: linkedTechIds.filter(Boolean).length
+      }
+    });
+  } catch (e) {
+    return sendErr(res, 500, e.message || 'Failed to generate dashboard summary');
+  }
+});
+
+// Core date-range summary metrics
+app.get('/api/reports/date-range-summary', auth, requireAdmin, async (req, res) => {
+  try {
+    const { from, to } = req.query;
+    const owner = req.user.sub;
+
+    let range;
+    try {
+      range = buildUtcDateRange(from, to);
+    } catch (e) {
+      return sendErr(res, 400, e.message);
+    }
+
+    const inRange = { $gte: range.start, $lt: range.endExclusive };
+
+    const [
+      jobsCreated,
+      incomingRequests,
+      convertedRequests,
+      completedPrimaryIds,
+      completedFallbackIds,
+      closedPrimaryIds,
+      closedFallbackIds,
+      followUpFlagged,
+    ] = await Promise.all([
+      Job.countDocuments({ owner, createdAt: inRange }),
+      IncomingJobRequest.countDocuments({ createdAt: inRange }),
+      IncomingJobRequest.countDocuments({
+        convertedAt: inRange,
+        convertedToJobId: { $ne: null },
+        convertedBy: owner
+      }),
+      Job.distinct('_id', { owner, completedAt: inRange }),
+      Job.distinct('_id', {
+        owner,
+        events: {
+          $elemMatch: {
+            type: 'status_changed',
+            'details.toStatus': 'Completed',
+            timestamp: inRange
+          }
+        }
+      }),
+      Job.distinct('_id', { owner, closedAt: inRange }),
+      Job.distinct('_id', {
+        owner,
+        events: {
+          $elemMatch: {
+            timestamp: inRange,
+            $or: [
+              { type: 'job_closed' },
+              { type: 'status_changed', 'details.toStatus': 'Closed' }
+            ]
+          }
+        }
+      }),
+      Job.countDocuments({
+        owner,
+        'completionForm.submittedAt': inRange,
+        'completionForm.followUpRequired': true
+      })
+    ]);
+
+    const jobsCompleted = new Set([
+      ...completedPrimaryIds.map(String),
+      ...completedFallbackIds.map(String)
+    ]).size;
+
+    const jobsClosed = new Set([
+      ...closedPrimaryIds.map(String),
+      ...closedFallbackIds.map(String)
+    ]).size;
+
+    return res.json({
+      range: {
+        from: range.from,
+        to: range.to
+      },
+      summary: {
+        jobsCreated,
+        incomingRequests,
+        convertedRequests,
+        jobsCompleted,
+        jobsClosed,
+        followUpFlagged
+      }
+    });
+  } catch (e) {
+    return sendErr(res, 500, e.message || 'Failed to generate date-range summary');
+  }
+});
+
+// Date-range technician performance rows
+app.get('/api/reports/date-range-technicians', auth, requireAdmin, async (req, res) => {
+  try {
+    const { from, to } = req.query;
+    const owner = req.user.sub;
+
+    let range;
+    try {
+      range = buildUtcDateRange(from, to);
+    } catch (e) {
+      return sendErr(res, 400, e.message);
+    }
+
+    const inRange = { $gte: range.start, $lt: range.endExclusive };
+
+    const techDocs = await Tech.find({ createdBy: owner })
+      .select('_id name active')
+      .sort({ name: 1 })
+      .lean();
+
+    const techIds = techDocs.map(t => t._id).filter(Boolean);
+
+    if (techIds.length === 0) {
+      return res.json({
+        range: { from: range.from, to: range.to },
+        rows: []
+      });
+    }
+
+    const [
+      assignedPrimary,
+      assignedFallback,
+      completionPrimary,
+      completionFallback,
+      followUpPrimary,
+      followUpFallback,
+      openWorkload,
+      linkedTechIds,
+    ] = await Promise.all([
+      Job.aggregate([
+        {
+          $match: {
+            owner,
+            assignedTo: { $in: techIds },
+            assignedAt: inRange
+          }
+        },
+        { $group: { _id: '$assignedTo', count: { $sum: 1 } } }
+      ]),
+      Job.aggregate([
+        {
+          $match: {
+            owner,
+            assignedTo: { $in: techIds, $ne: null },
+            assignedAt: null,
+            createdAt: inRange,
+            status: { $in: ASSIGNMENT_FALLBACK_STATUSES }
+          }
+        },
+        { $group: { _id: '$assignedTo', count: { $sum: 1 } } }
+      ]),
+      Job.aggregate([
+        {
+          $match: {
+            owner,
+            'completionForm.submittedAt': inRange,
+            'completionForm.submittedBy': { $in: techIds }
+          }
+        },
+        { $group: { _id: '$completionForm.submittedBy', count: { $sum: 1 } } }
+      ]),
+      Job.aggregate([
+        {
+          $match: {
+            owner,
+            'completionForm.submittedAt': inRange,
+            'completionForm.submittedBy': null,
+            assignedTo: { $in: techIds, $ne: null }
+          }
+        },
+        { $group: { _id: '$assignedTo', count: { $sum: 1 } } }
+      ]),
+      Job.aggregate([
+        {
+          $match: {
+            owner,
+            'completionForm.submittedAt': inRange,
+            'completionForm.followUpRequired': true,
+            'completionForm.submittedBy': { $in: techIds }
+          }
+        },
+        { $group: { _id: '$completionForm.submittedBy', count: { $sum: 1 } } }
+      ]),
+      Job.aggregate([
+        {
+          $match: {
+            owner,
+            'completionForm.submittedAt': inRange,
+            'completionForm.followUpRequired': true,
+            'completionForm.submittedBy': null,
+            assignedTo: { $in: techIds, $ne: null }
+          }
+        },
+        { $group: { _id: '$assignedTo', count: { $sum: 1 } } }
+      ]),
+      Job.aggregate([
+        {
+          $match: {
+            owner,
+            assignedTo: { $in: techIds, $ne: null },
+            status: { $nin: OPEN_WORKLOAD_EXCLUDED_STATUSES }
+          }
+        },
+        { $group: { _id: '$assignedTo', count: { $sum: 1 } } }
+      ]),
+      User.distinct('techId', { techId: { $in: techIds } }),
+    ]);
+
+    const assignMap = new Map();
+    const completionMap = new Map();
+    const followUpMap = new Map();
+    const openWorkloadMap = new Map();
+
+    for (const row of assignedPrimary) {
+      assignMap.set(String(row._id), Number(row.count || 0));
+    }
+    for (const row of assignedFallback) {
+      const key = String(row._id);
+      assignMap.set(key, (assignMap.get(key) || 0) + Number(row.count || 0));
+    }
+
+    for (const row of completionPrimary) {
+      completionMap.set(String(row._id), Number(row.count || 0));
+    }
+    for (const row of completionFallback) {
+      const key = String(row._id);
+      completionMap.set(key, (completionMap.get(key) || 0) + Number(row.count || 0));
+    }
+
+    for (const row of followUpPrimary) {
+      followUpMap.set(String(row._id), Number(row.count || 0));
+    }
+    for (const row of followUpFallback) {
+      const key = String(row._id);
+      followUpMap.set(key, (followUpMap.get(key) || 0) + Number(row.count || 0));
+    }
+
+    for (const row of openWorkload) {
+      openWorkloadMap.set(String(row._id), Number(row.count || 0));
+    }
+
+    const linkedSet = new Set(linkedTechIds.map(String));
+
+    const rows = techDocs.map((tech) => {
+      const techId = String(tech._id);
+      return {
+        techId,
+        name: tech.name || 'Unknown',
+        jobsAssigned: assignMap.get(techId) || 0,
+        completionSubmissions: completionMap.get(techId) || 0,
+        followUpFlagged: followUpMap.get(techId) || 0,
+        openWorkload: openWorkloadMap.get(techId) || 0,
+        hasLoginAccount: linkedSet.has(techId)
+      };
+    });
+
+    return res.json({
+      range: {
+        from: range.from,
+        to: range.to
+      },
+      rows
+    });
+  } catch (e) {
+    return sendErr(res, 500, e.message || 'Failed to generate technician date-range report');
+  }
+});
 
 /* ---------- Marketing Site Routes ---------- */
 // Submit job request from marketing site (no auth required)

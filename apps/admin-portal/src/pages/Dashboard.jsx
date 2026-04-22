@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
-import { api } from '../lib/api';
+import { api, reportsApi } from '../lib/api';
 import { useAuth } from '../context/AuthProvider';
 
 export default function Dashboard() {
@@ -26,6 +26,9 @@ export default function Dashboard() {
   const [techs, setTechs] = useState([]); // raw list from API (now has hasLoginAccount)
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
+  const [dashboardSummary, setDashboardSummary] = useState(null);
+  const [dashboardSummaryLoading, setDashboardSummaryLoading] = useState(false);
+  const [dashboardSummaryError, setDashboardSummaryError] = useState('');
 
   // ----- modal state (New/Edit job) -----
   const [open, setOpen] = useState(false);
@@ -151,6 +154,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     load();
+    loadDashboardSummary();
     const saved = localStorage.getItem('cat_theme');
     if (saved) document.documentElement.dataset.theme = saved;
     
@@ -270,6 +274,20 @@ useEffect(() => {
       setJobs([mockJob1, mockJob2]);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadDashboardSummary() {
+    setDashboardSummaryLoading(true);
+    setDashboardSummaryError('');
+    try {
+      const data = await reportsApi.getDashboardSummary();
+      setDashboardSummary(data || null);
+    } catch (e) {
+      setDashboardSummary(null);
+      setDashboardSummaryError(e?.message || 'Failed to load business statistics');
+    } finally {
+      setDashboardSummaryLoading(false);
     }
   }
 
@@ -1633,6 +1651,25 @@ async function save() {
     [jobs]
   );
 
+  const reportKpis = useMemo(() => {
+    if (!dashboardSummary) return [];
+    const safeNumber = (value) => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
+    const conversionRate = safeNumber(dashboardSummary?.requests30d?.conversionRate);
+
+    return [
+      { label: 'Total Jobs', value: safeNumber(dashboardSummary?.jobs?.total) },
+      { label: 'Open Jobs', value: safeNumber(dashboardSummary?.jobs?.open) },
+      { label: 'In Workflow', value: safeNumber(dashboardSummary?.jobs?.inWorkflow) },
+      { label: 'Completed Jobs', value: safeNumber(dashboardSummary?.jobs?.completed) },
+      { label: 'Closed Jobs', value: safeNumber(dashboardSummary?.jobs?.closed) },
+      { label: 'Incoming Requests (30d)', value: safeNumber(dashboardSummary?.requests30d?.incoming) },
+      { label: 'Converted Requests (30d)', value: safeNumber(dashboardSummary?.requests30d?.converted) },
+      { label: 'Conversion Rate (30d)', value: `${conversionRate.toFixed(1)}%` },
+      { label: 'Active Technicians', value: safeNumber(dashboardSummary?.technicians?.active) },
+      { label: 'Technicians With Login Accounts', value: safeNumber(dashboardSummary?.technicians?.withLoginAccounts) },
+    ];
+  }, [dashboardSummary]);
+
   return (
     <div className="min-h-screen bg-brand-bg text-white">
       <Header />
@@ -1661,6 +1698,53 @@ async function save() {
           <Card label="Completed" value={kpi.completed} />
           <Card label="Closed" value={kpi.closed} />
         </div>
+
+        <section className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-bold text-white">Business Statistics</h2>
+              <p className="text-sm text-slate-400 mt-1">Quick KPI snapshot from reporting data</p>
+            </div>
+            <button
+              onClick={loadDashboardSummary}
+              className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-sm text-white"
+              type="button"
+            >
+              Refresh
+            </button>
+          </div>
+
+          {dashboardSummaryLoading && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              {Array.from({ length: 10 }).map((_, idx) => (
+                <div key={idx} className="rounded-2xl p-5 bg-white/5 border border-white/10 animate-pulse">
+                  <div className="h-4 w-3/4 bg-white/10 rounded mb-3" />
+                  <div className="h-8 w-1/2 bg-white/10 rounded" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!dashboardSummaryLoading && dashboardSummaryError && (
+            <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 text-rose-200 px-4 py-3 text-sm">
+              {dashboardSummaryError}
+            </div>
+          )}
+
+          {!dashboardSummaryLoading && !dashboardSummaryError && reportKpis.length === 0 && (
+            <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
+              No business statistics are available yet.
+            </div>
+          )}
+
+          {!dashboardSummaryLoading && !dashboardSummaryError && reportKpis.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              {reportKpis.map((item) => (
+                <Card key={item.label} label={item.label} value={item.value} />
+              ))}
+            </div>
+          )}
+        </section>
 
         {/* Enhanced Recent Jobs Section */}
         <div className="bg-brand-panel rounded-2xl border border-brand-border overflow-hidden">

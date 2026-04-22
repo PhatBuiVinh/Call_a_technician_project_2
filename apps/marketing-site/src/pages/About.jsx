@@ -3,6 +3,9 @@ import { H2 } from "../components/UI/Heading";
 import Button from "../components/atoms/Button";
 import { motion, useInView } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import NeedHelpBand from "../components/UI/NeedHelpBand";
+import Reveal from "../components/animation/Reveal";
+import SplitRevealText from "../components/animation/SplitRevealText";
 import aboutTeamImg from "../assets/about/team.jpg";
 import caseStudyImg from "../assets/about/casestudy.jpg";
 import founderImg from "../assets/about/people.jpg";
@@ -11,25 +14,30 @@ export default function About() {
   return (
     <div className="text-slate-800">
       {/* HERO */}
+      <Reveal y={16} duration={0.45} amount={0.15}>
       <Section className="relative overflow-hidden bg-gradient-to-br from-brand-blue/10 to-brand-lightblue/10">
         <div className="absolute inset-0 bg-dot-grid text-brand-navy/15 pointer-events-none" />
         <div className="container-app text-center relative z-10">
-          <div className="w-16 h-[3px] bg-gradient-to-r from-brand-blue via-brand-lightblue to-brand-green rounded-full mx-auto" />
-          <h1 className="mt-4 text-3xl md:text-5xl font-semibold italic text-brand-navy">
-            We make tech support simple, human, and fast.
-          </h1>
-          <p className="mt-3 text-slate-600 text-lg max-w-2xl mx-auto">
+          <motion.div layoutId="shared-page-kicker" className="w-16 h-[3px] bg-gradient-to-r from-brand-blue via-brand-lightblue to-brand-green rounded-full mx-auto" />
+          <motion.div layoutId="shared-page-headline">
+            <SplitRevealText tag="h1" className="mt-4 text-3xl md:text-5xl font-semibold italic text-brand-navy" delay={0.04}>
+              We make tech support simple, human, and fast.
+            </SplitRevealText>
+          </motion.div>
+          <motion.p layoutId="shared-page-copy" className="mt-3 text-slate-600 text-lg max-w-2xl mx-auto">
             Adelaide-based technicians delivering same-day help for homes and small businesses —
             without jargon, and with a clear promise: <span className="font-medium">No Fix, No Fee.</span>
-          </p>
-          <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+          </motion.p>
+          <motion.div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
             <Button variant="primary" className="px-6 py-3" to="/contact">Book a Technician</Button>
             <Button variant="secondary" className="px-6 py-3" to="/contact">Contact Us</Button>
-          </div>
+          </motion.div>
         </div>
       </Section>
+      </Reveal>
 
       {/* OUR STORY (timeline + image) */}
+      <Reveal>
       <Section>
         <div className="container-app grid md:grid-cols-2 gap-10 items-center">
           {/* Image (replace src later) */}
@@ -67,8 +75,10 @@ export default function About() {
           </div>
         </div>
       </Section>
+      </Reveal>
 
       {/* METRICS STRIP */}
+      <Reveal>
       <Section>
   <div className="container-app">
     <div className="grid sm:grid-cols-3 gap-4 rounded-2xl border bg-white p-4 text-center">
@@ -82,8 +92,10 @@ export default function About() {
     </div>
   </div>
 </Section>
+      </Reveal>
 
 {/* MINI CASE STUDY */}
+<Reveal>
 <Section>
   <div className="container-app">
     <div className="grid md:grid-cols-3 gap-6 items-stretch">
@@ -117,9 +129,11 @@ export default function About() {
     </div>
   </div>
 </Section>
+      </Reveal>
 
 
       {/* VALUES (refined) */}
+      <Reveal>
       <Section muted>
         <div className="container-app">
           <H2 className="text-center">Our values</H2>
@@ -158,8 +172,10 @@ export default function About() {
           </div>
         </div>
       </Section>
+      </Reveal>
 
       {/* FOUNDER */}
+      <Reveal>
       <Section>
         <div className="container-app">
           <div className="max-w-2xl mx-auto">
@@ -183,9 +199,11 @@ export default function About() {
           </div>
         </div>
       </Section>
+        </Reveal>
 
 {/* COVERAGE CALLOUT */}
-<Section muted>
+      <Reveal>
+      <Section muted>
   <div className="container-app">
     <div className="rounded-2xl border bg-white p-6 flex flex-col md:flex-row items-center justify-between gap-4">
       <div>
@@ -202,26 +220,24 @@ export default function About() {
     </div>
   </div>
 </Section>
+      </Reveal>
 
 
       {/* CTA BAND */}
+      <Reveal>
       <Section>
         <div className="container-app">
-          <div className="rounded-2xl overflow-hidden bg-brand-navy text-white p-8 md:p-10 relative">
-            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-blue to-brand-lightblue" />
-            <h3 className="text-2xl font-semibold italic">Ready for stress-free tech support?</h3>
-            <p className="mt-2 text-white/80">
-              Book a technician today — we’ll get you back on track quickly.
-            </p>
-            <div className="mt-6 flex flex-col sm:flex-row gap-3">
-              <Button variant="primary" to="/contact">Book Now</Button>
-              <Button variant="secondary" className="border-white text-white hover:text-brand-navy" href="tel:1300551350">
-                1300 551 350
-              </Button>
-            </div>
-          </div>
+          <NeedHelpBand
+            title="Ready for stress-free tech support?"
+            description="Book a technician today — we’ll get you back on track quickly."
+            primaryLabel="Book Now"
+            primaryTo="/contact"
+            secondaryLabel="1300 551 350"
+            secondaryHref="tel:1300551350"
+          />
         </div>
       </Section>
+      </Reveal>
       
     </div>
   );

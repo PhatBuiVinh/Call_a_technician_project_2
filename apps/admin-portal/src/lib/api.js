@@ -46,3 +46,17 @@ export const incomingJobsApi = {
   convertCheck: (requestId) => api(`/incoming-jobs/${requestId}/convert-check`),
   getConvertData: (requestId) => api(`/incoming-jobs/${requestId}/convert-check`),
 };
+
+export const reportsApi = {
+  getDashboardSummary: () => api('/reports/dashboard-summary'),
+
+  getDateRangeSummary: ({ from, to }) => {
+    const query = new URLSearchParams({ from, to }).toString();
+    return api(`/reports/date-range-summary?${query}`);
+  },
+
+  getDateRangeTechnicians: ({ from, to }) => {
+    const query = new URLSearchParams({ from, to }).toString();
+    return api(`/reports/date-range-technicians?${query}`);
+  },
+};

@@ -1,12 +1,60 @@
 export const SERVICES = [
-  { icon: "💻", title: "Virus & Malware Removal", blurb: "Clean infections and secure your PC." },
-  { icon: "🔐", title: "Secure Hacked Devices", blurb: "Lock down compromised accounts & devices." },
-  { icon: "⚡", title: "Speed Up Slow Computers", blurb: "Tune‑up & performance fixes." },
-  { icon: "📶", title: "Network & Wi‑Fi", blurb: "Setup, optimise and troubleshoot Wi‑Fi." },
-  { icon: "🪫", title: "Won’t Boot / Startup", blurb: "Recover boot issues without losing data." },
-  { icon: "🛠️", title: "Hardware Repairs", blurb: "Diagnose & replace faulty parts." },
-  { icon: "🆕", title: "New PC Setup", blurb: "Transfer data & set up apps/printers." },
-  { icon: "☁️", title: "Backup & Data Recovery", blurb: "Protect files and recover when possible." },
+  {
+    icon: "💻",
+    title: "Virus & Malware Removal",
+    blurb: "Clean infections and secure your PC.",
+    image: "/images/services/service-virus-removal-01.webp",
+    imageAlt: "Technician running malware cleanup on a desktop PC",
+  },
+  {
+    icon: "🔐",
+    title: "Secure Hacked Devices",
+    blurb: "Lock down compromised accounts & devices.",
+    image: "/images/services/service-security-hardening-01.webp",
+    imageAlt: "Security checks on a laptop with account protection",
+  },
+  {
+    icon: "⚡",
+    title: "Speed Up Slow Computers",
+    blurb: "Tune-up and performance fixes.",
+    image: "/images/services/service-laptop-speedup-01.webp",
+    imageAlt: "Technician optimizing laptop performance",
+  },
+  {
+    icon: "📶",
+    title: "Network & Wi-Fi",
+    blurb: "Setup, optimise and troubleshoot Wi-Fi.",
+    image: "/images/services/service-home-wifi-repair-01.webp",
+    imageAlt: "Technician testing home Wi-Fi signal",
+  },
+  {
+    icon: "🪫",
+    title: "Won't Boot / Startup",
+    blurb: "Recover boot issues without losing data.",
+    image: "/images/services/service-startup-repair-01.webp",
+    imageAlt: "Computer startup troubleshooting on workbench",
+  },
+  {
+    icon: "🛠️",
+    title: "Hardware Repairs",
+    blurb: "Diagnose and replace faulty parts.",
+    image: "/images/services/service-hardware-repair-01.webp",
+    imageAlt: "Technician repairing internal computer hardware",
+  },
+  {
+    icon: "🆕",
+    title: "New PC Setup",
+    blurb: "Transfer data and set up apps/printers.",
+    image: "/images/services/service-new-device-setup-01.webp",
+    imageAlt: "New computer setup with software installation",
+  },
+  {
+    icon: "☁️",
+    title: "Backup & Data Recovery",
+    blurb: "Protect files and recover when possible.",
+    image: "/images/services/service-data-recovery-01.webp",
+    imageAlt: "Data backup and recovery work in progress",
+  },
 ];
 
 export const WHY = [

@@ -2,6 +2,17 @@ import { motion } from "framer-motion";
 import Section from "../../layout/Section";
 import { H2 } from "../../UI/Heading";
 import Button from "../../atoms/Button";
+import fallbackImage from "../../../assets/tech-visit.jpg";
+
+const getNextImageFallback = (src = "") => {
+  if (/\.webp(?=($|\?))/i.test(src)) {
+    return src.replace(/\.webp(?=($|\?))/i, ".png");
+  }
+  if (/\.png(?=($|\?))/i.test(src)) {
+    return src.replace(/\.png(?=($|\?))/i, ".jpg");
+  }
+  return null;
+};
 
 export default function ServicesGrid({ items = [] }) {
   // Guard against bad input
@@ -40,6 +51,25 @@ export default function ServicesGrid({ items = [] }) {
                     focus:outline-none focus:ring-2 focus:ring-brand-lightblue/60
                   "
                 >
+                  <div className="mb-4 h-36 w-full overflow-hidden rounded-lg bg-slate-100">
+                    <img
+                      src={s.image || fallbackImage}
+                      alt={s.imageAlt || s.title}
+                      loading="lazy"
+                      onError={(e) => {
+                        const nextSrc = getNextImageFallback(e.currentTarget.getAttribute("src") || "");
+                        if (nextSrc) {
+                          e.currentTarget.setAttribute("src", nextSrc);
+                          return;
+                        }
+
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = fallbackImage;
+                      }}
+                      className="h-full w-full object-cover motion-standard group-hover:scale-[1.03]"
+                    />
+                  </div>
+
                   {/* top accent */}
                   <div className="h-1 w-12 bg-gradient-to-r from-brand-blue to-brand-lightblue rounded-full" />
 

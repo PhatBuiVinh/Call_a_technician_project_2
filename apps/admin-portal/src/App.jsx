@@ -10,6 +10,7 @@ import Technicians from './pages/Technicians';
 import CalendarPage from './pages/Calendar';
 import Customers from './pages/Customers';
 import IncomingJobs from './pages/IncomingJobs';
+import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import TechDashboard from './pages/TechDashboard';
 import TechJobDetail from './pages/TechJobDetail';
@@ -55,6 +56,7 @@ export default function App() {
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/customers" element={<Customers />} />
             <Route path="/incoming-jobs" element={<IncomingJobs />} />
+            <Route path="/reports" element={<Reports />} />
           </Route>
 
           {/* Technician Routes */}

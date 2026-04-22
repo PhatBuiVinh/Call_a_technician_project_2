@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowUp } from "lucide-react";
+import { useMotionPreference } from "../../contexts/MotionPreferenceContext";
 
 export default function BackToTop() {
   const [visible, setVisible] = useState(false);
+  const { reduceMotion, motionIntensity } = useMotionPreference();
+  const subtle = motionIntensity === "subtle";
 
   useEffect(() => {
     const toggleVisibility = () => {
@@ -18,7 +21,7 @@ export default function BackToTop() {
   }, []);
 
   const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
   };
 
   return (
@@ -26,10 +29,28 @@ export default function BackToTop() {
       {visible && (
         <motion.button
           key="backtotop"
-          initial={{ opacity: 0, y: 20, scale: 0.8 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 20, scale: 0.8 }}
-          transition={{ duration: 0.25 }}
+          initial={reduceMotion ? false : { opacity: 0, y: 20, scale: 0.8 }}
+          animate={
+            reduceMotion
+              ? { opacity: 1 }
+              : subtle
+                ? { opacity: 1, y: 0, scale: 1 }
+                : { opacity: 1, y: 0, scale: 1 }
+          }
+          exit={
+            reduceMotion
+              ? { opacity: 0 }
+              : subtle
+                ? { opacity: 0, y: 8, scale: 0.95 }
+                : { opacity: 0, y: 20, scale: 0.8 }
+          }
+          transition={
+            reduceMotion
+              ? { duration: 0 }
+              : subtle
+                ? { duration: 0.16 }
+                : { duration: 0.25 }
+          }
           onClick={scrollToTop}
           className="
             fixed bottom-24 right-7 z-40

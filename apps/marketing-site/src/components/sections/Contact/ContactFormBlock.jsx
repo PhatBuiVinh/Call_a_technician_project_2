@@ -23,6 +23,12 @@ const MAX_MB = 5;
 const DRAFT_KEY = "contact_form_draft_v1";
 
 export default function ContactFormBlock() {
+  const STEPS = [
+    { id: 1, title: "Contact" },
+    { id: 2, title: "Issue" },
+    { id: 3, title: "Review" },
+  ];
+
   // form state
   const [values, setValues] = useState({
     name: "",
@@ -44,6 +50,7 @@ export default function ContactFormBlock() {
   const [success, setSuccess] = useState(false); // you can toggle a modal using this
   const [serverError, setServerError] = useState("");
   const [jobRef, setJobRef] = useState(""); // NEW: show job reference if backend returns it
+  const [activeStep, setActiveStep] = useState(1);
 
   // Anti-spam: track form load time (3 second minimum)
   const formLoadTime = useRef(Date.now());
@@ -187,9 +194,52 @@ export default function ContactFormBlock() {
     });
   }
 
+  const STEP_FIELDS = {
+    1: ["name", "phone", "email"],
+    2: ["preferredAt", "message"],
+    3: ["files"],
+  };
+
+  function markStepTouched(step) {
+    const fields = STEP_FIELDS[step] || [];
+    const patch = {};
+    for (const field of fields) {
+      patch[field] = true;
+    }
+    if (Object.keys(patch).length) {
+      setTouched((t) => ({ ...t, ...patch }));
+    }
+  }
+
+  function stepHasErrors(step) {
+    const fields = STEP_FIELDS[step] || [];
+    return fields.some((field) => {
+      if (field === "files") return Boolean(errors.files);
+      return Boolean(errors[field]);
+    });
+  }
+
+  function onNextStep() {
+    markStepTouched(activeStep);
+    if (stepHasErrors(activeStep)) {
+      focusFirstError(STEP_FIELDS[activeStep]);
+      return;
+    }
+    setActiveStep((s) => Math.min(3, s + 1));
+  }
+
+  function onPrevStep() {
+    setActiveStep((s) => Math.max(1, s - 1));
+  }
+
   // SUBMIT: replaced to call Portal API (no more fake demo delay)
   async function onSubmit(e) {
     e.preventDefault();
+
+    if (activeStep < 3) {
+      onNextStep();
+      return;
+    }
 
     // Reveal validation errors and move focus to the first problem field.
     setTouched((t) => ({
@@ -259,6 +309,7 @@ export default function ContactFormBlock() {
       setFiles([]);
       setValues({ name: "", phone: "", email: "", suburb: "", time: "", preferredAt: "", message: "", website: "" });
       setTouched({});
+      setActiveStep(1);
       localStorage.removeItem(DRAFT_KEY);
 
     } catch (err) {
@@ -267,7 +318,7 @@ export default function ContactFormBlock() {
     }
   }
 
-  function focusFirstError() {
+  function focusFirstError(preferredFields = null) {
     const order = [
       ["name", refs.name],
       ["phone", refs.phone],
@@ -276,7 +327,11 @@ export default function ContactFormBlock() {
       ["message", refs.message],
     ];
 
-    for (const [key, ref] of order) {
+    const filteredOrder = Array.isArray(preferredFields)
+      ? order.filter(([key]) => preferredFields.includes(key))
+      : order;
+
+    for (const [key, ref] of filteredOrder) {
       if (!errors[key]) continue;
       ref.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       const target = ref.current?.querySelector("input, textarea");
@@ -284,7 +339,7 @@ export default function ContactFormBlock() {
       return;
     }
 
-    if (errors.files) {
+    if (errors.files && (!Array.isArray(preferredFields) || preferredFields.includes("files"))) {
       fileZoneRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       const fileInput = fileZoneRef.current?.querySelector("input[type='file']");
       fileInput?.focus();
@@ -338,176 +393,227 @@ export default function ContactFormBlock() {
               </label>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div ref={refs.name}>
-                <Input
-                  label="Full name"
-                  placeholder="Your name"
-                  autoComplete="name"
-                  required
-                  value={values.name}
-                  onChange={onChange("name")}
-                  aria-invalid={!!(touched.name && errors.name)}
-                  aria-describedby={touched.name && errors.name ? "err-name" : undefined}
-                  title="Your full name helps us address you correctly"
-                />
-                {touched.name && errors.name && <p id="err-name" className="mt-1 text-xs text-red-600">{errors.name}</p>}
+            <div className="rounded-xl border border-brand-blue/20 bg-white/75 p-3">
+              <div className="mb-2 flex items-center justify-between text-xs text-slate-600">
+                <span>Step {activeStep} of 3</span>
+                <span>{STEPS.find((s) => s.id === activeStep)?.title}</span>
               </div>
-
-              <div ref={refs.phone}>
-                <Input
-                  label="Phone"
-                  placeholder="e.g., 04xx xxx xxx"
-                  autoComplete="tel"
-                  inputMode="tel"
-                  required
-                  value={values.phone}
-                  onChange={onChange("phone")}
-                  aria-invalid={!!(touched.phone && errors.phone)}
-                  aria-describedby={touched.phone && errors.phone ? "err-phone" : undefined}
-                  title="Mobile preferred for same-day scheduling"
-                />
-                {touched.phone && errors.phone && <p id="err-phone" className="mt-1 text-xs text-red-600">{errors.phone}</p>}
-              </div>
-            </div>
-
-            <div ref={refs.email}>
-              <Input
-                label="Email (optional)"
-                type="email"
-                placeholder="you@example.com"
-                autoComplete="email"
-                value={values.email}
-                onChange={onChange("email")}
-                aria-invalid={!!(touched.email && errors.email)}
-                aria-describedby={touched.email && errors.email ? "err-email" : undefined}
-              />
-              {touched.email && errors.email && <p id="err-email" className="mt-1 text-xs text-red-600">{errors.email}</p>}
-            </div>
-
-            <div className="grid sm:grid-cols-2 gap-4">
-              {/* Suburb with datalist */}
-              <div>
-                <label className="block text-sm text-slate-700">
-                  Suburb
-                  <input
-                    list="sa-suburbs"
-                    className="mt-1 w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm bg-white motion-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:border-brand-blue hover:border-slate-400"
-                    placeholder="e.g., Glenelg"
-                    value={values.suburb}
-                    onChange={onChange("suburb")}
-                  />
-                  <datalist id="sa-suburbs">
-                    {SA_SUBURBS.map((s) => <option key={s} value={s} />)}
-                  </datalist>
-                </label>
-              </div>
-
-              <Input
-                label="Preferred time (notes)"
-                placeholder="e.g., today after 3pm"
-                value={values.time}
-                onChange={onChange("time")}
-              />
-            </div>
-
-            {/* Native date/time — optional */}
-            <div ref={refs.preferredAt}>
-              <label className="block text-sm text-slate-700">
-                Preferred date & time (optional)
-                <input
-                  type="datetime-local"
-                  className="mt-1 w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm bg-white motion-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:border-brand-blue hover:border-slate-400"
-                  value={values.preferredAt}
-                  onChange={onChange("preferredAt")}
-                  min={getLocalNowForInput()}
-                />
-              </label>
-              {touched.preferredAt && errors.preferredAt && (
-                <p className="mt-1 text-xs text-red-600">{errors.preferredAt}</p>
-              )}
-              <p className="mt-1 text-xs text-slate-500">We’ll try our best to book this time (subject to availability).</p>
-            </div>
-
-            {/* Message + counter */}
-            <div ref={refs.message}>
-              <Textarea
-                label="How can we help?"
-                rows={5}
-                placeholder="Describe the problem…"
-                value={values.message}
-                onChange={onChange("message")}
-                aria-invalid={!!(touched.message && errors.message)}
-                aria-describedby={touched.message && errors.message ? "err-message" : undefined}
-              />
-              <div className="mt-1 flex items-center justify-between">
-                {touched.message && errors.message
-                  ? <p id="err-message" className="text-xs text-red-600">{errors.message}</p>
-                  : <span className="text-xs text-slate-500">{values.message.length}/{MAX_MSG}</span>}
-              </div>
-            </div>
-
-            {/* Drop zone + file input */}
-            <div
-              ref={fileZoneRef}
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={onDrop}
-              className={`rounded-lg border p-4 motion-standard ${dragOver ? "border-brand-blue bg-brand-lightblue/10" : "border-slate-200 bg-white"}`}
-              title="Drag and drop screenshots here"
-            >
-              <label className="block text-sm text-slate-700">
-                Add screenshots/photos (optional)
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={onSelectFiles}
-                  className="mt-1 block w-full text-sm file:mr-3 file:rounded-md file:border file:bg-white file:px-3 file:py-1.5 file:text-sm hover:file:bg-slate-50"
-                />
-              </label>
-              <p className="mt-1 text-xs text-slate-500">Up to {MAX_FILES} images, max {MAX_MB}MB each. You can drag and drop files.</p>
-
-              {files.length > 0 && (
-                <div className="mt-3 grid grid-cols-3 gap-3">
-                  {files.map((f, i) => (
-                    <div key={i} className="relative rounded-lg border overflow-hidden bg-slate-50">
-                      {f.url
-                        ? <img src={f.url} alt={`upload ${i + 1}`} className="h-28 w-full object-cover" />
-                        : <div className="h-28 w-full grid place-items-center text-xs text-slate-500">Preview</div>}
-                      <button
-                        type="button"
-                        onClick={() => removeFile(i)}
-                        className="absolute top-1 right-1 rounded bg-white/90 px-2 py-0.5 text-[11px] border hover:bg-white"
-                      >
-                        Remove
-                      </button>
-                      {f.error && <div className="p-2 text-[11px] text-red-600">{f.error}</div>}
+              <div className="grid grid-cols-3 gap-2">
+                {STEPS.map((step) => {
+                  const isActive = activeStep === step.id;
+                  const isDone = activeStep > step.id;
+                  return (
+                    <div
+                      key={step.id}
+                      className={`rounded-md px-2 py-1.5 text-center text-xs font-medium motion-standard ${
+                        isActive
+                          ? "bg-brand-blue text-white"
+                          : isDone
+                            ? "bg-brand-lightblue/25 text-brand-blue"
+                            : "bg-slate-100 text-slate-500"
+                      }`}
+                    >
+                      {step.title}
                     </div>
-                  ))}
-                </div>
-              )}
-              {errors.files && <p className="mt-2 text-xs text-red-600">{errors.files}</p>}
+                  );
+                })}
+              </div>
             </div>
 
-            <div className="flex items-center justify-between gap-3">
-              <label className="text-xs text-slate-500 max-w-[70%]">
-                We’ll never share your details. By submitting, you agree to be contacted about your request.
-              </label>
+            {activeStep === 1 && (
+              <>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div ref={refs.name}>
+                    <Input
+                      label="Full name"
+                      placeholder="Your name"
+                      autoComplete="name"
+                      required
+                      value={values.name}
+                      onChange={onChange("name")}
+                      aria-invalid={!!(touched.name && errors.name)}
+                      aria-describedby={touched.name && errors.name ? "err-name" : undefined}
+                      title="Your full name helps us address you correctly"
+                    />
+                    {touched.name && errors.name && <p id="err-name" className="mt-1 text-xs text-red-600">{errors.name}</p>}
+                  </div>
 
-              <Button
-                type="submit"
-                className="min-w-40 inline-flex items-center justify-center gap-2"
-                disabled={submitting}
-              >
-                {submitting && (
-                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" aria-hidden="true">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                  </svg>
+                  <div ref={refs.phone}>
+                    <Input
+                      label="Phone"
+                      placeholder="e.g., 04xx xxx xxx"
+                      autoComplete="tel"
+                      inputMode="tel"
+                      required
+                      value={values.phone}
+                      onChange={onChange("phone")}
+                      aria-invalid={!!(touched.phone && errors.phone)}
+                      aria-describedby={touched.phone && errors.phone ? "err-phone" : undefined}
+                      title="Mobile preferred for same-day scheduling"
+                    />
+                    {touched.phone && errors.phone && <p id="err-phone" className="mt-1 text-xs text-red-600">{errors.phone}</p>}
+                  </div>
+                </div>
+
+                <div ref={refs.email}>
+                  <Input
+                    label="Email (optional)"
+                    type="email"
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                    value={values.email}
+                    onChange={onChange("email")}
+                    aria-invalid={!!(touched.email && errors.email)}
+                    aria-describedby={touched.email && errors.email ? "err-email" : undefined}
+                  />
+                  {touched.email && errors.email && <p id="err-email" className="mt-1 text-xs text-red-600">{errors.email}</p>}
+                </div>
+              </>
+            )}
+
+            {activeStep === 2 && (
+              <>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm text-slate-700">
+                      Suburb
+                      <input
+                        list="sa-suburbs"
+                        className="mt-1 w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm bg-white motion-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:border-brand-blue hover:border-slate-400"
+                        placeholder="e.g., Glenelg"
+                        value={values.suburb}
+                        onChange={onChange("suburb")}
+                      />
+                      <datalist id="sa-suburbs">
+                        {SA_SUBURBS.map((s) => <option key={s} value={s} />)}
+                      </datalist>
+                    </label>
+                  </div>
+
+                  <Input
+                    label="Preferred time (notes)"
+                    placeholder="e.g., today after 3pm"
+                    value={values.time}
+                    onChange={onChange("time")}
+                  />
+                </div>
+
+                <div ref={refs.preferredAt}>
+                  <label className="block text-sm text-slate-700">
+                    Preferred date & time (optional)
+                    <input
+                      type="datetime-local"
+                      className="mt-1 w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm bg-white motion-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:border-brand-blue hover:border-slate-400"
+                      value={values.preferredAt}
+                      onChange={onChange("preferredAt")}
+                      min={getLocalNowForInput()}
+                    />
+                  </label>
+                  {touched.preferredAt && errors.preferredAt && (
+                    <p className="mt-1 text-xs text-red-600">{errors.preferredAt}</p>
+                  )}
+                  <p className="mt-1 text-xs text-slate-500">We’ll try our best to book this time (subject to availability).</p>
+                </div>
+
+                <div ref={refs.message}>
+                  <Textarea
+                    label="How can we help?"
+                    rows={5}
+                    placeholder="Describe the problem…"
+                    value={values.message}
+                    onChange={onChange("message")}
+                    aria-invalid={!!(touched.message && errors.message)}
+                    aria-describedby={touched.message && errors.message ? "err-message" : undefined}
+                  />
+                  <div className="mt-1 flex items-center justify-between">
+                    {touched.message && errors.message
+                      ? <p id="err-message" className="text-xs text-red-600">{errors.message}</p>
+                      : <span className="text-xs text-slate-500">{values.message.length}/{MAX_MSG}</span>}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {activeStep === 3 && (
+              <>
+                <div className="rounded-lg border border-brand-blue/20 bg-brand-lightblue/10 p-3 text-sm text-slate-700">
+                  Quick review: we will contact <span className="font-medium">{values.name || "you"}</span> on <span className="font-medium">{values.phone || "your phone"}</span>.
+                </div>
+
+                <div
+                  ref={fileZoneRef}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={onDrop}
+                  className={`rounded-lg border p-4 motion-standard ${dragOver ? "border-brand-blue bg-brand-lightblue/10" : "border-slate-200 bg-white"}`}
+                  title="Drag and drop screenshots here"
+                >
+                  <label className="block text-sm text-slate-700">
+                    Add screenshots/photos (optional)
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={onSelectFiles}
+                      className="mt-1 block w-full text-sm file:mr-3 file:rounded-md file:border file:bg-white file:px-3 file:py-1.5 file:text-sm hover:file:bg-slate-50"
+                    />
+                  </label>
+                  <p className="mt-1 text-xs text-slate-500">Up to {MAX_FILES} images, max {MAX_MB}MB each. You can drag and drop files.</p>
+
+                  {files.length > 0 && (
+                    <div className="mt-3 grid grid-cols-3 gap-3">
+                      {files.map((f, i) => (
+                        <div key={i} className="relative rounded-lg border overflow-hidden bg-slate-50">
+                          {f.url
+                            ? <img src={f.url} alt={`upload ${i + 1}`} className="h-28 w-full object-cover" />
+                            : <div className="h-28 w-full grid place-items-center text-xs text-slate-500">Preview</div>}
+                          <button
+                            type="button"
+                            onClick={() => removeFile(i)}
+                            className="absolute top-1 right-1 rounded bg-white/90 px-2 py-0.5 text-[11px] border hover:bg-white"
+                          >
+                            Remove
+                          </button>
+                          {f.error && <div className="p-2 text-[11px] text-red-600">{f.error}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {errors.files && <p className="mt-2 text-xs text-red-600">{errors.files}</p>}
+                </div>
+              </>
+            )}
+
+            <div className="flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
+              <div className="text-xs text-slate-500 max-w-[70%]">
+                {activeStep < 3
+                  ? "Takes under 60 seconds. You can review before final submit."
+                  : "We’ll never share your details. By submitting, you agree to be contacted about your request."}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {activeStep > 1 && (
+                  <Button type="button" variant="secondary" onClick={onPrevStep}>Back</Button>
                 )}
-                {submitting ? "Sending…" : "Request a call"}
-              </Button>
+
+                {activeStep < 3 ? (
+                  <Button type="button" onClick={onNextStep}>Continue</Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    className="min-w-40 inline-flex items-center justify-center gap-2"
+                    disabled={submitting}
+                  >
+                    {submitting && (
+                      <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                      </svg>
+                    )}
+                    {submitting ? "Sending…" : "Request a call"}
+                  </Button>
+                )}
+              </div>
             </div>
           </form>
         </div>
