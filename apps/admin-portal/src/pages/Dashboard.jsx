@@ -1657,16 +1657,16 @@ async function save() {
     const conversionRate = safeNumber(dashboardSummary?.requests30d?.conversionRate);
 
     return [
-      { label: 'Total Jobs', value: safeNumber(dashboardSummary?.jobs?.total) },
-      { label: 'Open Jobs', value: safeNumber(dashboardSummary?.jobs?.open) },
-      { label: 'In Workflow', value: safeNumber(dashboardSummary?.jobs?.inWorkflow) },
-      { label: 'Completed Jobs', value: safeNumber(dashboardSummary?.jobs?.completed) },
-      { label: 'Closed Jobs', value: safeNumber(dashboardSummary?.jobs?.closed) },
-      { label: 'Incoming Requests (30d)', value: safeNumber(dashboardSummary?.requests30d?.incoming) },
-      { label: 'Converted Requests (30d)', value: safeNumber(dashboardSummary?.requests30d?.converted) },
-      { label: 'Conversion Rate (30d)', value: `${conversionRate.toFixed(1)}%` },
-      { label: 'Active Technicians', value: safeNumber(dashboardSummary?.technicians?.active) },
-      { label: 'Technicians With Login Accounts', value: safeNumber(dashboardSummary?.technicians?.withLoginAccounts) },
+      { label: 'Total Jobs', value: safeNumber(dashboardSummary?.jobs?.total), accent: 'blue' },
+      { label: 'Open Jobs', value: safeNumber(dashboardSummary?.jobs?.open), accent: 'blue' },
+      { label: 'In Workflow', value: safeNumber(dashboardSummary?.jobs?.inWorkflow), accent: 'blue' },
+      { label: 'Completed Jobs', value: safeNumber(dashboardSummary?.jobs?.completed), accent: 'blue' },
+      { label: 'Closed Jobs', value: safeNumber(dashboardSummary?.jobs?.closed), accent: 'blue' },
+      { label: 'Incoming Requests (Shared Pool)', value: safeNumber(dashboardSummary?.requests30d?.incoming), accent: 'teal' },
+      { label: 'Converted Requests (30d)', value: safeNumber(dashboardSummary?.requests30d?.converted), accent: 'teal' },
+      { label: 'Conversion Rate (30d)', value: `${conversionRate.toFixed(1)}%`, accent: 'teal' },
+      { label: 'Active Technicians', value: safeNumber(dashboardSummary?.technicians?.active), accent: 'sky' },
+      { label: 'Technicians With Login Accounts', value: safeNumber(dashboardSummary?.technicians?.withLoginAccounts), accent: 'sky' },
     ];
   }, [dashboardSummary]);
 
@@ -1692,18 +1692,18 @@ async function save() {
 
         {/* KPIs */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-          <Card label="Total Jobs" value={kpi.total} />
-          <Card label="Open" value={kpi.open} />
-          <Card label="In Progress" value={kpi.progress} />
-          <Card label="Completed" value={kpi.completed} />
-          <Card label="Closed" value={kpi.closed} />
+          <Card label="Total Jobs" value={kpi.total} accent="blue" />
+          <Card label="Open" value={kpi.open} accent="blue" />
+          <Card label="In Progress" value={kpi.progress} accent="blue" />
+          <Card label="Completed" value={kpi.completed} accent="blue" />
+          <Card label="Closed" value={kpi.closed} accent="blue" />
         </div>
 
         <section className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-xl font-bold text-white">Business Statistics</h2>
-              <p className="text-sm text-slate-400 mt-1">Quick KPI snapshot from reporting data</p>
+              <p className="text-sm text-slate-400 mt-1">Quick KPI snapshot from reporting data. Incoming requests reflects the shared lead pool; conversion metrics show your personal performance.</p>
             </div>
             <button
               onClick={loadDashboardSummary}
@@ -1733,14 +1733,14 @@ async function save() {
 
           {!dashboardSummaryLoading && !dashboardSummaryError && reportKpis.length === 0 && (
             <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
-              No business statistics are available yet.
+              No business statistics are available yet. Check your connection or try refreshing.
             </div>
           )}
 
           {!dashboardSummaryLoading && !dashboardSummaryError && reportKpis.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {reportKpis.map((item) => (
-                <Card key={item.label} label={item.label} value={item.value} />
+                <Card key={item.label} label={item.label} value={item.value} accent={item.accent} />
               ))}
             </div>
           )}
@@ -1774,58 +1774,38 @@ async function save() {
             </div>
           ) : (
             <div className="divide-y divide-white/5">
-              {jobs.map((j, index) => {
-                const priorityColors = {
-                  'Low': 'bg-slate-500/20 text-slate-300 border-slate-500/30',
-                  'Medium': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-                  'High': 'bg-orange-500/20 text-orange-300 border-orange-500/30',
-                  'Urgent': 'bg-red-500/20 text-red-300 border-red-500/30'
-                };
-                
-                const statusColors = {
-                  'Open': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-                  'In Progress': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-                  'Completed': 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-                  'Closed': 'bg-slate-500/20 text-slate-400 border-slate-500/30'
-                };
-
-                return (
-                  <div key={j._id} className="p-6 hover:bg-brand-surface-hover transition-all duration-200 group">
-                    <div className="flex items-center justify-between">
-                      {/* Left Section - Job Info */}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-4 mb-3">
-                          <div className="w-10 h-10 bg-brand-blue/20 rounded-xl flex items-center justify-center text-lg">
-                            🔧
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-semibold text-white group-hover:text-brand-sky transition-colors">
-                              {j.title}
-                            </h3>
-                            <div className="flex items-center gap-4 text-sm text-text-secondary">
-                              <span className="flex items-center gap-1">
-                                <span>👤</span>
-                                {j.technician || 'Unassigned'}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <span>📅</span>
-                                {j.createdAt ? new Date(j.createdAt).toLocaleDateString() : '—'}
-                              </span>
-                            </div>
+              {jobs.map((j) => (
+                <div key={j._id} className="p-6 hover:bg-brand-surface-hover transition-all duration-200 group">
+                  <div className="flex items-center justify-between">
+                    {/* Left Section - Job Info */}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-4 mb-3">
+                        <div className="w-10 h-10 bg-brand-blue/20 rounded-xl flex items-center justify-center text-lg">
+                          🔧
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-white group-hover:text-brand-sky transition-colors">
+                            {j.title}
+                          </h3>
+                          <div className="flex items-center gap-4 text-sm text-text-secondary">
+                            <span className="flex items-center gap-1">
+                              <span>👤</span>
+                              {j.technician || 'Unassigned'}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <span>📅</span>
+                              {j.createdAt ? new Date(j.createdAt).toLocaleDateString() : '—'}
+                            </span>
                           </div>
                         </div>
+                      </div>
 
-                        <div className="flex items-center gap-3 mb-3">
-                          {/* Priority Badge */}
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${priorityColors[j.priority] || priorityColors['Low']}`}>
-                            {j.priority}
-                          </span>
-                          
-                          {/* Status Badge */}
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColors[j.status] || statusColors['Open']}`}>
-                            {j.status === 'Closed' && <span className="mr-1">🔒</span>}
-                            {j.status}
-                          </span>
+                      <div className="flex items-center gap-3 mb-3">
+                        {/* Priority Badge */}
+                        <StatusBadge status={j.priority} type="priority" />
+                        
+                        {/* Status Badge */}
+                        <StatusBadge status={j.status} type="status" />
 
                           {/* Invoice Link */}
                           {j.invoice && (
@@ -1869,8 +1849,7 @@ async function save() {
                       </div>
                     </div>
                   </div>
-                );
-              })}
+              ))}
             </div>
           )}
         </div>
@@ -2776,12 +2755,44 @@ async function save() {
   );
 }
 
-function Card({ label, value }) {
+function Card({ label, value, accent = 'default' }) {
+  const accents = {
+    default: 'from-white/5 to-white/[0.02] border-white/10 hover:border-white/15',
+    blue: 'from-brand-blue/10 to-brand-blue/[0.02] border-brand-blue/20 hover:border-brand-blue/30',
+    teal: 'from-brand-teal/10 to-brand-teal/[0.02] border-brand-teal/20 hover:border-brand-teal/30',
+    sky: 'from-brand-sky/10 to-brand-sky/[0.02] border-brand-sky/20 hover:border-brand-sky/30',
+  };
+
   return (
-    <div className="rounded-2xl p-5 bg-white/5">
-      <div className="text-sm opacity-75">{label}</div>
-      <div className="text-4xl font-extrabold mt-2">{value}</div>
+    <div className={`rounded-2xl p-5 bg-gradient-to-br ${accents[accent]} border shadow-soft transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5`}>
+      <div className="text-sm text-slate-300 font-medium mb-1">{label}</div>
+      <div className="text-4xl font-extrabold text-white tracking-tight">{value}</div>
     </div>
+  );
+}
+
+function StatusBadge({ status, type = 'status' }) {
+  const styles = {
+    status: {
+      'Open': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+      'In Progress': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+      'Completed': 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+      'Closed': 'bg-slate-500/20 text-slate-400 border-slate-500/30',
+    },
+    priority: {
+      'Low': 'bg-slate-500/20 text-slate-300 border-slate-500/30',
+      'Medium': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+      'High': 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+      'Urgent': 'bg-red-500/20 text-red-300 border-red-500/30',
+    },
+  };
+
+  const statusStyle = styles[type][status] || styles[type]['Open'];
+
+  return (
+    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${statusStyle}`}>
+      {status}
+    </span>
   );
 }
 

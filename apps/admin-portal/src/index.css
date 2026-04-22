@@ -163,10 +163,16 @@
   .nav-link-active { @apply bg-white/10 border-white/10; }
 }
 
-    /* Tables */
-    .table { @apply w-full text-left; }
-    .table thead { @apply bg-white/5 text-slate-300; }
-    .table tr { @apply border-t border-white/10; }
+    /* Tables - Enhanced for better readability */
+    .table { @apply w-full text-left border-collapse; }
+    .table thead { @apply bg-white/10 text-slate-200 text-sm font-semibold; }
+    .table th { @apply py-3 px-4 border-b border-white/15; }
+    .table tbody tr { @apply border-t border-white/10 transition-colors duration-150; }
+    .table tbody tr:hover { @apply bg-white/[0.04]; }
+    .table td { @apply py-3 px-4; }
+    /* Subtle zebra striping for large tables */
+    .table tbody tr:nth-child(even) { @apply bg-white/[0.02]; }
+    .table tbody tr:nth-child(even):hover { @apply bg-white/[0.05]; }
 
     /* Custom Scrollbar */
     .scrollbar-thin {
