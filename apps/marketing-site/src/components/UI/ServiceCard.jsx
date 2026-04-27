@@ -12,8 +12,11 @@ const getNextImageFallback = (src = "") => {
 
 export default function ServiceCard({ icon: Icon, title, blurb, bullets = [], price, href, image, imageAlt }) {
   return (
-    <a href={href || "/contact"} className="group block rounded-xl border bg-white p-5 hover:shadow-lg hover:-translate-y-[2px] transition focus:outline-none focus:ring-2 focus:ring-brand-lightblue/60">
-      <div className="mb-4 h-40 w-full overflow-hidden rounded-lg bg-slate-100">
+    <a
+      href={href || "/contact"}
+      className="group block rounded-[32px] border border-slate-200/50 bg-white p-6 transition-transform duration-200 motion-safe:hover:-translate-y-1 hover:border-brand-blue/35 focus-brand"
+    >
+      <div className="mb-4 h-40 w-full overflow-hidden rounded-2xl bg-slate-100">
         <img
           src={image || fallbackImage}
           alt={imageAlt || title}
@@ -28,7 +31,7 @@ export default function ServiceCard({ icon: Icon, title, blurb, bullets = [], pr
             e.currentTarget.onerror = null;
             e.currentTarget.src = fallbackImage;
           }}
-          className="h-full w-full object-cover motion-standard group-hover:scale-[1.03]"
+          className="h-full w-full object-cover motion-standard motion-safe:group-hover:scale-105"
         />
       </div>
       <div className="h-1 w-12 bg-gradient-to-r from-brand-blue to-brand-lightblue rounded-full" />
@@ -37,7 +40,7 @@ export default function ServiceCard({ icon: Icon, title, blurb, bullets = [], pr
           {Icon ? <Icon className="w-5 h-5" /> : <span className="text-lg">🛠️</span>}
         </div>
         <div className="min-w-0">
-          <div className="font-semibold text-brand-navy">{title}</div>
+          <div className="text-xl md:text-2xl font-semibold text-brand-navy">{title}</div>
           <p className="mt-1 text-sm text-slate-600">{blurb}</p>
           {bullets.length > 0 && (
             <ul className="mt-2 text-sm text-slate-600 space-y-1 list-disc list-inside">
@@ -45,7 +48,7 @@ export default function ServiceCard({ icon: Icon, title, blurb, bullets = [], pr
             </ul>
           )}
           <div className="mt-4 flex items-center justify-between">
-            <span className="text-xs rounded-full bg-brand-lightblue/35 text-brand-blue px-2 py-0.5">
+            <span className="chip">
               {price || "from $99"}
             </span>
             <span className="text-sm font-medium text-brand-blue group-hover:text-brand-lightblue">Get help →</span>

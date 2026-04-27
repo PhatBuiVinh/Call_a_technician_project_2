@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { portal } from "../lib/portal";
+import Button from "./atoms/Button";
 
 export default function BookingForm() {
   const [form, setForm] = useState({
@@ -31,32 +32,34 @@ export default function BookingForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-3 max-w-md">
-      <input className="border p-2 rounded" placeholder="Issue title" required
-             value={form.title} onChange={e=>update("title", e.target.value)} />
-      <textarea className="border p-2 rounded" placeholder="Description"
-                value={form.description} onChange={e=>update("description", e.target.value)} />
-      <input className="border p-2 rounded" placeholder="Customer name" required
-             value={form.customerName} onChange={e=>update("customerName", e.target.value)} />
-      <input className="border p-2 rounded" placeholder="Phone" required
-             value={form.phone} onChange={e=>update("phone", e.target.value)} />
-      <input className="border p-2 rounded" placeholder="Suburb"
-             value={form.suburb} onChange={e=>update("suburb", e.target.value)} />
-      <div className="grid grid-cols-2 gap-3">
-        <input className="border p-2 rounded" type="date" required
-               value={form.date} onChange={e=>update("date", e.target.value)} />
-        <input className="border p-2 rounded" type="time" required
-               value={form.time} onChange={e=>update("time", e.target.value)} />
+      <form onSubmit={onSubmit} className="grid max-w-md gap-4 rounded-[40px] border border-slate-200/60 bg-white p-6 md:p-8">
+        <input className="w-full rounded-2xl border border-slate-200/60 px-4 py-3 text-sm motion-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:border-brand-blue" placeholder="Issue title" required
+          value={form.title} onChange={e=>update("title", e.target.value)} />
+        <textarea className="w-full rounded-2xl border border-slate-200/60 px-4 py-3 text-sm motion-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:border-brand-blue" placeholder="Description"
+        value={form.description} onChange={e=>update("description", e.target.value)} />
+        <input className="w-full rounded-2xl border border-slate-200/60 px-4 py-3 text-sm motion-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:border-brand-blue" placeholder="Customer name" required
+          value={form.customerName} onChange={e=>update("customerName", e.target.value)} />
+        <input className="w-full rounded-2xl border border-slate-200/60 px-4 py-3 text-sm motion-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:border-brand-blue" placeholder="Phone" required
+          value={form.phone} onChange={e=>update("phone", e.target.value)} />
+        <input className="w-full rounded-2xl border border-slate-200/60 px-4 py-3 text-sm motion-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:border-brand-blue" placeholder="Suburb"
+          value={form.suburb} onChange={e=>update("suburb", e.target.value)} />
+        <div className="grid grid-cols-2 gap-4">
+     <input className="w-full rounded-2xl border border-slate-200/60 px-4 py-3 text-sm motion-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:border-brand-blue" type="date" required
+       value={form.date} onChange={e=>update("date", e.target.value)} />
+     <input className="w-full rounded-2xl border border-slate-200/60 px-4 py-3 text-sm motion-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:border-brand-blue" type="time" required
+       value={form.time} onChange={e=>update("time", e.target.value)} />
       </div>
       <label className="text-sm">
         Extra minutes (0/15/30/45/60)
-        <input className="border p-2 rounded w-full" type="number"
+     <input className="mt-1 w-full rounded-2xl border border-slate-200/60 px-4 py-3 text-sm motion-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:border-brand-blue" type="number"
                min="0" max="60" step="15"
                value={form.additionalMins}
                onChange={e=>update("additionalMins", e.target.value)} />
       </label>
-      <button className="bg-blue-600 text-white rounded px-4 py-2">Book technician</button>
-      <div className="text-sm">{msg}</div>
+        <Button type="submit" variant="primary" className="w-full justify-center py-3">
+     Book technician
+        </Button>
+        <div className="text-sm text-slate-600">{msg}</div>
     </form>
   );
 }

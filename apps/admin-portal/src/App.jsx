@@ -14,6 +14,7 @@ import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import TechDashboard from './pages/TechDashboard';
 import TechJobDetail from './pages/TechJobDetail';
+import TechCompletedJobs from './pages/TechCompletedJobs';
 import { useAuth } from './context/AuthProvider';
 
 // Require authentication
@@ -62,6 +63,7 @@ export default function App() {
           {/* Technician Routes */}
           <Route element={<RequireTech />}>
             <Route path="/tech-view" element={<TechDashboard />} />
+            <Route path="/tech-view/completed" element={<TechCompletedJobs />} />
             <Route path="/tech-view/job/:id" element={<TechJobDetail />} />
             <Route path="/settings" element={<Settings />} />
           </Route>

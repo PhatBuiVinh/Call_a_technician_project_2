@@ -14,13 +14,13 @@ export default function PricingBands() {
 
         <div className="mt-8 grid md:grid-cols-3 gap-6">
           {plans.map((p) => (
-            <div key={p.name} className={`rounded-2xl border bg-white p-6 ${p.best ? "ring-2 ring-brand-blue" : ""}`}>
-              <div className="text-sm text-slate-600">{p.name}</div>
+            <div key={p.name} className={`rounded-2xl border border-slate-200/70 bg-white p-6 transition-transform duration-200 motion-safe:hover:-translate-y-1 ${p.best ? "ring-2 ring-brand-blue" : ""}`}>
+              <div className={p.best ? "chip-success inline-flex" : "chip inline-flex"}>{p.name}</div>
               <div className="mt-1 text-2xl font-semibold text-brand-navy">{p.price}</div>
               <ul className="mt-4 text-sm text-slate-700 space-y-1 list-disc list-inside">
                 {p.features.map((f) => <li key={f}>{f}</li>)}
               </ul>
-              <a href="/contact" className="mt-5 inline-block rounded-md bg-brand-blue text-white px-4 py-2 text-sm font-semibold hover:bg-brand-navy">
+              <a href="/contact" className="mt-5 inline-block rounded-full bg-brand-blue px-4 py-2 text-sm font-semibold text-white focus-brand hover:bg-brand-navy">
                 Book / Ask price →
               </a>
             </div>

@@ -17,6 +17,10 @@
     @apply antialiased text-slate-800 bg-white;
   }
 
+  ::selection {
+    @apply bg-brand-lightblue/30 text-brand-navy;
+  }
+
   h1, h2, h3, h4 {
     @apply tracking-[-0.01em] text-brand-navy;
     font-style: normal;
@@ -24,47 +28,115 @@
 }
 
 @layer components {
-  .container-app { @apply max-w-6xl mx-auto px-4; }
-  .section { @apply py-12 md:py-16; }
+  .container-app { @apply mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 xl:px-12; }
+  .section { @apply py-16 md:py-24; }
   .section-tight { @apply py-10 md:py-12; }
-  .section-feature { @apply py-16 md:py-20; }
+  .section-feature { @apply py-20 md:py-28; }
   .section-lead { @apply mt-2 text-slate-600 max-w-2xl; }
-  .h1 { @apply text-3xl md:text-5xl font-semibold leading-tight; }
-  .h2 { @apply text-2xl md:text-4xl font-semibold leading-tight; }
+  .h1 { @apply text-4xl md:text-6xl font-semibold leading-[1.00]; }
+  .h2 { @apply text-4xl md:text-5xl font-semibold leading-tight; }
 
   .section-muted { @apply bg-brand-lightblue/10; }
 
   .btn-primary {
-    @apply bg-brand-green text-brand-navy rounded-lg px-5 py-2.5 font-semibold shadow-sm;
-    @apply hover:brightness-95 hover:-translate-y-[1px] active:translate-y-0;
+    @apply bg-brand-green text-brand-navy rounded-[56px] px-5 py-2.5 font-semibold tracking-[0.16px] shadow-sm;
+    @apply motion-safe:hover:brightness-95 motion-safe:hover:-translate-y-[1px] motion-safe:hover:scale-[1.02] active:translate-y-0;
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:ring-offset-2;
     transition: transform var(--dur-fast) var(--ease-standard), filter var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard);
   }
 
   .btn-secondary {
-    @apply border border-brand-blue/45 text-brand-blue rounded-lg px-5 py-2.5 font-semibold bg-white;
-    @apply hover:bg-brand-lightblue/20 hover:border-brand-blue active:translate-y-0;
+    @apply border border-brand-blue/45 text-brand-blue rounded-[56px] px-5 py-2.5 font-semibold tracking-[0.16px] bg-white;
+    @apply motion-safe:hover:bg-brand-lightblue/20 motion-safe:hover:border-brand-blue motion-safe:hover:scale-[1.02] active:translate-y-0;
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:ring-offset-2;
     transition: background-color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
   }
 
   .btn-accent {
-    @apply bg-brand-blue text-white rounded-lg px-5 py-2.5 font-semibold shadow-sm;
-    @apply hover:bg-brand-navy hover:-translate-y-[1px] active:translate-y-0;
+    @apply bg-brand-blue text-white rounded-[56px] px-5 py-2.5 font-semibold tracking-[0.16px] shadow-sm;
+    @apply motion-safe:hover:bg-brand-navy motion-safe:hover:-translate-y-[1px] motion-safe:hover:scale-[1.02] active:translate-y-0;
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:ring-offset-2;
     transition: background-color var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
   }
 
   .muted { @apply text-slate-600; }
-  .card { @apply rounded-xl border border-slate-200/90 bg-white p-5 shadow-sm; }
-  .card-soft { @apply rounded-xl border border-slate-200/90 bg-white shadow-sm; }
+  .card {
+    @apply rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm;
+    @apply motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-md;
+    @apply transition-transform duration-200;
+  }
+  .card-soft {
+    @apply rounded-2xl border border-slate-200/90 bg-white shadow-sm;
+    @apply motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-md;
+    @apply transition-transform duration-200;
+  }
   .card-spotlight {
     @apply rounded-2xl border border-brand-lightblue/30 bg-gradient-to-b from-white to-brand-lightblue/10;
-    @apply shadow-[0_14px_40px_rgba(26,88,211,0.12)];
+    @apply shadow-[0_14px_40px_rgba(26,88,211,0.12)] motion-safe:hover:-translate-y-1;
+    @apply transition-transform duration-200;
   }
-  .chip { @apply text-xs rounded-full bg-brand-lightblue/40 text-brand-blue px-2 py-0.5; }
+  .chip { @apply rounded-full border border-brand-blue/20 bg-brand-lightblue/30 px-3 py-1 text-xs font-semibold text-brand-blue; }
+  .chip-success { @apply rounded-full border border-brand-navy/20 bg-brand-green/20 px-3 py-1 text-xs font-semibold text-brand-navy; }
   .divider { @apply h-px bg-slate-200/70; }
   .list-brand { @apply list-disc list-inside; }
+
+  .link-animated {
+    @apply relative inline-block no-underline motion-standard;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
+  }
+
+  .link-animated::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    height: 2px;
+    width: 0;
+    background: currentColor;
+    transition: width var(--dur-fast) var(--ease-standard);
+  }
+
+  .link-animated:hover::after,
+  .link-animated:focus-visible::after {
+    width: 100%;
+  }
+
+  .link-animated-dark {
+    @apply relative inline-block no-underline motion-standard;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent;
+  }
+
+  .link-animated-dark::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -2px;
+    height: 2px;
+    width: 0;
+    background: currentColor;
+    transition: width var(--dur-fast) var(--ease-standard);
+  }
+
+  .link-animated-dark:hover::after,
+  .link-animated-dark:focus-visible::after {
+    width: 100%;
+  }
+
+  .focus-brand {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
+  }
+
+  .focus-brand-dark {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent;
+  }
+
+  .section-transition-dark-to-light {
+    @apply h-14 md:h-20 bg-gradient-to-b from-brand-navy to-white;
+  }
+
+  .skeleton-block {
+    @apply rounded-2xl bg-white/10 animate-pulse;
+  }
 }
 
 @layer utilities {

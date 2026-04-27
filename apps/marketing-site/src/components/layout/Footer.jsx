@@ -13,95 +13,85 @@ export default function Footer() {
   ].filter((item) => Boolean(item.href));
 
   return (
-    <footer className="bg-slate-900 text-gray-200 mt-12">
-      <div className="max-w-6xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-5 gap-8">
-        {/* Company Links */}
+    <footer className="relative mt-16 border-t border-white/10 bg-brand-navy text-white">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand-lightblue/60 to-transparent" />
+
+      <div className="container-app grid grid-cols-1 gap-8 py-12 md:grid-cols-2 lg:grid-cols-5 lg:gap-12">
+        <div className="lg:col-span-2">
+          <Link to="/" className="inline-flex items-center gap-2">
+            <img src={logo2} alt="Call-a-Technician logo" className="h-20 w-auto" />
+          </Link>
+          <p className="mt-4 max-w-sm text-sm text-white/80 leading-relaxed">
+            Same-day support for homes and businesses across Adelaide with clear pricing, trusted technicians, and practical fixes.
+          </p>
+          <div className="mt-6 rounded-2xl border border-white/15 bg-white/5 p-4">
+            <h3 className="text-sm font-semibold text-white">Hours (ACST)</h3>
+            <div className="mt-3 space-y-1.5 text-sm text-white/80">
+              <p><span className="font-medium text-white">Mon-Fri:</span> 8am - 7pm</p>
+              <p><span className="font-medium text-white">Sat:</span> 10am - 5pm</p>
+              <p><span className="font-medium text-white">Sun:</span> 10am - 5pm</p>
+              <p><span className="font-medium text-white">Holidays:</span> 10am - 5pm</p>
+            </div>
+          </div>
+        </div>
+
         <div>
-          <h3 className="font-semibold mb-3">Company</h3>
-          <ul className="space-y-2 text-sm">
-            <li><Link to="/about" className="hover:text-brand-lightblue motion-standard">About</Link></li>
-            <li><Link to="/contact" className="hover:text-brand-lightblue motion-standard">Contact</Link></li>
-            <li><Link to="/services" className="hover:text-brand-lightblue motion-standard">Services</Link></li>
-            <li><Link to="/location" className="hover:text-brand-lightblue motion-standard">Service Areas</Link></li>
-            <li><Link to="/blog" className="hover:text-brand-lightblue motion-standard">Blog</Link></li>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.16px] text-white">Company</h3>
+          <ul className="space-y-2 text-sm text-white/80">
+            <li><Link to="/about" className="link-animated-dark text-white/80 hover:text-brand-green">About</Link></li>
+            <li><Link to="/services" className="link-animated-dark text-white/80 hover:text-brand-green">Services</Link></li>
+            <li><Link to="/location" className="link-animated-dark text-white/80 hover:text-brand-green">Service Areas</Link></li>
+            <li><Link to="/blog" className="link-animated-dark text-white/80 hover:text-brand-green">Blog</Link></li>
+            <li><Link to="/contact" className="link-animated-dark text-white/80 hover:text-brand-green">Contact</Link></li>
           </ul>
         </div>
 
-        {/* Discover */}
         <div>
-          <h3 className="font-semibold mb-3">Discover</h3>
-          <ul className="space-y-2 text-sm">
-            <li><Link to="/services" className="hover:text-brand-lightblue motion-standard">Pricing</Link></li>
-            <li><Link to="/blog" className="hover:text-brand-lightblue motion-standard">Blog</Link></li>
-            <li><Link to="/about" className="hover:text-brand-lightblue motion-standard">Why Choose Us?</Link></li>
-            <li><Link to="/location" className="hover:text-brand-lightblue motion-standard">Our Coverage</Link></li>
-            <li><Link to="/contact" className="hover:text-brand-lightblue motion-standard">FAQs & Support</Link></li>
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.16px] text-white">Services</h3>
+          <ul className="space-y-2 text-sm text-white/80">
+            <li><Link to="/services" className="link-animated-dark text-white/80 hover:text-brand-green">Computer Repairs</Link></li>
+            <li><Link to="/services" className="link-animated-dark text-white/80 hover:text-brand-green">Laptop Repairs</Link></li>
+            <li><Link to="/services" className="link-animated-dark text-white/80 hover:text-brand-green">Mac Support</Link></li>
+            <li><Link to="/services" className="link-animated-dark text-white/80 hover:text-brand-green">Business IT Support</Link></li>
+            <li><Link to="/contact" className="link-animated-dark text-white/80 hover:text-brand-green">Book a Technician</Link></li>
           </ul>
         </div>
 
-        {/* Popular */}
         <div>
-          <h3 className="font-semibold mb-3">Popular</h3>
-          <ul className="space-y-2 text-sm">
-            <li><Link to="/services" className="hover:text-brand-lightblue motion-standard">Computer Repairs</Link></li>
-            <li><Link to="/services" className="hover:text-brand-lightblue motion-standard">Laptop Repairs</Link></li>
-            <li><Link to="/services" className="hover:text-brand-lightblue motion-standard">PC Repairs</Link></li>
-            <li><Link to="/services" className="hover:text-brand-lightblue motion-standard">Mac Repairs</Link></li>
-            <li><Link to="/services" className="hover:text-brand-lightblue motion-standard">IT Support</Link></li>
-          </ul>
-        </div>
-
-        {/* Hours */}
-        <div>
-          <h3 className="font-semibold mb-3">Hours (ACST)</h3>
-          <p className="text-sm"><b>Mon–Fri:</b> 8am – 7pm</p>
-          <p className="text-sm"><b>Sat:</b> 10am – 5pm</p>
-          <p className="text-sm"><b>Sun:</b> 10am – 5pm</p>
-          <p className="text-sm"><b>Holidays:</b> 10am – 5pm</p>
-        </div>
-
-        {/* Customer Rating */}
-        <div>
-          <h3 className="font-semibold mb-3">Customer Rating</h3>
-          <p className="text-2xl font-bold text-brand-green">4.6/5</p>
-          <p className="text-xs text-gray-400">based on 300,000+ ratings</p>
-        </div>
-      </div>
-
-      <div className="bg-slate-900">
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          <div className="flex items-center gap-3 mb-3">
+          <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.16px] text-white">Trust</h3>
+          <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
+            <p className="text-3xl font-semibold leading-none text-brand-green">4.6/5</p>
+            <p className="mt-1 text-xs text-white/70">based on 300,000+ ratings</p>
+          </div>
+          <div className="mt-4 flex items-center gap-3">
             <img src={aboriginalFlag} alt="Aboriginal Flag" className="h-6 w-auto" />
             <img src={tsiFlag} alt="Torres Strait Islander Flag" className="h-6 w-auto" />
           </div>
-          <h3 className="text-lg font-semibold text-white">Acknowledgement of Country</h3>
-          <p className="text-sm text-gray-300 mt-2 max-w-3xl leading-relaxed">
-            Call-a-Technician acknowledges Aboriginal and Torres Strait Islander people
-            as the Traditional Custodians of the land and pays respect to their Elders,
-            past and present.
+        </div>
+      </div>
+
+      <div className="border-t border-white/10">
+        <div className="container-app py-8">
+          <h3 className="text-base font-semibold text-white">Acknowledgement of Country</h3>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-white/75">
+            Call-a-Technician acknowledges Aboriginal and Torres Strait Islander people as the Traditional Custodians of the land and pays respect to their Elders, past and present.
           </p>
         </div>
       </div>
 
-      {/* Bottom bar */}
-      <div className="border-t border-gray-700 mt-6 pt-6 text-sm text-gray-400 max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
-        
-        <div>
-          <Link to="/" className="flex items-center gap-2">
-            <img src={logo2} alt="Call-a-Technician logo" className="h-20 w-auto" />
-          </Link>
-        </div>
-        
-        <p>© {new Date().getFullYear()} Call-a-Technician. All rights reserved.</p>
-        <div className="flex space-x-4">
-          {socialLinks.length > 0 ? socialLinks.map((item) => {
-            const Icon = item.icon;
-            return (
-              <a key={item.id} href={item.href} target="_blank" rel="noreferrer" aria-label={item.id}>
-                <Icon className="w-5 h-5 hover:text-brand-lightblue motion-standard" />
-              </a>
-            );
-          }) : <span className="text-xs text-gray-500">Social links coming soon</span>}
+      <div className="border-t border-white/10">
+        <div className="container-app flex flex-col gap-4 py-6 text-sm text-white/70 md:flex-row md:items-center md:justify-between">
+          <p>© {new Date().getFullYear()} Call-a-Technician. All rights reserved.</p>
+          <div className="flex items-center gap-4">
+            {socialLinks.length > 0 ? socialLinks.map((item) => {
+              const Icon = item.icon;
+              return (
+                <a key={item.id} href={item.href} target="_blank" rel="noreferrer" aria-label={item.id} className="link-animated-dark text-white/70 hover:text-brand-green">
+                  <Icon className="h-5 w-5" />
+                </a>
+              );
+            }) : <span className="text-xs text-white/55">Social links coming soon</span>}
+          </div>
         </div>
       </div>
     </footer>

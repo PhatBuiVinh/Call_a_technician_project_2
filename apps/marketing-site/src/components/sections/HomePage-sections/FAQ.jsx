@@ -37,7 +37,7 @@ export default function FAQ() {
           <label className="text-sm text-slate-600">
             Search FAQs
             <input
-              className="mt-1 w-full rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-lightblue/60"
+              className="mt-1 w-full rounded-2xl border border-slate-200/60 px-4 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:border-brand-blue"
               placeholder="e.g., pricing, remote, suburbs…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
@@ -49,18 +49,18 @@ export default function FAQ() {
         </div>
 
         {/* Two-column accordion grid */}
-        <div className="mt-6 grid md:grid-cols-2 gap-5">
+        <div className="mt-6 grid gap-6 md:grid-cols-2">
           {filtered.map((item, idx) => (
             <div
               key={idx}
-              className="bg-gradient-to-r from-brand-blue/20 via-brand-lightblue/20 to-brand-green/20 p-[1.5px] rounded-xl"
+              className="rounded-2xl bg-gradient-to-r from-brand-blue/20 via-brand-lightblue/20 to-brand-green/20 p-[1.5px]"
             >
-              <div className="rounded-xl bg-white/90 backdrop-blur border shadow-sm">
+              <div className={`rounded-2xl border border-slate-200/50 backdrop-blur ${idx % 2 ? "bg-slate-50/70" : "bg-white"}`}>
                 <Disclosure>
                   {({ open }) => (
                     <>
                       {/* ✅ Use Disclosure.Button (not a plain button) */}
-                      <Disclosure.Button className="w-full p-4 md:p-5 flex items-start gap-3 text-left">
+                      <Disclosure.Button className="flex w-full items-start gap-3 p-4 text-left motion-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-lightblue/70 md:p-5">
                         <span className="shrink-0 mt-1 inline-flex items-center justify-center w-7 h-7 rounded-md bg-brand-lightblue/25 text-brand-blue">
                           <HelpCircle className="w-4 h-4" />
                         </span>
@@ -83,7 +83,7 @@ export default function FAQ() {
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: "auto", opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.25, ease: "easeOut" }}
+                            transition={{ duration: 0.3, ease: "easeOut" }}
                             className="overflow-hidden"
                           >
                             <div className="pt-0 md:pt-1 pb-4 px-4 md:px-5 pl-14 text-sm text-slate-600">
@@ -101,12 +101,12 @@ export default function FAQ() {
         </div>
 
         {/* Bottom callout */}
-        <div className="mt-6 rounded-xl border bg-brand-lightblue/10 p-4 text-sm text-slate-700 text-center">
+        <div className="mt-6 rounded-2xl border border-slate-200/50 bg-brand-lightblue/10 p-4 text-sm text-slate-700 text-center">
           Still have questions?{" "}
-          <a className="underline text-brand-blue hover:text-brand-lightblue" href="/contact">
+          <a className="link-animated text-brand-blue hover:text-brand-lightblue" href="/contact">
             Contact us
           </a>{" "}
-          or call <a className="underline" href="tel:1300551350">1300 551 350</a>.
+          or call <a className="link-animated text-brand-blue hover:text-brand-lightblue" href="tel:1300551350">1300 551 350</a>.
         </div>
       </div>
     </Section>

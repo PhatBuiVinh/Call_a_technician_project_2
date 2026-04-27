@@ -14,13 +14,13 @@ export default function PostCard({ post }) {
   }
 
   return (
-    <article className="group rounded-xl border bg-white overflow-hidden hover:shadow-lg transition">
-      <Link to={`/blog/${safePost.id}`} className="block">
+    <article className="group overflow-hidden rounded-2xl border border-slate-200/50 bg-white transition-transform duration-200 motion-safe:hover:-translate-y-1 hover:border-brand-blue/35">
+      <Link to={`/blog/${safePost.id}`} className="block overflow-hidden">
         {safePost.image ? (
           <img
             src={safePost.image}
             alt={safePost.title}
-            className="h-44 w-full object-cover"
+            className="h-44 w-full object-cover motion-standard motion-safe:group-hover:scale-105"
             loading="lazy"
           />
         ) : (
@@ -30,7 +30,7 @@ export default function PostCard({ post }) {
 
       <div className="p-4">
         <div className="text-xs uppercase tracking-wide text-brand-blue">{safePost.category}</div>
-        <h3 className="mt-1 font-semibold text-brand-navy leading-snug line-clamp-2">
+        <h3 className="mt-1 text-xl md:text-2xl font-semibold leading-snug text-brand-navy line-clamp-2">
           <Link to={`/blog/${safePost.id}`}>{safePost.title}</Link>
         </h3>
 

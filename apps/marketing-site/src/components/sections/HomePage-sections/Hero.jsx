@@ -4,14 +4,13 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { motion } from "framer-motion";
 import { ShieldCheck, Clock3, Star, ArrowRight } from "lucide-react";
 import Button from "../../atoms/Button";
-import heroImg from "../../../assets/hero-team.jpg";
 import SplitRevealText from "../../animation/SplitRevealText";
 import { useMotionPreference } from "../../../contexts/MotionPreferenceContext";
+import HeroImageCarousel from "./HeroImageCarousel";
 
 gsap.registerPlugin(ScrollTrigger);
 
 export default function Hero({ imageUrl }) {
-  const heroSource = imageUrl || heroImg;
   const sectionRef = useRef(null);
   const leftColRef = useRef(null);
   const ctaRef = useRef(null);
@@ -95,10 +94,10 @@ export default function Hero({ imageUrl }) {
     <section ref={sectionRef} className="section-feature relative overflow-hidden bg-gradient-to-br from-brand-blue/10 via-white to-brand-lightblue/15">
       <div className="absolute inset-0 z-0 bg-dot-grid text-brand-navy/20 mask-fade-b" />
 
-      <div ref={orbARef} className="absolute -top-16 -left-16 w-72 h-72 bg-brand-green/20 rounded-full blur-3xl" />
-      <div ref={orbBRef} className="absolute bottom-0 right-0 w-80 h-80 bg-brand-lightblue/20 rounded-full blur-3xl" />
+      <div ref={orbARef} className="absolute -top-24 -left-24 h-[28rem] w-[28rem] rounded-full bg-brand-green/25 blur-3xl" />
+      <div ref={orbBRef} className="absolute -bottom-8 -right-8 h-[32rem] w-[32rem] rounded-full bg-brand-lightblue/25 blur-3xl" />
 
-      <div className="container-app grid md:grid-cols-[1.05fr_0.95fr] gap-8 md:gap-10 items-center relative z-10">
+      <div className="container-app relative z-10 grid items-center gap-8 md:grid-cols-[1.1fr_0.9fr] md:gap-16">
         <div ref={leftColRef}>
           <motion.div layoutId="shared-page-kicker" data-hero-badge className="inline-flex items-center gap-2 rounded-full border border-brand-blue/20 bg-white/80 px-3 py-1 text-xs font-semibold text-brand-blue">
             <Star className="h-3.5 w-3.5 fill-current" />
@@ -106,7 +105,7 @@ export default function Hero({ imageUrl }) {
           </motion.div>
 
           <motion.div layoutId="shared-page-headline" data-hero-heading-wrap>
-            <SplitRevealText tag="h1" className="h1 mt-4" delay={0.08}>
+            <SplitRevealText tag="h1" className="h1 mt-4 !text-5xl md:!text-7xl !leading-none" delay={0.08}>
               Same-day tech support that fixes the issue the first time
             </SplitRevealText>
           </motion.div>
@@ -147,32 +146,9 @@ export default function Hero({ imageUrl }) {
 
         <div
           ref={visualRef}
-          className="relative rounded-2xl overflow-hidden border border-white/60 shadow-[0_24px_70px_rgba(0,1,84,0.22)] md:h-[430px] h-[270px] flex items-center"
+          className="relative overflow-hidden rounded-[32px] border border-white/60 md:h-[430px] h-[270px] flex items-center"
         >
-          <img
-            ref={imageRef}
-            src={heroSource}
-            alt="Our technician team at work"
-            className="aspect-video w-full h-full object-cover will-change-transform"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-brand-navy/45 via-brand-navy/10 to-transparent" />
-
-          <div className="absolute left-4 right-4 bottom-4 rounded-xl bg-white/92 backdrop-blur-md border border-white/80 p-3 sm:p-4">
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div>
-                <div className="text-xl font-semibold text-brand-navy">5,000+</div>
-                <div className="text-[11px] text-slate-600">Devices fixed</div>
-              </div>
-              <div>
-                <div className="text-xl font-semibold text-brand-navy">98%</div>
-                <div className="text-[11px] text-slate-600">Same-day jobs</div>
-              </div>
-              <div>
-                <div className="text-xl font-semibold text-brand-navy">4.9</div>
-                <div className="text-[11px] text-slate-600">Avg rating</div>
-              </div>
-            </div>
-          </div>
+          <HeroImageCarousel imageUrl={imageUrl} imageTrackRef={imageRef} reduceMotion={reduceMotion} />
         </div>
       </div>
 

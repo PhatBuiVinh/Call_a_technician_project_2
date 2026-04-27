@@ -10,7 +10,7 @@ export default function ServicesHero() {
       <div className="container-app relative z-10 text-center">
         <motion.div layoutId="shared-page-kicker" className="w-16 h-[3px] bg-gradient-to-r from-brand-blue via-brand-lightblue to-brand-green rounded-full mx-auto" />
         <motion.div layoutId="shared-page-headline">
-          <SplitRevealText tag="h1" className="mt-4 text-3xl md:text-4xl font-semibold italic text-brand-navy" delay={0.04}>
+          <SplitRevealText tag="h1" className="mt-4 text-4xl md:text-6xl font-semibold italic leading-[1.00] text-brand-navy" delay={0.04}>
             On-Site Computer Repair & IT Support
           </SplitRevealText>
         </motion.div>

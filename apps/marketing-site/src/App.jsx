@@ -38,6 +38,7 @@ import UrgentCallout from "./components/layout/UrgentCallout";
 import Footer from "./components/layout/Footer";
 import BackToTop from "./components/UI/BackToTop";
 import ScrollToTop from "./components/UI/ScrollToTop";
+import ScrollProgressBar from "./components/UI/ScrollProgressBar";
 import MobileStickyCTA from "./components/UI/MobileStickyCTA";
 import AccessibilitySettings from "./components/UI/AccessibilitySettings";
 import SeoManager from "./components/seo/SeoManager";
@@ -51,7 +52,6 @@ const Blog = lazy(() => import("./pages/Blog"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
 const Contact = lazy(() => import("./pages/contact"));
 const Login = lazy(() => import("./pages/Login"));
-const LiveChatButton = lazy(() => import("./components/UI/LiveChatButton"));
 const TRANSITION_PATHS = new Set(["/", "/about", "/services"]);
 
 function PageFallback() {
@@ -83,6 +83,7 @@ export default function App() {
       <ScrollToTop />
       <SeoManager />
       <NavBar />
+      <ScrollProgressBar />
       <UrgentCallout persist="none"/> {/* sticky banner under the nav */}
       <div className="pt-24 md:pt-28">
         <Suspense fallback={<PageFallback />}>
@@ -112,9 +113,6 @@ export default function App() {
         </Suspense>
       </div>
       <Footer />
-      <Suspense fallback={null}>
-        <LiveChatButton />
-      </Suspense>
       <MobileStickyCTA />
       <AccessibilitySettings />
       <BackToTop />

@@ -357,15 +357,15 @@ export default function ContactFormBlock() {
           </p>
 
           <div className="mt-4 grid sm:grid-cols-3 gap-2">
-            <div className="rounded-lg border border-brand-blue/20 bg-white/80 px-3 py-2 text-xs text-slate-700 inline-flex items-center gap-2">
+            <div className="inline-flex items-center gap-2 rounded-2xl border border-brand-blue/20 bg-white/80 px-3 py-2 text-xs text-slate-700">
               <Clock3 className="h-4 w-4 text-brand-blue" />
               Quick response
             </div>
-            <div className="rounded-lg border border-brand-blue/20 bg-white/80 px-3 py-2 text-xs text-slate-700 inline-flex items-center gap-2">
+            <div className="inline-flex items-center gap-2 rounded-2xl border border-brand-blue/20 bg-white/80 px-3 py-2 text-xs text-slate-700">
               <ShieldCheck className="h-4 w-4 text-brand-blue" />
               Private and secure
             </div>
-            <div className="rounded-lg border border-brand-blue/20 bg-white/80 px-3 py-2 text-xs text-slate-700 inline-flex items-center gap-2">
+            <div className="inline-flex items-center gap-2 rounded-2xl border border-brand-blue/20 bg-white/80 px-3 py-2 text-xs text-slate-700">
               <CheckCircle2 className="h-4 w-4 text-brand-blue" />
               No Fix, No Fee
             </div>
@@ -373,13 +373,13 @@ export default function ContactFormBlock() {
 
           {/* Success banner (now real, not demo) */}
           {success && (
-            <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800" role="status" aria-live="polite">
+            <div className="mt-4 rounded-2xl border border-brand-green/45 bg-brand-green/15 px-4 py-3 text-sm text-brand-navy" role="status" aria-live="polite">
               Thanks! Your request was submitted. We’ll contact you shortly.
-              {jobRef ? <div className="mt-1 text-emerald-700">{jobRef}</div> : null}
+              {jobRef ? <div className="mt-1 text-brand-navy">{jobRef}</div> : null}
             </div>
           )}
           {serverError && (
-            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+            <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
               {serverError}
             </div>
           )}
@@ -393,7 +393,7 @@ export default function ContactFormBlock() {
               </label>
             </div>
 
-            <div className="rounded-xl border border-brand-blue/20 bg-white/75 p-3">
+            <div className="rounded-2xl border border-brand-blue/20 bg-white/75 p-3">
               <div className="mb-2 flex items-center justify-between text-xs text-slate-600">
                 <span>Step {activeStep} of 3</span>
                 <span>{STEPS.find((s) => s.id === activeStep)?.title}</span>
@@ -479,7 +479,7 @@ export default function ContactFormBlock() {
                       Suburb
                       <input
                         list="sa-suburbs"
-                        className="mt-1 w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm bg-white motion-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:border-brand-blue hover:border-slate-400"
+                        className="mt-1 w-full rounded-2xl border border-slate-200/60 bg-white px-4 py-3 text-sm motion-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:border-brand-blue hover:border-brand-blue/55"
                         placeholder="e.g., Glenelg"
                         value={values.suburb}
                         onChange={onChange("suburb")}
@@ -503,7 +503,7 @@ export default function ContactFormBlock() {
                     Preferred date & time (optional)
                     <input
                       type="datetime-local"
-                      className="mt-1 w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm bg-white motion-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:border-brand-blue hover:border-slate-400"
+                      className="mt-1 w-full rounded-2xl border border-slate-200/60 bg-white px-4 py-3 text-sm motion-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:border-brand-blue hover:border-brand-blue/55"
                       value={values.preferredAt}
                       onChange={onChange("preferredAt")}
                       min={getLocalNowForInput()}
@@ -536,7 +536,7 @@ export default function ContactFormBlock() {
 
             {activeStep === 3 && (
               <>
-                <div className="rounded-lg border border-brand-blue/20 bg-brand-lightblue/10 p-3 text-sm text-slate-700">
+                <div className="rounded-2xl border border-brand-blue/25 bg-brand-lightblue/10 p-3 text-sm text-slate-700">
                   Quick review: we will contact <span className="font-medium">{values.name || "you"}</span> on <span className="font-medium">{values.phone || "your phone"}</span>.
                 </div>
 
@@ -545,7 +545,7 @@ export default function ContactFormBlock() {
                   onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                   onDragLeave={() => setDragOver(false)}
                   onDrop={onDrop}
-                  className={`rounded-lg border p-4 motion-standard ${dragOver ? "border-brand-blue bg-brand-lightblue/10" : "border-slate-200 bg-white"}`}
+                  className={`rounded-2xl border p-4 motion-standard ${dragOver ? "border-brand-blue bg-brand-lightblue/10" : "border-slate-200 bg-white"}`}
                   title="Drag and drop screenshots here"
                 >
                   <label className="block text-sm text-slate-700">
@@ -563,14 +563,14 @@ export default function ContactFormBlock() {
                   {files.length > 0 && (
                     <div className="mt-3 grid grid-cols-3 gap-3">
                       {files.map((f, i) => (
-                        <div key={i} className="relative rounded-lg border overflow-hidden bg-slate-50">
+                        <div key={i} className="relative overflow-hidden rounded-2xl border bg-slate-50">
                           {f.url
                             ? <img src={f.url} alt={`upload ${i + 1}`} className="h-28 w-full object-cover" />
                             : <div className="h-28 w-full grid place-items-center text-xs text-slate-500">Preview</div>}
                           <button
                             type="button"
                             onClick={() => removeFile(i)}
-                            className="absolute top-1 right-1 rounded bg-white/90 px-2 py-0.5 text-[11px] border hover:bg-white"
+                            className="absolute top-1 right-1 rounded-xl border bg-white/90 px-2 py-1 text-[11px] hover:bg-white"
                           >
                             Remove
                           </button>
@@ -585,7 +585,7 @@ export default function ContactFormBlock() {
             )}
 
             <div className="flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
-              <div className="text-xs text-slate-500 max-w-[70%]">
+              <div className="max-w-[70%] text-xs text-slate-500">
                 {activeStep < 3
                   ? "Takes under 60 seconds. You can review before final submit."
                   : "We’ll never share your details. By submitting, you agree to be contacted about your request."}
@@ -630,18 +630,18 @@ export default function ContactFormBlock() {
           </div>
 
           <div className="p-6 md:p-8">
-            <h3 className="font-semibold text-brand-navy">Prefer to call?</h3>
+            <h3 className="text-xl md:text-2xl font-semibold text-brand-navy">Prefer to call?</h3>
             <p className="text-sm text-slate-600 mt-1">Speak with a technician now. Same-day availability across Adelaide.</p>
             <div className="mt-3 flex flex-wrap gap-3">
               <Button href="tel:1300551350" variant="accent">Call 1300 551 350</Button>
               <Button href="mailto:hello@call-a-technician.example" variant="secondary">Email us</Button>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-              <div className="rounded-lg bg-brand-lightblue/10 p-3">
+              <div className="rounded-2xl bg-brand-lightblue/10 p-3">
                 <div className="text-xs text-slate-500">Hours</div>
                 <div className="font-medium text-brand-navy">Mon–Sun, 8am–6pm</div>
               </div>
-              <div className="rounded-lg bg-brand-lightblue/10 p-3">
+              <div className="rounded-2xl bg-brand-lightblue/10 p-3">
                 <div className="text-xs text-slate-500">Coverage</div>
                 <div className="font-medium text-brand-navy">Adelaide & nearby suburbs</div>
               </div>

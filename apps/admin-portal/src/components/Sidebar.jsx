@@ -37,11 +37,12 @@ export default function Sidebar({ open, onClose }){
         </div>
 
         <nav className="flex flex-col gap-1">
-          <LinkItem to="/tech-view" icon="J" label="My Jobs" />
+          <LinkItem to="/tech-view" icon="📋" label="My Jobs" />
+          <LinkItem to="/tech-view/completed" icon="✓" label="Completed Jobs" />
         </nav>
 
         <div className="mt-4 p-3 rounded-xl bg-white/5 border border-white/10 text-xs text-slate-400 leading-relaxed">
-          Keep this queue focused. Completed and closed work is managed from admin workflow.
+          View your active jobs and completed history. Closed jobs are managed by admin.
         </div>
 
         <div className="mt-auto pt-6">

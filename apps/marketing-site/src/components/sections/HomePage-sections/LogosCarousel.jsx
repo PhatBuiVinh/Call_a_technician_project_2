@@ -37,7 +37,7 @@ export default function LogosCarousel() {
     <Section>
       <div className="container-app">
         <div className="text-center mb-6">
-          <H2 className="!text-xl md:!text-2xl">Trusted by homes & small businesses</H2>
+          <H2>Trusted by homes & small businesses</H2>
           <p className="mt-2 text-slate-600">Proudly supporting Adelaide with reliable tech services</p>
         </div>
 

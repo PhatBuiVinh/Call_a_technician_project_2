@@ -15,8 +15,10 @@ export default function Home() {
     <div className="text-slate-800">
       <Reveal y={16} duration={0.45} amount={0.15}><Hero /></Reveal>
       <Reveal delay={0.02}><StatsBar /></Reveal>
+      <div className="section-transition-dark-to-light" aria-hidden="true" />
       <Reveal delay={0.02}><LogosCarousel /></Reveal>
       <Reveal><HomeStoryFlow services={SERVICES} /></Reveal>
+      <div className="section-transition-dark-to-light" aria-hidden="true" />
       <Reveal><FAQ /></Reveal>
       <Reveal><CompanyBlurb imageUrl={teamImg} /></Reveal>
       <Reveal><ServiceAreas suburbs={SUBURBS_SA} /></Reveal>

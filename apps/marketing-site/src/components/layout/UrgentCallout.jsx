@@ -46,8 +46,8 @@ return (
                 role="region"
                 aria-label="Urgent assistance"
             >
-                <div className="w-[min(94vw,940px)] bg-gradient-to-r from-brand-blue via-brand-lightblue to-brand-green p-[1.5px] rounded-2xl shadow-xl">
-                    <div className="relative rounded-2xl bg-white/90 backdrop-blur-md text-brand-navy">
+                <div className="w-[min(94vw,940px)] rounded-[32px] bg-gradient-to-r from-brand-blue via-brand-lightblue to-brand-green p-[1.5px]">
+                    <div className="relative rounded-[32px] bg-white/90 backdrop-blur-md text-brand-navy">
                         <div className="px-4 sm:px-6 py-3.5 flex flex-wrap md:flex-nowrap items-center gap-3">
                             <div className="hidden sm:flex items-center justify-center w-9 h-9 rounded-full bg-brand-lightblue/25 text-brand-blue">
                                 <Phone className="w-4 h-4" />
@@ -61,16 +61,16 @@ return (
                             <div className="flex items-center gap-2 ml-auto">
                                 <a
                                     href="tel:1300551350"
-                                    className="hidden sm:inline-flex items-center border border-brand-blue/40 hover:border-brand-blue text-brand-blue rounded-lg px-3 py-1.5 text-sm transition"
+                                    className="hidden sm:inline-flex min-h-11 items-center rounded-xl border border-brand-blue/40 px-3 py-1.5 text-sm text-brand-blue transition hover:border-brand-blue"
                                 >
                                     Call 1300 551 350
                                 </a>
                                 <a
                                     href="tel:1300551350"
-                                    className="sm:hidden inline-flex items-center justify-center h-9 w-9 rounded-lg border border-brand-blue/40 text-brand-blue"
+                                    className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-brand-blue/40 text-brand-blue sm:hidden"
                                     aria-label="Call now"
                                 >
-                                    <Phone className="w-4 h-4" />
+                                    <Phone className="h-4 w-4" />
                                 </a>
                                 <Button
                                     variant="primary"
@@ -82,9 +82,9 @@ return (
                                 <button
                                     aria-label="Dismiss"
                                     onClick={dismiss}
-                                    className="ml-1 p-1 rounded-md hover:bg-black/5"
+                                    className="ml-1 rounded-xl p-2 hover:bg-black/5"
                                 >
-                                    <X className="w-4 h-4" />
+                                    <X className="h-4 w-4" />
                                 </button>
                             </div>
                         </div>

@@ -58,17 +58,17 @@ export default function HomeStoryFlow({ services }) {
   }, []);
 
   return (
-    <section className="section-feature relative bg-gradient-to-b from-brand-lightblue/10 via-white to-brand-lightblue/5">
+    <section className="section-feature relative bg-brand-navy text-white">
       <div className="container-app grid lg:grid-cols-[250px_1fr] gap-7 lg:gap-10">
         <aside className="hidden lg:block">
-          <div className="sticky top-28 rounded-2xl border border-brand-blue/15 bg-white/85 backdrop-blur p-4 shadow-sm">
-            <div className="text-xs font-semibold tracking-wide text-brand-blue">Story Flow</div>
-            <div className="mt-2 text-sm text-slate-600">A guided scroll through the reasons to choose us.</div>
+          <div className="sticky top-28 rounded-[32px] border border-white/15 bg-white/10 backdrop-blur p-4">
+            <div className="text-xs font-semibold tracking-wide text-brand-lightblue">Story Flow</div>
+            <div className="mt-2 text-sm text-white/80">A guided scroll through the reasons to choose us.</div>
 
             <div className="mt-4 relative">
-              <div className="absolute left-[7px] top-0 h-full w-[2px] bg-slate-200" />
+              <div className="absolute left-[7px] top-0 h-full w-[2px] bg-white/25" />
               <div
-                className="absolute left-[7px] top-0 w-[2px] bg-brand-blue motion-standard"
+                className="absolute left-[7px] top-0 w-[2px] bg-brand-lightblue motion-standard"
                 style={{ height: `${((activeIndex + 1) / CHAPTERS.length) * 100}%` }}
               />
               <div className="space-y-4">
@@ -78,13 +78,13 @@ export default function HomeStoryFlow({ services }) {
                     <div key={chapter.id} className="relative pl-6">
                       <span
                         className={`absolute left-0 top-1.5 h-4 w-4 rounded-full border-2 motion-standard ${
-                          active ? "border-brand-blue bg-brand-blue" : "border-slate-300 bg-white"
+                          active ? "border-brand-lightblue bg-brand-lightblue" : "border-white/40 bg-transparent"
                         }`}
                       />
-                      <div className={`text-sm font-semibold ${active ? "text-brand-navy" : "text-slate-500"}`}>
+                      <div className={`text-sm font-semibold ${active ? "text-white" : "text-white/60"}`}>
                         {chapter.title}
                       </div>
-                      <div className="text-xs text-slate-500">Chapter {idx + 1}</div>
+                      <div className="text-xs text-white/60">Chapter {idx + 1}</div>
                     </div>
                   );
                 })}
@@ -101,7 +101,7 @@ export default function HomeStoryFlow({ services }) {
               ref={(el) => {
                 nodesRef.current[idx] = el;
               }}
-              className="rounded-2xl border border-brand-blue/15 bg-white/70 overflow-hidden"
+              className="rounded-[32px] border border-white/20 bg-white/95 text-brand-navy overflow-hidden"
             >
               <div className="border-b border-slate-200/80 bg-gradient-to-r from-white to-brand-lightblue/10">
                 <div className="relative h-40 sm:h-48 overflow-hidden">
@@ -121,7 +121,7 @@ export default function HomeStoryFlow({ services }) {
                 </div>
 
                 <div className="px-5 py-4">
-                  <h3 className="text-xl font-semibold text-brand-navy">{chapter.title}</h3>
+                  <h3 className="text-xl md:text-2xl font-semibold text-brand-navy">{chapter.title}</h3>
                   <p className="mt-1 text-sm text-slate-600">{chapter.description}</p>
                 </div>
               </div>

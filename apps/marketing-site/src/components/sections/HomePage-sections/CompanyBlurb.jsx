@@ -31,7 +31,7 @@ Today, we support homes and small businesses across South Australia with the sam
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.35 }}
           transition={{ duration: 0.45, ease: "easeOut" }}
-          className="relative rounded-2xl overflow-hidden border bg-white shadow-sm"
+          className="relative rounded-[32px] overflow-hidden border bg-white"
         >
           {/* Top gradient rule */}
           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-blue via-brand-lightblue to-brand-green" />

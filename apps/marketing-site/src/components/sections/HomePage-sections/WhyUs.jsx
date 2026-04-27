@@ -22,34 +22,34 @@ export default function WhyUs() {
           </div>
 
           {/* Responsive matrix */}
-          <div className="relative mt-8 rounded-xl border bg-white overflow-x-auto shadow-lg">
+          <div className="relative mt-8 overflow-x-auto rounded-2xl border border-slate-200/70 bg-white transition-transform duration-200 motion-safe:hover:-translate-y-1">
             <div className="absolute top-2 right-4 text-xs text-slate-400 md:hidden">
               ← scroll →
             </div>
             <table className="min-w-[720px] w-full border-collapse">
-              <thead className="sticky top-0 bg-white z-10">
+              <thead className="sticky top-0 z-10">
                 <tr className="text-left text-sm text-slate-600">
-                  <th className="p-4 font-medium"></th>
-                  <th className="p-4 font-bold bg-brand-navy text-white rounded-t-lg">Call-a-Technician</th>
-                  <th className="p-4 font-medium">Big-box Repair Counter</th>
-                  <th className="p-4 font-medium">Remote-only Service</th>
+                  <th className="bg-brand-navy px-4 py-3 font-medium text-white"></th>
+                  <th className="bg-brand-navy px-4 py-3 font-bold text-white">Call-a-Technician</th>
+                  <th className="bg-brand-navy px-4 py-3 font-medium text-white">Big-box Repair Counter</th>
+                  <th className="bg-brand-navy px-4 py-3 font-medium text-white">Remote-only Service</th>
                 </tr>
               </thead>
               <tbody className="text-sm">
                 {ROWS.map((r, idx) => (
                   <tr
                     key={r.label}
-                    className={`transition ${idx % 2 ? "bg-slate-50/60" : ""} hover:bg-amber-50`}
+                    className={`border-b border-slate-100 transition ${idx % 2 ? "bg-slate-50/50" : "bg-white"} hover:bg-brand-lightblue/10`}
                   >
-                    <th className="p-4 font-medium text-brand-navy align-top w-[38%]">
+                    <th className="w-[38%] rounded-l-lg px-4 py-3 font-medium align-top text-brand-navy">
                       {r.label}
                       {r.note && (
                         <div className="text-xs text-slate-500 mt-1">{r.note}</div>
                       )}
                     </th>
-                    <td className="p-4 font-bold align-top bg-brand-navy/10 border-l-4 border-brand-navy">{renderCell(r.us)}</td>
-                    <td className="p-4 align-top text-slate-700">{renderCell(r.counter)}</td>
-                    <td className="p-4 align-top text-slate-700">{renderCell(r.remote)}</td>
+                    <td className="px-4 py-3 font-bold align-top bg-brand-navy/10 border-l-4 border-brand-navy">{renderCell(r.us)}</td>
+                    <td className="px-4 py-3 align-top text-slate-700">{renderCell(r.counter)}</td>
+                    <td className="rounded-r-lg px-4 py-3 align-top text-slate-700">{renderCell(r.remote)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -57,7 +57,7 @@ export default function WhyUs() {
           </div>
 
           {/* Credibility line */}
-          <div className="mt-6 rounded-lg border bg-brand-lightblue/10 p-4 text-sm text-slate-700 text-center">
+          <div className="mt-6 rounded-2xl border border-slate-200/60 bg-brand-lightblue/10 p-4 text-sm text-slate-700 text-center">
             Rated <span className="font-semibold text-brand-navy">4.9/5</span> by 1,200+ customers {" "}
                    
           </div>

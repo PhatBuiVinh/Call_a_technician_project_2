@@ -48,13 +48,14 @@ export default function Testimonials() {
         >
           {TESTIMONIALS.map((t, i) => (
             <SwiperSlide key={i}>
-              <div className="card-soft p-6 md:p-8 text-center max-w-2xl mx-auto">
+              <div className="relative mx-auto max-w-2xl rounded-[40px] border border-slate-200/60 bg-white p-6 text-center transition-transform duration-200 motion-safe:hover:-translate-y-1 md:p-8">
+  <div className="pointer-events-none absolute left-5 top-2 text-7xl leading-none text-brand-lightblue/20">“</div>
   <img
     src={t.img}
     alt={t.name}
     className="w-16 h-16 rounded-full mx-auto"
   />
-  <p className="mt-4 italic text-slate-700">“{t.quote}”</p>
+  <p className="mt-4 italic text-slate-700">{t.quote}</p>
 
   {/* ⭐️ Stars */}
   <div className="mt-3 flex justify-center gap-1 text-brand-green">
@@ -68,7 +69,7 @@ export default function Testimonials() {
     ))}
   </div>
 
-  <div className="mt-3 font-semibold text-brand-navy">{t.name}</div>
+  <div className="mt-4 text-sm font-semibold text-brand-navy">{t.name}</div>
   <div className="text-sm text-slate-500">{t.role}</div>
 </div>
 

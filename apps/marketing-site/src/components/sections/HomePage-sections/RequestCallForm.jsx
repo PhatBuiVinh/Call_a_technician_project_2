@@ -147,7 +147,7 @@ export default function RequestCallForm() {
       <Section className="relative z-10">
         <div className="container-app grid md:grid-cols-2 gap-10 items-center">
           {/* Left: form card */}
-          <div className="rounded-2xl border bg-white p-6 md:p-8 shadow-sm hover:shadow-md transition">
+          <div className="rounded-[32px] border border-slate-200/60 bg-white p-6 md:p-8 transition">
             <H2 className="text-center md:text-left">Request a Call</H2>
             <p className="text-center md:text-left muted mt-1">
               We’ll get back to you within business hours — usually faster.
@@ -202,7 +202,7 @@ export default function RequestCallForm() {
                   disabled={isProcessingImages}
                   className="block w-full text-sm text-gray-500
                     file:mr-4 file:py-2 file:px-4
-                    file:rounded-full file:border-0
+                    file:rounded-xl file:border-0
                     file:text-sm file:font-semibold
                     file:bg-brand-navy file:text-white
                     hover:file:bg-brand-blue
@@ -210,7 +210,7 @@ export default function RequestCallForm() {
                 />
                 
                 {isProcessingImages && (
-                  <p className="text-sm text-blue-600 mt-1">
+                  <p className="mt-1 text-sm text-brand-blue">
                     Processing images... Please wait.
                   </p>
                 )}
@@ -223,12 +223,12 @@ export default function RequestCallForm() {
                         <img
                           src={preview}
                           alt={`Preview ${index + 1}`}
-                          className="w-full h-24 object-cover rounded-lg border-2 border-gray-200"
+                          className="h-24 w-full rounded-2xl border-2 border-gray-200 object-cover"
                         />
                         <button
                           type="button"
                           onClick={() => removeImage(index)}
-                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-xl bg-red-500 text-white opacity-0 transition-opacity group-hover:opacity-100"
                         >
                           ×
                         </button>
@@ -239,13 +239,13 @@ export default function RequestCallForm() {
               </div>
 
               {submitStatus === 'success' && (
-                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+                <div className="rounded-2xl border border-brand-green/45 bg-brand-green/15 px-4 py-3 text-brand-navy" role="status" aria-live="polite">
                   Thank you! We'll get back to you within business hours.
                 </div>
               )}
 
               {submitStatus === 'error' && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                <div className="rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-red-700" role="alert">
                   Sorry, there was an error submitting your request. Please try again.
                 </div>
               )}
@@ -253,7 +253,7 @@ export default function RequestCallForm() {
                       <div className="flex justify-center md:justify-start">
                         <Button 
                           type="submit" 
-                          className="min-w-40"
+                          className="min-h-11 min-w-40"
                           disabled={isSubmitting || isProcessingImages}
                         >
                           {isSubmitting ? 'Submitting...' : 

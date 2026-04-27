@@ -368,14 +368,31 @@ export default function TechJobDetail() {
   const isCompleted = job.status === 'Completed';
 
   return (
-    <Shell title={job.title} subtitle="Review details and update progress">
+    <Shell 
+      title={job.title} 
+      subtitle={isCompleted ? "Completed job - Read only" : "Review details and update progress"}
+    >
       <div className="space-y-5">
         <div className="flex items-center justify-between gap-3">
-          <button onClick={() => nav('/tech-view')} className="btn btn-ghost text-sm">
-            Back to My Jobs
+          <button onClick={() => nav(-1)} className="btn btn-ghost text-sm">
+            ← Back
           </button>
           <div className="text-xs text-slate-400">{job.invoice || 'No invoice assigned'}</div>
         </div>
+
+        {isCompleted && (
+          <div className="flex items-center gap-3 px-4 py-3 bg-brand-teal/10 border border-brand-teal/30 rounded-xl">
+            <span className="text-2xl">✓</span>
+            <div>
+              <p className="font-medium text-brand-teal">Completed Job</p>
+              <p className="text-sm text-slate-400">
+                {job.completionForm?.submittedAt 
+                  ? `Completed on ${new Date(job.completionForm.submittedAt).toLocaleDateString()}`
+                  : 'This job has been completed'}
+              </p>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="p-3 bg-rose-500/20 border border-rose-400/30 text-rose-200 rounded-xl text-sm">
@@ -421,6 +438,20 @@ export default function TechJobDetail() {
               <div className="rounded-xl bg-white/5 border border-white/10 p-3 sm:col-span-2">
                 <p className="text-xs uppercase tracking-wide text-slate-500">Job Description</p>
                 <div className="text-slate-200 whitespace-pre-wrap mt-1">{job.description}</div>
+              </div>
+            )}
+
+            {job.troubleshooting && (
+              <div className="rounded-xl bg-brand-blue/10 border border-brand-blue/30 p-4 sm:col-span-2">
+                <div className="flex items-start gap-3">
+                  <span className="text-xl shrink-0">💡</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-brand-sky mb-1">Troubleshooting Guidance</p>
+                    <div className="text-slate-300 text-sm whitespace-pre-wrap leading-relaxed">
+                      {job.troubleshooting}
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -504,11 +535,13 @@ export default function TechJobDetail() {
 
         <div className="surface p-4 rounded-xl">
           <h3 className="font-medium mb-1">Work Notes</h3>
-          <p className="text-sm text-slate-400 mb-3">Track progress details for internal reference.</p>
+          <p className="text-sm text-slate-400 mb-3">
+            {isCompleted ? 'Notes from when this job was active.' : 'Track progress details for internal reference.'}
+          </p>
 
           <div className="space-y-2 mb-4">
             {notes.length === 0 ? (
-              <p className="text-slate-500 text-sm italic">No notes yet</p>
+              <p className="text-slate-500 text-sm italic">No notes recorded</p>
             ) : (
               notes.map((note, idx) => (
                 <div
@@ -559,10 +592,29 @@ export default function TechJobDetail() {
         </div>
 
         {showCompletionModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="surface w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl p-6">
-              <h2 className="text-xl font-semibold mb-4">Complete Job</h2>
-              <p className="text-slate-400 text-sm mb-4">{job.title}</p>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4 z-50">
+            <div className="surface w-full sm:max-w-lg sm:max-h-[90vh] h-[100dvh] sm:h-auto overflow-y-auto rounded-t-2xl sm:rounded-2xl p-4 sm:p-6">
+              {/* Mobile header with close */}
+              <div className="flex items-center justify-between gap-3 mb-4 sm:hidden">
+                <div>
+                  <h2 className="text-lg font-semibold">Complete Job</h2>
+                  <p className="text-slate-400 text-xs truncate max-w-[200px]">{job.title}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCompletionModal(false)}
+                  disabled={actionLoading}
+                  className="p-2 text-slate-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Desktop header */}
+              <div className="hidden sm:block">
+                <h2 className="text-xl font-semibold mb-2">Complete Job</h2>
+                <p className="text-slate-400 text-sm mb-6">{job.title}</p>
+              </div>
 
               {showRestoreDraftPrompt && (
                 <div className="mb-4 p-3 rounded-lg border border-amber-500/40 bg-amber-500/10">
@@ -586,69 +638,86 @@ export default function TechJobDetail() {
                 </div>
               )}
 
-              <form onSubmit={handleCompleteJob} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">
+              <form onSubmit={handleCompleteJob} className="space-y-6">
+                {/* Work Performed Section */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-white">
                     Work Performed <span className="text-rose-400">*</span>
                   </label>
+                  <p className="text-xs text-slate-400">Describe what you did to complete this job</p>
                   <textarea
                     value={completionForm.workPerformed}
                     onChange={(e) => setCompletionForm(prev => ({ ...prev, workPerformed: e.target.value }))}
-                    placeholder="Describe what work was performed..."
-                    className="input w-full"
-                    rows={4}
+                    placeholder="e.g., Replaced faulty thermostat, tested heating system, verified temperature control..."
+                    className="input w-full text-base leading-relaxed"
+                    rows={5}
                     required
                     minLength={10}
                     maxLength={2000}
                   />
-                  <p className="text-slate-500 text-xs mt-1">
-                    Minimum 10 characters, maximum 2000
-                  </p>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500">Minimum 10 characters</span>
+                    <span className={`${completionForm.workPerformed.length > 1800 ? 'text-amber-400' : 'text-slate-500'}`}>
+                      {completionForm.workPerformed.length}/2000
+                    </span>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Parts/Materials Used <span className="text-slate-500">(optional)</span>
+                {/* Parts/Materials Section */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-white">
+                    Parts & Materials Used
                   </label>
+                  <p className="text-xs text-slate-400">Optional - List any parts you installed or materials used</p>
                   <input
                     type="text"
                     value={completionForm.partsUsed}
                     onChange={(e) => setCompletionForm(prev => ({ ...prev, partsUsed: e.target.value }))}
-                    placeholder="List any parts or materials used..."
-                    className="input w-full"
+                    placeholder="e.g., Honeywell T6 Pro Thermostat, 2x Wire connectors"
+                    className="input w-full text-base py-3"
                     maxLength={500}
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Evidence Photos <span className="text-slate-500">(optional, max 3)</span>
-                  </label>
+                {/* Photos Section */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-semibold text-white">
+                      Evidence Photos
+                    </label>
+                    <p className="text-xs text-slate-400">Optional - Add up to 3 photos of completed work</p>
+                  </div>
 
                   {completionPhotos.length > 0 && (
-                    <div className="flex gap-2 mb-3 flex-wrap">
+                    <div className="flex gap-3 flex-wrap">
                       {completionPhotos.map((photo, idx) => (
-                        <div key={idx} className="relative">
+                        <div key={idx} className="relative group">
                           <img
                             src={photo}
                             alt={`Photo ${idx + 1}`}
-                            className="w-20 h-20 object-cover rounded-lg border border-slate-600"
+                            className="w-24 h-24 sm:w-20 sm:h-20 object-cover rounded-xl border-2 border-slate-600 group-hover:border-brand-sky/50 transition-colors"
                           />
                           <button
                             type="button"
                             onClick={() => removePhoto(idx)}
-                            className="absolute -top-2 -right-2 w-7 h-7 bg-rose-500 text-white rounded-full text-sm flex items-center justify-center hover:bg-rose-600"
+                            className="absolute -top-2 -right-2 w-8 h-8 bg-rose-500 text-white rounded-full text-base flex items-center justify-center hover:bg-rose-600 shadow-lg active:scale-95 transition-transform"
+                            aria-label="Remove photo"
                           >
                             ×
                           </button>
+                          <span className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded">
+                            {idx + 1}/3
+                          </span>
                         </div>
                       ))}
                     </div>
                   )}
 
                   {completionPhotos.length < 3 && (
-                    <label className="inline-flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg cursor-pointer transition">
-                      <span className="text-sm">{photoLoading ? 'Processing...' : 'Upload Photo'}</span>
+                    <label className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-3 bg-slate-700/80 hover:bg-slate-600 active:bg-slate-600 rounded-xl cursor-pointer transition-colors border-2 border-dashed border-slate-500 hover:border-brand-sky/50">
+                      <span className="text-xl">📷</span>
+                      <span className="text-sm font-medium">{photoLoading ? 'Processing...' : 'Add Photo'}</span>
+                      <span className="text-xs text-slate-400">({completionPhotos.length}/3)</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -659,61 +728,78 @@ export default function TechJobDetail() {
                       />
                     </label>
                   )}
-                  <p className="text-slate-500 text-xs mt-1">
-                    Max 5MB per photo. JPEG, PNG accepted.
+                  <p className="text-xs text-slate-500">
+                    Max 5MB each. JPEG or PNG. Tap to take a photo or choose from gallery.
                   </p>
                 </div>
 
-                <div className="pt-2 border-t border-slate-700">
-                  <label className="flex items-center gap-2 cursor-pointer">
+                {/* Follow-up Section */}
+                <div className="pt-4 border-t border-slate-700/50 space-y-3">
+                  <label className="flex items-start gap-3 p-3 -mx-3 rounded-xl hover:bg-white/5 active:bg-white/10 transition-colors cursor-pointer">
                     <input
                       type="checkbox"
                       checked={completionForm.followUpRequired}
                       onChange={(e) => setCompletionForm(prev => ({ ...prev, followUpRequired: e.target.checked }))}
-                      className="w-5 h-5 rounded border-slate-600"
+                      className="w-6 h-6 mt-0.5 rounded-lg border-slate-600 bg-slate-700 text-brand-teal focus:ring-brand-teal focus:ring-2"
                     />
-                    <span className="text-sm font-medium">Follow-up Required</span>
+                    <div>
+                      <span className="text-sm font-semibold text-white block">Follow-up Required</span>
+                      <span className="text-xs text-slate-400">Check if this job needs additional work or return visit</span>
+                    </div>
                   </label>
 
                   {completionForm.followUpRequired && (
-                    <div className="mt-3">
-                      <label className="block text-sm font-medium mb-1">
-                        Follow-up Notes <span className="text-rose-400">*</span>
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <label className="block text-sm font-semibold text-amber-300">
+                        Follow-up Details <span className="text-rose-400">*</span>
                       </label>
                       <textarea
                         value={completionForm.followUpNotes}
                         onChange={(e) => setCompletionForm(prev => ({ ...prev, followUpNotes: e.target.value }))}
-                        placeholder="Describe what follow-up is needed..."
-                        className="input w-full"
-                        rows={2}
+                        placeholder="Describe what follow-up work is needed and when..."
+                        className="input w-full text-base leading-relaxed border-amber-500/30 focus:border-amber-500/60"
+                        rows={3}
                         required={completionForm.followUpRequired}
                         maxLength={1000}
                       />
+                      <p className="text-xs text-slate-500">
+                        Admin will be notified that follow-up is required.
+                      </p>
                     </div>
                   )}
                 </div>
 
+                {/* Draft Status */}
                 {draftSavedAt && (
-                  <p className="text-xs text-slate-400">
-                    Draft saved ({new Date(draftSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })})
-                  </p>
+                  <div className="flex items-center gap-2 text-xs text-slate-400 bg-white/5 px-3 py-2 rounded-lg">
+                    <span>💾</span>
+                    <span>Draft saved at {new Date(draftSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
                 )}
 
-                <div className="flex gap-3 pt-4">
+                {/* Action Buttons - Sticky on mobile */}
+                <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 sm:sticky sm:bottom-0 bg-[#0a0e27] sm:bg-transparent pb-safe">
                   <button
                     type="button"
                     onClick={() => setShowCompletionModal(false)}
                     disabled={actionLoading}
-                    className="btn btn-ghost flex-1"
+                    className="btn btn-ghost w-full sm:flex-1 py-3.5 text-base"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={actionLoading}
-                    className="btn btn-green flex-1"
+                    className="btn btn-green w-full sm:flex-1 py-3.5 text-base font-semibold shadow-lg shadow-emerald-500/20"
                   >
-                    {actionLoading ? 'Submitting...' : 'Submit & Complete Job'}
+                    {actionLoading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="animate-spin">⏳</span>
+                        Submitting...
+                      </span>
+                    ) : (
+                      'Submit & Complete Job'
+                    )}
                   </button>
                 </div>
               </form>
