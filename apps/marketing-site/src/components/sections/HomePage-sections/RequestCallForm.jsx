@@ -6,6 +6,8 @@ import Textarea from "../../atoms/Textarea";
 import Button from "../../atoms/Button";
 import { portal } from "../../../lib/portal";
 import { getRecaptchaToken } from "../../../lib/recaptcha";
+
+const SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL || "support@callatech.com";
 import { Phone, Mail, Clock, ShieldCheck } from "lucide-react";
 
 export default function RequestCallForm() {
@@ -21,6 +23,7 @@ export default function RequestCallForm() {
   const [isProcessingImages, setIsProcessingImages] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null); // 'success', 'error', null
+  const [submitError, setSubmitError] = useState('');
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -88,11 +91,16 @@ export default function RequestCallForm() {
     e.preventDefault();
     setIsSubmitting(true);
     setSubmitStatus(null);
+    setSubmitError('');
 
     try {
       // Validate form data
       if (!formData.fullName.trim() || !formData.phone.trim() || !formData.description.trim()) {
         throw new Error('Please fill in all required fields');
+      }
+
+      if (formData.email.trim() && !/^\S+@\S+\.\S+$/.test(formData.email.trim())) {
+        throw new Error('Please enter a valid email address or leave it blank.');
       }
 
       // Prepare submit data with proper image handling
@@ -111,6 +119,7 @@ export default function RequestCallForm() {
       });
 
         setSubmitStatus('success');
+        setSubmitError('');
         setFormData({
           fullName: '',
           phone: '',
@@ -125,6 +134,7 @@ export default function RequestCallForm() {
     } catch (error) {
       console.error('Error submitting form:', error);
       setSubmitStatus('error');
+      setSubmitError(error?.message || 'Sorry, there was an error submitting your request. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -246,7 +256,7 @@ export default function RequestCallForm() {
 
               {submitStatus === 'error' && (
                 <div className="rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-red-700" role="alert">
-                  Sorry, there was an error submitting your request. Please try again.
+                  {submitError || 'Sorry, there was an error submitting your request. Please try again.'}
                 </div>
               )}
 
@@ -282,7 +292,7 @@ export default function RequestCallForm() {
             <div className="rounded-2xl border border-slate-200/60 bg-white p-6 shadow-sm">
               <h3 className="text-xl font-semibold text-brand-navy mb-4">Contact options</h3>
               <div className="space-y-3">
-                <a href="mailto:hello@call-a-technician.example" className="flex items-center gap-3 text-sm text-slate-700 hover:text-brand-blue transition">
+                <a href={`mailto:${SUPPORT_EMAIL}`} className="flex items-center gap-3 text-sm text-slate-700 hover:text-brand-blue transition">
                   <Mail className="w-5 h-5 text-brand-blue" />
                   Email us
                 </a>

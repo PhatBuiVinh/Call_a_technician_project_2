@@ -7,6 +7,8 @@ import Button from "../../atoms/Button";
 import { portal } from "../../../lib/portal"; // NEW: API helper import
 import { getRecaptchaToken } from "../../../lib/recaptcha";
 
+const SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL || "support@callatech.com";
+
 // Minimal SA suburbs list (add more anytime)
 const SA_SUBURBS = [
   "Adelaide", "Glenelg", "Henley Beach", "Semaphore", "Prospect", "Norwood",
@@ -627,7 +629,7 @@ export default function ContactFormBlock() {
                 <Phone className="w-4 h-4" />
                 Call 1300 551 350
               </Button>
-              <Button href="mailto:hello@call-a-technician.example" variant="secondary" className="flex items-center gap-2">
+              <Button href={`mailto:${SUPPORT_EMAIL}`} variant="secondary" className="flex items-center gap-2">
                 <Mail className="w-4 h-4" />
                 Email us
               </Button>
@@ -648,7 +650,7 @@ export default function ContactFormBlock() {
                 <Mail className="w-5 h-5 text-brand-blue mt-0.5" />
                 <div>
                   <div className="text-sm font-medium text-brand-navy">Email</div>
-                  <div className="text-sm text-slate-600">hello@call-a-technician.example</div>
+                  <div className="text-sm text-slate-600">{SUPPORT_EMAIL}</div>
                 </div>
               </div>
               <div className="flex items-start gap-3">

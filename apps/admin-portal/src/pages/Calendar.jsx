@@ -11,10 +11,14 @@ const SLOT = '00:30:00'; // 30-min cells
 
 export default function CalendarPage() {
   const mainRef = useRef(null);
+  const calendarRef = useRef(null);
 
   // technicians
   const [techs, setTechs] = useState([]);
   const [techFilter, setTechFilter] = useState('All');
+  
+  // refresh key to trigger FullCalendar refetch
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // mode: normal time-grid OR columns-per-tech
   const [mode, setMode] = useState('time'); // 'time' | 'tech'
@@ -90,7 +94,7 @@ export default function CalendarPage() {
     } catch (e) {
       failure(e);
     }
-  }, [jobToEvent, techFilter]);
+  }, [jobToEvent, techFilter, refreshKey]);
 
   // background events for time-off (drawn per calendar)
   const timeoffBgEvents = useCallback((info, success) => {
@@ -160,15 +164,15 @@ export default function CalendarPage() {
         method: 'PUT',
         body: { startAt: arg.event.startStr, endAt: arg.event.endStr },
       });
-      // hard refresh as requested to keep UI snappy/clean
-      window.location.reload();
+      // refetch events to show updated data
+      setRefreshKey(k => k + 1);
     } catch (e) {
       alert(e.message || 'Update failed');
       arg.revert();
     }
   }, []);
 
-  // save (create/update) — refresh page afterwards per your request
+  // save (create/update) — close modal and refresh events
   const save = useCallback(async () => {
     try {
       const body = { ...form };
@@ -177,7 +181,11 @@ export default function CalendarPage() {
       } else {
         await api('/jobs', { method: 'POST', body });
       }
-      window.location.reload();
+      // close modal and refetch events
+      setOpen(false);
+      setEditingId(null);
+      setForm(empty);
+      setRefreshKey(k => k + 1);
     } catch (e) {
       alert(e.message || 'Save failed');
     }
@@ -189,7 +197,11 @@ export default function CalendarPage() {
     if (!confirm('Delete this job?')) return;
     try {
       await api(`/jobs/${editingId}`, { method: 'DELETE' });
-      window.location.reload();
+      // close modal and refetch events
+      setOpen(false);
+      setEditingId(null);
+      setForm(empty);
+      setRefreshKey(k => k + 1);
     } catch (e) {
       alert(e.message || 'Delete failed');
     }
@@ -263,7 +275,7 @@ export default function CalendarPage() {
         {mode === 'time' ? (
           <div className="rounded-2xl overflow-hidden border border-white/10 bg-white/5">
             <FullCalendar
-              ref={mainRef}
+              ref={calendarRef}
               {...fcCommon}
               plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
               initialView="timeGridWeek"

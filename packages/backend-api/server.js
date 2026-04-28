@@ -16,7 +16,7 @@ const jwt       = require('jsonwebtoken');
 const dns       = require('node:dns');
 
 // Email notification service
-const { sendEmail } = require('./services/email');
+const { sendEmail, isEmailAddressValid } = require('./services/email');
 const templates = require('./services/emailTemplates');
 
 const app  = express();
@@ -35,6 +35,7 @@ const ENFORCE_SAME_DAY = (process.env.ENFORCE_SAME_DAY ?? 'false') === 'true';
 // Simple in-memory rate limiter for job request submissions
 // Limits: 5 per hour per IP, 10 per day per email
 // NOTE: For production scale, replace with Redis
+const RATE_LIMIT_ENABLED = (process.env.RATE_LIMIT_ENABLED ?? 'true') === 'true';
 const rateLimitStore = new Map(); // key -> { count, resetTime }
 
 function checkRateLimit(key, windowMs, maxRequests) {
@@ -102,11 +103,8 @@ async function verifyRecaptcha(token, action) {
     const data = await response.json();
 
     if (!data.success) {
+      console.error('[RECAPTCHA] Verification failed:', data['error-codes']);
       return { success: false, error: 'Invalid reCAPTCHA token' };
-    }
-
-    if (data.action !== action) {
-      return { success: false, error: 'Action mismatch' };
     }
 
     if (data.score < RECAPTCHA_MIN_SCORE) {
@@ -395,12 +393,7 @@ CustomerSchema.index({ name: 1 });
 CustomerSchema.index({ phone: 1 });
 const Customer = mongoose.models.Customer || mongoose.model('Customer', CustomerSchema);
 
-// Make sure we have an index to speed up overlap checks (if not defined in Job schema)
-(async () => {
-  try {
-    await Job.collection.createIndex({ owner: 1, technician: 1, startAt: 1, endAt: 1 });
-  } catch {}
-})();
+// Indexes are now defined in models/Job.js - no need to create them here
 
 /* ---------------- SCHEDULING HELPERS (CONFLICTS) ------------ */
 const dayMap = ['sun','mon','tue','wed','thu','fri','sat'];
@@ -817,37 +810,47 @@ app.post('/api/marketing/job-request', async (req, res) => {
   try {
     const clientIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || 'unknown';
     const { email } = req.body;
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const hasEmail = normalizedEmail.length > 0;
 
     console.log('Received job request:', {
-      fullName: req.body.fullName,
-      phone: req.body.phone,
-      email: req.body.email,
-      description: req.body.description,
+      hasFullName: Boolean(req.body.fullName),
+      hasPhone: Boolean(req.body.phone),
+      hasEmail: Boolean(req.body.email),
+      descriptionLength: String(req.body.description || '').length,
       imagesCount: req.body.images ? req.body.images.length : 0,
       ip: clientIp
     });
 
     // Anti-spam: Rate limit by IP (5 per hour)
-    const ipLimit = checkRateLimit(`ip:${clientIp}`, 3600000, 5);
-    if (!ipLimit.allowed) {
-      console.warn(`[RATE LIMIT] IP blocked: ${clientIp}`);
-      return res.status(429).json({
-        error: 'Too many requests.',
-        message: ipLimit.message,
-        retryAfter: ipLimit.retryAfter
-      });
-    }
-
-    // Anti-spam: Rate limit by email (10 per day) if email provided
-    if (email && email.includes('@')) {
-      const emailLimit = checkRateLimit(`email:${email.toLowerCase()}`, 86400000, 10);
-      if (!emailLimit.allowed) {
-        console.warn(`[RATE LIMIT] Email blocked: ${email}`);
+    if (RATE_LIMIT_ENABLED) {
+      const ipLimit = checkRateLimit(`ip:${clientIp}`, 3600000, 5);
+      if (!ipLimit.allowed) {
+        console.warn(`[RATE LIMIT] IP blocked: ${clientIp}`);
         return res.status(429).json({
-          error: 'Too many requests from this email.',
-          message: emailLimit.message,
-          retryAfter: emailLimit.retryAfter
+          error: 'Too many requests.',
+          message: ipLimit.message,
+          retryAfter: ipLimit.retryAfter
         });
+      }
+
+      // Anti-spam: Rate limit by email (10 per day) if email provided
+      if (hasEmail) {
+        if (!isEmailAddressValid(normalizedEmail)) {
+          return res.status(400).json({
+            error: 'Please enter a valid email address or leave the email field blank.'
+          });
+        }
+
+        const emailLimit = checkRateLimit(`email:${normalizedEmail}`, 86400000, 10);
+        if (!emailLimit.allowed) {
+          console.warn('[RATE LIMIT] Email blocked');
+          return res.status(429).json({
+            error: 'Too many requests from this email.',
+            message: emailLimit.message,
+            retryAfter: emailLimit.retryAfter
+          });
+        }
       }
     }
 
@@ -866,16 +869,26 @@ app.post('/api/marketing/job-request', async (req, res) => {
     const { fullName, phone, description, images } = req.body;
 
     if (!fullName || !phone || !description) {
-      console.log('Validation failed:', { fullName, phone, description });
+      console.log('Validation failed:', {
+        hasFullName: Boolean(fullName),
+        hasPhone: Boolean(phone),
+        descriptionLength: String(description || '').length
+      });
       return res.status(400).json({
         error: 'Full name, phone, and description are required'
+      });
+    }
+
+    if (hasEmail && !isEmailAddressValid(normalizedEmail)) {
+      return res.status(400).json({
+        error: 'Please enter a valid email address or leave the email field blank.'
       });
     }
 
     const jobRequest = await IncomingJobRequest.create({
       fullName: fullName.trim(),
       phone: phone.trim(),
-      email: email ? email.trim() : '',
+      email: hasEmail ? normalizedEmail : '',
       description: description.trim(),
       images: images || [],
       status: 'New'
@@ -884,18 +897,45 @@ app.post('/api/marketing/job-request', async (req, res) => {
     console.log('Job request created successfully:', jobRequest._id);
 
     // Send customer confirmation email (best-effort, non-blocking)
-    if (email && email.includes('@')) {
+    if (hasEmail) {
       const template = templates.customerRequestConfirmation({
         fullName: fullName.trim(),
         description: description.trim(),
         requestId: jobRequest._id
       });
-      sendEmail(email.trim(), template.subject, template.text, template.html)
+      sendEmail(normalizedEmail, template.subject, template.text, template.html)
         .then(result => {
           if (!result.sent) {
             console.log('[EMAIL] Customer confirmation not sent:', result.reason || result.error);
           }
+        })
+        .catch(error => {
+          console.error('[EMAIL] Customer confirmation send error:', error.message);
         });
+    }
+
+    // Send admin notification email (best-effort, non-blocking)
+    const adminNotificationEmail = process.env.ADMIN_NOTIFICATION_EMAIL;
+    if (adminNotificationEmail && adminNotificationEmail.trim()) {
+      try {
+        const template = templates.adminNewRequestNotification({
+          customerName: fullName.trim(),
+          customerPhone: phone.trim(),
+          customerEmail: normalizedEmail || 'Not provided',
+          description: description.trim(),
+          requestId: jobRequest._id
+        });
+        sendEmail(adminNotificationEmail.trim(), template.subject, template.text, template.html)
+          .then(result => {
+            if (!result.sent) {
+              console.log('[EMAIL] Admin notification not sent:', result.reason || result.error);
+            } else {
+              console.log('[EMAIL] Admin notification sent successfully');
+            }
+          });
+      } catch (error) {
+        console.error('[EMAIL] Failed to send admin notification:', error.message);
+      }
     }
 
     res.status(201).json({ 
@@ -1006,7 +1046,7 @@ app.post('/api/jobs', auth, async (req, res) => {
   try {
     let { 
       title, invoice, priority, status, technician, phone, description, 
-      startAt, endAt, sourceRequestId 
+      startAt, endAt, sourceRequestId, customerEmail 
     } = req.body;
     if (!title || !invoice) return sendErr(res, 400, 'Title and Invoice are required');
 
@@ -1021,11 +1061,21 @@ app.post('/api/jobs', auth, async (req, res) => {
       if (sourceRequest.convertedToJobId) {
         return sendErr(res, 400, 'Request already converted to a job');
       }
+      // Use email from source request if available
+      customerEmail = sourceRequest.email || customerEmail;
     }
 
     startAt = startAt ? new Date(startAt) : null;
     endAt   = endAt   ? new Date(endAt)   : null;
     if (startAt && endAt && endAt < startAt) return sendErr(res, 400, 'endAt must be after startAt');
+
+    // Normalize and validate customerEmail if provided
+    if (customerEmail) {
+      customerEmail = String(customerEmail).trim().toLowerCase();
+      if (!isEmailAddressValid(customerEmail)) {
+        return sendErr(res, 400, 'Invalid customer email address');
+      }
+    }
 
     // Conflict prevention (only if scheduled and technician set)
     if (technician && startAt && endAt) {
@@ -1067,6 +1117,7 @@ app.post('/api/jobs', auth, async (req, res) => {
       startAt, endAt,
       owner: req.user.sub,
       assignedTo,  // proper technician reference (null if no technician)
+      customerEmail: customerEmail || undefined,
       ...(status === 'Assigned' && assignedTo && { assignedAt: new Date() }),  // Set timestamp if assigned
       events: initialEvents,
       ...(sourceRequestId && { sourceRequestId })
@@ -1081,6 +1132,75 @@ app.post('/api/jobs', auth, async (req, res) => {
         status: 'Converted',
         updatedAt: new Date()
       });
+    }
+
+    // Send assignment emails if technician was assigned during job creation
+    if (assignedTo && technician && technician.trim()) {
+      // Technician notification
+      try {
+        const techUser = await User.findOne({ techId: assignedTo });
+        if (techUser?.email) {
+          const template = templates.technicianAssigned({
+            techName: technician.trim(),
+            jobTitle: job.title,
+            jobDescription: job.description || 'No description provided',
+            customerName: job.customerName || 'Unknown',
+            customerPhone: job.phone || 'N/A',
+            customerAddress: job.customerAddress || 'N/A',
+            jobId: job._id
+          });
+          sendEmail(techUser.email, template.subject, template.text, template.html)
+            .then(result => {
+              if (!result.sent) {
+                console.log('[EMAIL] Tech assignment not sent during job creation:', result.reason || result.error);
+              } else {
+                console.log('[EMAIL] Tech assignment email sent successfully');
+              }
+            });
+        } else {
+          console.log('[EMAIL] Tech assigned but no linked user email found during job creation');
+        }
+      } catch (emailErr) {
+        console.error('[EMAIL] Failed to send tech assignment notification during job creation:', emailErr.message);
+      }
+
+      // Customer notification (if customer email exists)
+      if (customerEmail) {
+        try {
+          let scheduledWindow = 'To be confirmed';
+          if (job.startAt) {
+            const start = new Date(job.startAt);
+            if (!Number.isNaN(start.getTime())) {
+              if (job.endAt) {
+                const end = new Date(job.endAt);
+                if (!Number.isNaN(end.getTime())) {
+                  scheduledWindow = `${start.toLocaleString()} to ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                } else {
+                  scheduledWindow = start.toLocaleString();
+                }
+              } else {
+                scheduledWindow = start.toLocaleString();
+              }
+            }
+          }
+          const template = templates.customerTechnicianAssigned({
+            customerName: job.customerName || 'Valued Customer',
+            techName: technician.trim(),
+            jobTitle: job.title,
+            scheduledWindow
+          });
+          sendEmail(customerEmail, template.subject, template.text, template.html)
+            .then(result => {
+              if (!result.sent) {
+                console.log('[EMAIL] Customer assignment not sent during job creation:', result.reason || result.error);
+              } else {
+                console.log('[EMAIL] Customer assignment email sent successfully');
+              }
+            });
+        } catch (emailErr) {
+          console.error('[EMAIL] Failed to send customer assignment notification during job creation:', emailErr.message);
+        }
+      }
     }
 
     return res.json(job);
@@ -1957,14 +2077,14 @@ app.post('/api/techs/:id/create-account', auth, async (req, res) => {
     }
 
     const { email, password } = req.body || {};
-    
-    if (!email || !password) {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+
+    if (!normalizedEmail || !password) {
       return sendErr(res, 400, 'Email and password are required');
     }
 
     // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!isEmailAddressValid(normalizedEmail)) {
       return sendErr(res, 400, 'Invalid email format');
     }
 
@@ -1985,7 +2105,7 @@ app.post('/api/techs/:id/create-account', auth, async (req, res) => {
     }
 
     // Check if email is already used by another user
-    const existingEmail = await User.findOne({ email: email.toLowerCase() });
+    const existingEmail = await User.findOne({ email: normalizedEmail });
     if (existingEmail) {
       return sendErr(res, 409, 'Email address is already registered');
     }
@@ -1994,7 +2114,7 @@ app.post('/api/techs/:id/create-account', auth, async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await User.create({
       name: tech.name,
-      email: email.toLowerCase(),
+      email: normalizedEmail,
       passwordHash,
       role: 'technician',
       techId: tech._id

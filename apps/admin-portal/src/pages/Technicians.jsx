@@ -136,8 +136,15 @@ export default function Technicians() {
     setAccountError('');
     setAccountSuccess('');
 
-    if (!accountForm.email || !accountForm.password) {
+    const normalizedEmail = accountForm.email.trim().toLowerCase();
+
+    if (!normalizedEmail || !accountForm.password) {
       setAccountError('Email and password are required');
+      return;
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+      setAccountError('Please enter a valid email address');
       return;
     }
 
@@ -156,7 +163,7 @@ export default function Technicians() {
       await api(`/techs/${selectedTech._id}/create-account`, {
         method: 'POST',
         body: {
-          email: accountForm.email,
+          email: normalizedEmail,
           password: accountForm.password
         }
       });

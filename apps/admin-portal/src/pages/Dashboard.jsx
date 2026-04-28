@@ -745,6 +745,10 @@ async function save() {
     // 6) Close modal and reset form only on successful save
     // Job saved successfully
     
+    // Refresh jobs list and dashboard summary to show updated data
+    await load();
+    await loadDashboardSummary();
+    
     // Add a small delay to prevent accidental closing
     setTimeout(() => {
       setOpen(false);
@@ -757,9 +761,11 @@ async function save() {
     // Check for duplicate conversion error
     const errorMsg = e.message || '';
     if (errorMsg.toLowerCase().includes('already converted') || errorMsg.toLowerCase().includes('already converted to a job')) {
-      alert('This request has already been converted to a job. The page will refresh to show the updated status.');
-      // Refresh to get updated data
-      window.location.reload();
+      alert('This request has already been converted to a job. The status will refresh.');
+      // Refresh data without full page reload
+      await load();
+      setOpen(false);
+      setForm(empty);
     } else {
       alert(e.message || 'Save failed');
     }
@@ -774,6 +780,8 @@ async function save() {
     try {
       await api(`/jobs/${id}`, { method: 'DELETE' });
       setJobs((prev) => prev.filter((j) => j._id !== id));
+      // Refresh dashboard summary to update counts
+      await loadDashboardSummary();
     } catch (e) {
       alert(e.message);
     }

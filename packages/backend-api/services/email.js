@@ -7,33 +7,49 @@
 
 const nodemailer = require('nodemailer');
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 // Feature flag - disabled by default
 const ENABLED = process.env.EMAIL_NOTIFICATIONS_ENABLED === 'true';
 
 // SMTP configuration from environment
 const SMTP_HOST = process.env.SMTP_HOST;
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587', 10);
+const SMTP_SECURE = process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : SMTP_PORT === 465;
 const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
-const EMAIL_FROM = process.env.EMAIL_FROM || 'Call-a-Technician <noreply@callatech.com>';
+const EMAIL_FROM = process.env.EMAIL_FROM || SMTP_USER || 'Call-a-Technician <noreply@callatech.com>';
+
+function isEmailAddressValid(value) {
+  return EMAIL_REGEX.test(String(value || '').trim());
+}
+
+function getMissingSmtpFields() {
+  const missing = [];
+  if (!SMTP_HOST) missing.push('SMTP_HOST');
+  if (!SMTP_USER) missing.push('SMTP_USER');
+  if (!SMTP_PASS) missing.push('SMTP_PASS');
+  return missing;
+}
 
 // Create transporter only if enabled and configured
 let transporter = null;
 
 if (ENABLED) {
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
-    console.warn('[EMAIL] EMAIL_NOTIFICATIONS_ENABLED=true but SMTP config incomplete. Emails will fail.');
+  const missing = getMissingSmtpFields();
+  if (missing.length > 0) {
+    console.warn('[EMAIL] Email notifications enabled but SMTP config is incomplete. Missing:', missing.join(', '));
   } else {
     transporter = nodemailer.createTransport({
       host: SMTP_HOST,
       port: SMTP_PORT,
-      secure: SMTP_PORT === 465,
+      secure: SMTP_SECURE,
       auth: {
         user: SMTP_USER,
         pass: SMTP_PASS,
       },
     });
-    console.log('[EMAIL] Email notifications enabled via', SMTP_HOST);
+    console.log('[EMAIL] Email notifications enabled via', SMTP_HOST, 'port', SMTP_PORT);
   }
 } else {
   console.log('[EMAIL] Email notifications disabled (set EMAIL_NOTIFICATIONS_ENABLED=true to enable)');
@@ -58,24 +74,25 @@ async function sendEmail(to, subject, text, html = null) {
       return { sent: false, error: 'Transporter not configured' };
     }
 
-    if (!to || !to.includes('@')) {
-      console.error('[EMAIL FAILED] Invalid recipient:', to);
+    const recipient = String(to || '').trim();
+    if (!isEmailAddressValid(recipient)) {
+      console.error('[EMAIL FAILED] Invalid recipient address');
       return { sent: false, error: 'Invalid recipient email' };
     }
 
     const mailOptions = {
       from: EMAIL_FROM,
-      to: to.trim(),
+      to: recipient,
       subject,
       text,
       html: html || text.replace(/\n/g, '<br>'),
     };
 
     const result = await transporter.sendMail(mailOptions);
-    console.log('[EMAIL SENT]', to, subject, result.messageId);
+    console.log('[EMAIL SENT]', recipient, subject, result.messageId);
     return { sent: true, messageId: result.messageId };
   } catch (err) {
-    console.error('[EMAIL FAILED]', to, subject, err.message);
+    console.error('[EMAIL FAILED]', err.message);
     return { sent: false, error: err.message };
   }
 }
@@ -83,4 +100,5 @@ async function sendEmail(to, subject, text, html = null) {
 module.exports = {
   sendEmail,
   ENABLED,
+  isEmailAddressValid,
 };
