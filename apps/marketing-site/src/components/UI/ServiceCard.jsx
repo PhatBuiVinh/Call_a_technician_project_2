@@ -36,8 +36,8 @@ export default function ServiceCard({ icon: Icon, title, blurb, bullets = [], pr
       </div>
       <div className="h-1 w-12 bg-gradient-to-r from-brand-blue to-brand-lightblue rounded-full" />
       <div className="mt-4 flex items-start gap-3">
-        <div className="w-10 h-10 rounded-md bg-brand-lightblue/30 text-brand-blue grid place-items-center shrink-0">
-          {Icon ? <Icon className="w-5 h-5" /> : <span className="text-lg">🛠️</span>}
+        <div className="w-12 h-12 rounded-xl bg-brand-lightblue/20 text-brand-blue grid place-items-center shrink-0">
+          {Icon ? <Icon className="w-6 h-6" /> : <span className="text-lg">🛠️</span>}
         </div>
         <div className="min-w-0">
           <div className="text-xl md:text-2xl font-semibold text-brand-navy">{title}</div>

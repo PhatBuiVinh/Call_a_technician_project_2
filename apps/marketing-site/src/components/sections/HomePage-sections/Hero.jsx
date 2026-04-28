@@ -47,7 +47,6 @@ export default function Hero({ imageUrl }) {
       scrubTimeline
         .to(imageRef.current, {
           yPercent: subtle ? 8 : 14,
-          scale: subtle ? 1.045 : 1.085,
           transformOrigin: "center center",
           ease: "none",
         }, 0)
@@ -91,80 +90,82 @@ export default function Hero({ imageUrl }) {
   }, [reduceMotion, motionIntensity]);
 
   return (
-    <section ref={sectionRef} className="section-feature relative overflow-hidden bg-gradient-to-br from-brand-blue/10 via-white to-brand-lightblue/15">
-      <div className="absolute inset-0 z-0 bg-dot-grid text-brand-navy/20 mask-fade-b" />
-
-      <div ref={orbARef} className="absolute -top-24 -left-24 h-[28rem] w-[28rem] rounded-full bg-brand-green/25 blur-3xl" />
-      <div ref={orbBRef} className="absolute -bottom-8 -right-8 h-[32rem] w-[32rem] rounded-full bg-brand-lightblue/25 blur-3xl" />
-
-      <div className="container-app relative z-10 grid items-center gap-8 md:grid-cols-[1.1fr_0.9fr] md:gap-16">
-        <div ref={leftColRef}>
-          <motion.div layoutId="shared-page-kicker" data-hero-badge className="inline-flex items-center gap-2 rounded-full border border-brand-blue/20 bg-white/80 px-3 py-1 text-xs font-semibold text-brand-blue">
-            <Star className="h-3.5 w-3.5 fill-current" />
-            Rated 4.9/5 by 1,200+ Adelaide customers
-          </motion.div>
-
-          <motion.div layoutId="shared-page-headline" data-hero-heading-wrap>
-            <SplitRevealText tag="h1" className="h1 mt-4 !text-5xl md:!text-7xl !leading-none" delay={0.08}>
-              Same-day tech support that fixes the issue the first time
-            </SplitRevealText>
-          </motion.div>
-
-          <motion.p layoutId="shared-page-copy" data-hero-copy className="mt-4 text-slate-600 text-base md:text-lg">
-            Home or office, we handle computers, Wi-Fi, email, and security issues with clear pricing and no confusing jargon.
-          </motion.p>
-
-          <motion.div ref={ctaRef} data-hero-cta className="relative z-20 mt-7 flex flex-col sm:flex-row gap-3 !opacity-100">
-            <Button variant="primary" to="/contact" className="min-w-52 inline-flex items-center justify-center gap-2 !opacity-100 !visible">
-              Book a Technician
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-            <Button variant="secondary" href="tel:1300551350" className="min-w-44 justify-center !opacity-100 !visible">
-              Call 1300 551 350
-            </Button>
-          </motion.div>
-
-          <div ref={trustRef} data-hero-trust className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <div className="rounded-lg border border-brand-blue/20 bg-white/80 px-3 py-2 text-xs text-slate-700 inline-flex items-center gap-2">
-              <Clock3 className="h-4 w-4 text-brand-blue" />
-              Same-day availability
-            </div>
-            <div className="rounded-lg border border-brand-blue/20 bg-white/80 px-3 py-2 text-xs text-slate-700 inline-flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-brand-blue" />
-              No Fix, No Fee
-            </div>
-            <div className="rounded-lg border border-brand-blue/20 bg-white/80 px-3 py-2 text-xs text-slate-700 inline-flex items-center gap-2">
-              <Star className="h-4 w-4 text-brand-blue" />
-              Local Adelaide team
-            </div>
-          </div>
-
-          <p data-hero-footnote className="mt-3 text-xs text-slate-500">
-            Open 7 days · Adelaide and nearby suburbs · Fast response during business hours
-          </p>
-        </div>
-
-        <div
-          ref={visualRef}
-          className="relative overflow-hidden rounded-[32px] border border-white/60 md:h-[430px] h-[270px] flex items-center"
-        >
-          <HeroImageCarousel imageUrl={imageUrl} imageTrackRef={imageRef} reduceMotion={reduceMotion} />
-        </div>
+    <section ref={sectionRef} className="section-feature relative overflow-hidden bg-brand-navy pb-24 md:pb-28 lg:pb-32">
+      <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 bg-gradient-to-br from-brand-navy via-brand-blue to-brand-navy" />
+        <div className="absolute inset-0 bg-dot-grid text-white/10" />
+        <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-b from-transparent to-brand-navy" />
       </div>
 
-      {/* Curved divider */}
-      <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-none">
-        <svg
-          viewBox="0 0 1440 120"
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-full h-[60px] md:h-[80px] text-white"
-          preserveAspectRatio="none"
-        >
-          <path
-            d="M0,0 C480,120 960,0 1440,120 L1440,0 L0,0 Z"
-            className="fill-white"
-          />
-        </svg>
+      <div ref={orbARef} className="pointer-events-none absolute -top-20 -left-20 h-72 w-72 rounded-full bg-brand-green/20 blur-3xl md:h-96 md:w-96" />
+      <div ref={orbBRef} className="pointer-events-none absolute -bottom-16 -right-10 h-80 w-80 rounded-full bg-brand-lightblue/20 blur-3xl md:h-[24rem] md:w-[24rem]" />
+
+      <div className="container-app relative z-10 pb-8 md:pb-12">
+        <div className="relative overflow-hidden rounded-[30px] border border-white/20 bg-brand-navy/35 shadow-[0_30px_80px_rgba(0,1,84,0.45)] lg:h-[620px] xl:h-[680px]">
+          <div
+            ref={visualRef}
+            className="relative z-10 h-[320px] sm:h-[380px] md:h-[440px] lg:absolute lg:inset-y-0 lg:right-0 lg:h-[620px] lg:w-[54%] xl:h-[680px]"
+          >
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-l from-brand-navy/20 via-transparent to-brand-navy/55" />
+            <HeroImageCarousel
+              imageUrl={imageUrl}
+              imageTrackRef={imageRef}
+              reduceMotion={reduceMotion}
+              className="h-full w-full lg:rounded-none"
+            />
+          </div>
+
+          <div
+            ref={leftColRef}
+            className="relative z-20 bg-gradient-to-br from-brand-navy via-brand-blue to-brand-navy px-6 py-9 sm:px-8 sm:py-10 md:px-10 md:py-12 lg:h-[620px] lg:w-[52%] lg:-mr-14 lg:rounded-r-[180px] lg:px-12 lg:py-14 xl:h-[680px] xl:rounded-r-[230px]"
+          >
+            <div className="max-w-2xl xl:max-w-3xl">
+              <motion.div layoutId="shared-page-kicker" data-hero-badge className="inline-flex items-center gap-2 rounded-full border border-brand-green/35 bg-brand-green/15 px-3 py-1 text-xs font-semibold text-brand-green">
+                <Star className="h-3.5 w-3.5 fill-current" />
+                Rated 4.9/5 by 1,200+ Adelaide customers
+              </motion.div>
+
+              <motion.div layoutId="shared-page-headline" data-hero-heading-wrap>
+                <SplitRevealText tag="h1" className="h1 mt-4 !text-5xl !leading-[0.98] !text-white md:!text-6xl xl:!text-7xl" delay={0.08}>
+                  Same-day tech support that fixes the issue the first time
+                </SplitRevealText>
+              </motion.div>
+
+              <motion.p layoutId="shared-page-copy" data-hero-copy className="mt-4 max-w-2xl text-base text-white/85 md:text-lg">
+                Home or office, we handle computers, Wi-Fi, email, and security issues with clear pricing and no confusing jargon.
+              </motion.p>
+
+              <motion.div ref={ctaRef} data-hero-cta className="relative z-20 mt-7 flex flex-col gap-3 !opacity-100 sm:flex-row">
+                <Button variant="primary" to="/contact" className="min-w-52 inline-flex items-center justify-center gap-2 !opacity-100 !visible">
+                  Book a Technician
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+                <Button variant="secondary" href="tel:1300551350" className="min-w-44 justify-center !opacity-100 !visible !border-white/30 !bg-white/10 !text-white hover:!bg-white/20">
+                  Call 1300 551 350
+                </Button>
+              </motion.div>
+
+              <div ref={trustRef} data-hero-trust className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <div className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs text-white/90">
+                  <Clock3 className="h-4 w-4 text-brand-green" />
+                  Same-day availability
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs text-white/90">
+                  <ShieldCheck className="h-4 w-4 text-brand-green" />
+                  No Fix, No Fee
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs text-white/90">
+                  <Star className="h-4 w-4 text-brand-green" />
+                  Local Adelaide team
+                </div>
+              </div>
+
+              <p data-hero-footnote className="mt-3 text-xs text-white/65">
+                Open 7 days · Adelaide and nearby suburbs · Fast response during business hours
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );

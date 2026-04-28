@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, ShieldCheck, Clock3 } from "lucide-react";
+import { CheckCircle2, ShieldCheck, Clock3, Phone, Mail, MapPin } from "lucide-react";
 import Section from "../../layout/Section";
 import Input from "../../atoms/Input";
 import Textarea from "../../atoms/Textarea";
 import Button from "../../atoms/Button";
 import { portal } from "../../../lib/portal"; // NEW: API helper import
 import { getRecaptchaToken } from "../../../lib/recaptcha";
-import techVisitImg from "../../../assets/tech-visit.jpg";
 
 // Minimal SA suburbs list (add more anytime)
 const SA_SUBURBS = [
@@ -618,34 +617,63 @@ export default function ContactFormBlock() {
           </form>
         </div>
 
-        {/* Right column remains the same */}
-        <div className="card overflow-hidden">
-          <div className="aspect-[4/3] md:aspect-[5/4] relative">
-            <img
-              src={techVisitImg}
-              alt="Call-a-Technician on-site visit"
-              className="absolute inset-0 w-full h-full object-cover"
-              loading="lazy"
-            />
+        {/* Right column: contact info cards */}
+        <div className="flex flex-col gap-4">
+          <div className="card p-6">
+            <h3 className="text-xl md:text-2xl font-semibold text-brand-navy">Prefer to call?</h3>
+            <p className="text-sm text-slate-600 mt-2">Speak with a technician now. Same-day availability across Adelaide.</p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Button href="tel:1300551350" variant="accent" className="flex items-center gap-2">
+                <Phone className="w-4 h-4" />
+                Call 1300 551 350
+              </Button>
+              <Button href="mailto:hello@call-a-technician.example" variant="secondary" className="flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                Email us
+              </Button>
+            </div>
           </div>
 
-          <div className="p-6 md:p-8">
-            <h3 className="text-xl md:text-2xl font-semibold text-brand-navy">Prefer to call?</h3>
-            <p className="text-sm text-slate-600 mt-1">Speak with a technician now. Same-day availability across Adelaide.</p>
-            <div className="mt-3 flex flex-wrap gap-3">
-              <Button href="tel:1300551350" variant="accent">Call 1300 551 350</Button>
-              <Button href="mailto:hello@call-a-technician.example" variant="secondary">Email us</Button>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-              <div className="rounded-2xl bg-brand-lightblue/10 p-3">
-                <div className="text-xs text-slate-500">Hours</div>
-                <div className="font-medium text-brand-navy">Mon–Sun, 8am–6pm</div>
+          <div className="card p-6">
+            <h3 className="text-lg font-semibold text-brand-navy mb-4">Contact information</h3>
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <Phone className="w-5 h-5 text-brand-blue mt-0.5" />
+                <div>
+                  <div className="text-sm font-medium text-brand-navy">Phone</div>
+                  <div className="text-sm text-slate-600">1300 551 350</div>
+                </div>
               </div>
-              <div className="rounded-2xl bg-brand-lightblue/10 p-3">
-                <div className="text-xs text-slate-500">Coverage</div>
-                <div className="font-medium text-brand-navy">Adelaide & nearby suburbs</div>
+              <div className="flex items-start gap-3">
+                <Mail className="w-5 h-5 text-brand-blue mt-0.5" />
+                <div>
+                  <div className="text-sm font-medium text-brand-navy">Email</div>
+                  <div className="text-sm text-slate-600">hello@call-a-technician.example</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <MapPin className="w-5 h-5 text-brand-blue mt-0.5" />
+                <div>
+                  <div className="text-sm font-medium text-brand-navy">Service area</div>
+                  <div className="text-sm text-slate-600">Adelaide & nearby suburbs</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Clock3 className="w-5 h-5 text-brand-blue mt-0.5" />
+                <div>
+                  <div className="text-sm font-medium text-brand-navy">Hours</div>
+                  <div className="text-sm text-slate-600">Mon–Sun, 8am–6pm</div>
+                </div>
               </div>
             </div>
+          </div>
+
+          <div className="rounded-2xl bg-brand-lightblue/10 p-4 text-sm text-slate-700">
+            <div className="flex items-center gap-2 mb-1">
+              <ShieldCheck className="w-4 h-4 text-brand-blue" />
+              <span className="font-medium text-brand-navy">No Fix, No Fee</span>
+            </div>
+            <p>If we can't resolve your issue, you don't pay. Clear pricing before work begins.</p>
           </div>
         </div>
       </div>

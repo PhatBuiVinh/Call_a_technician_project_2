@@ -3,6 +3,7 @@ import Section from "../../layout/Section";
 import { H2 } from "../../UI/Heading";
 import Button from "../../atoms/Button";
 import { MapPin, Rocket, Users } from "lucide-react";
+import ImageFallback from "../../UI/ImageFallback";
 
 /**
  * Our Story split layout
@@ -36,19 +37,15 @@ Today, we support homes and small businesses across South Australia with the sam
           {/* Top gradient rule */}
           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-blue via-brand-lightblue to-brand-green" />
 
-          <div className="aspect-video w-full bg-slate-100">
-            {imageUrl ? (
-              <img
-                src={imageUrl}
-                alt="Our team at work"
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="h-full w-full grid place-items-center text-slate-500">
-                Team / workplace photo
-              </div>
-            )}
-          </div>
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt="Our team at work"
+              className="aspect-video w-full object-cover"
+            />
+          ) : (
+            <ImageFallback type="team" className="aspect-video w-full" alt="Our team at work" />
+          )}
 
           {/* Subtle corner accent */}
           <div className="pointer-events-none absolute -left-4 -top-4 rotate-[-8deg]">

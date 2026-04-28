@@ -6,7 +6,7 @@ import Textarea from "../../atoms/Textarea";
 import Button from "../../atoms/Button";
 import { portal } from "../../../lib/portal";
 import { getRecaptchaToken } from "../../../lib/recaptcha";
-import supportTeamImg from "../../../assets/Smiling Businesswoman with Tablet _ Premium…-Photoroom.png";
+import { Phone, Mail, Clock, ShieldCheck } from "lucide-react";
 
 export default function RequestCallForm() {
   const fileInputRef = useRef(null);
@@ -268,15 +268,40 @@ export default function RequestCallForm() {
             </form>
           </div>
 
-          {/* Right: visual */}
-          <div className="aspect-video flex items-center justify-center p-6 bg-transparent">
-  <img
-    src={supportTeamImg}
-    alt="Support team"
-    className="max-h-max w-auto object-contain drop-shadow-xl"
-    style={{ maxWidth: "100%" }}
-  />
-</div>
+          {/* Right: contact info cards */}
+          <div className="flex flex-col gap-4">
+            <div className="rounded-2xl border border-slate-200/60 bg-white p-6 shadow-sm">
+              <h3 className="text-xl font-semibold text-brand-navy mb-4">Prefer to call?</h3>
+              <p className="text-sm text-slate-600 mb-4">Speak with a technician now. Same-day availability across Adelaide.</p>
+              <Button href="tel:1300551350" variant="accent" className="w-full justify-center">
+                <Phone className="w-4 h-4 mr-2" />
+                Call 1300 551 350
+              </Button>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200/60 bg-white p-6 shadow-sm">
+              <h3 className="text-xl font-semibold text-brand-navy mb-4">Contact options</h3>
+              <div className="space-y-3">
+                <a href="mailto:hello@call-a-technician.example" className="flex items-center gap-3 text-sm text-slate-700 hover:text-brand-blue transition">
+                  <Mail className="w-5 h-5 text-brand-blue" />
+                  Email us
+                </a>
+                <div className="flex items-center gap-3 text-sm text-slate-700">
+                  <Clock className="w-5 h-5 text-brand-blue" />
+                  <span>Mon–Sun, 8am–6pm</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-slate-700">
+                  <ShieldCheck className="w-5 h-5 text-brand-blue" />
+                  <span>No Fix, No Fee</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-brand-lightblue/10 p-4 text-sm text-slate-700">
+              <p className="font-medium text-brand-navy mb-1">Service coverage</p>
+              <p>Adelaide & nearby suburbs. Same-day bookings available.</p>
+            </div>
+          </div>
 
         </div>
       </Section>

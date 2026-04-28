@@ -26,7 +26,7 @@ export default function ServicesGrid({ items = [] }) {
           <div className="w-16 h-[3px] bg-gradient-to-r from-brand-blue via-brand-lightblue to-brand-green rounded-full mx-auto" />
           <H2 className="mt-4">On-Site Computer Repair Services</H2>
           <p className="mt-2 text-slate-600">
-            Don’t see your issue listed? <a className="link-animated text-brand-blue hover:text-brand-lightblue" href="tel:1300551350">Call us</a> — we can help.
+            Don't see your issue listed? <a className="link-animated text-brand-blue hover:text-brand-lightblue" href="tel:1300551350">Call us</a> — we can help.
           </p>
         </div>
 
@@ -74,8 +74,8 @@ export default function ServicesGrid({ items = [] }) {
                   <div className="h-1 w-12 bg-gradient-to-r from-brand-blue to-brand-lightblue rounded-full" />
 
                   <div className="mt-4 flex items-start gap-3">
-                    {/* icon chip (replace s.icon with lucide icon if you have it) */}
-                    <div className="w-10 h-10 rounded-md bg-brand-lightblue/30 text-brand-blue grid place-items-center text-2xl shrink-0">
+                    {/* icon chip */}
+                    <div className="w-12 h-12 rounded-xl bg-brand-lightblue/20 text-brand-blue grid place-items-center shrink-0">
                       {s.icon ?? "🛠️"}
                     </div>
 
@@ -111,7 +111,7 @@ export default function ServicesGrid({ items = [] }) {
 
         {/* band below grid */}
         <div className="mt-8 rounded-2xl border border-slate-200/50 bg-brand-lightblue/10 p-4 text-sm text-slate-700 text-center">
-          Can’t find your exact problem? Describe it on our{" "}
+          Can't find your exact problem? Describe it on our{" "}
           <a href="/contact" className="link-animated text-brand-blue hover:text-brand-lightblue">
             contact form
           </a>{" "}

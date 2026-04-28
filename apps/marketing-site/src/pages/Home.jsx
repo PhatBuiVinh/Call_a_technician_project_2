@@ -1,4 +1,5 @@
 import Hero from "../components/sections/HomePage-sections/Hero";
+import HeroBookingStrip from "../components/sections/HomePage-sections/HeroBookingStrip";
 import StatsBar from "../components/sections/HomePage-sections/StatsBar";
 import CompanyBlurb from "../components/sections/HomePage-sections/CompanyBlurb";
 import ServiceAreas from "../components/sections/HomePage-sections/ServiceAreas";
@@ -14,6 +15,7 @@ export default function Home() {
   return (
     <div className="text-slate-800">
       <Reveal y={16} duration={0.45} amount={0.15}><Hero /></Reveal>
+      <HeroBookingStrip />
       <Reveal delay={0.02}><StatsBar /></Reveal>
       <div className="section-transition-dark-to-light" aria-hidden="true" />
       <Reveal delay={0.02}><LogosCarousel /></Reveal>
