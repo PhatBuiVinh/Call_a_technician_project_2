@@ -803,12 +803,6 @@ async function save() {
       return;
     }
 
-    const reportWindow = window.open('', '_blank', 'noopener,noreferrer,width=980,height=1100');
-    if (!reportWindow) {
-      alert('Could not open report window. Please allow pop-ups and try again.');
-      return;
-    }
-
     const submittedAt = new Date(form.completionForm.submittedAt).toLocaleString();
     const technicianName = form.technician || 'Unknown technician';
     const photos = Array.isArray(form.completionPhotos) ? form.completionPhotos : [];
@@ -918,9 +912,25 @@ async function save() {
   </body>
 </html>`;
 
-    reportWindow.document.open();
-    reportWindow.document.write(html);
-    reportWindow.document.close();
+    // Create a Blob and trigger file download instead of using popups
+    try {
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const filename = `Job-Completion-Report-${form.invoice || 'unknown'}.html`;
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      // Clean up the object URL after a short delay
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      console.error('Failed to download report:', e);
+      alert('Failed to download report. Please try again.');
+    }
   }
 
   function exportCSV() {
@@ -1682,24 +1692,24 @@ async function save() {
     <div className="min-h-screen bg-brand-bg text-white">
       <Header />
 
-      <main className="max-w-6xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
+      <main className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-extrabold text-white">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
               Welcome, <span className="text-brand-sky">{who}</span>
             </h1>
             <p className="text-sm text-slate-400 mt-1">Operations Dashboard</p>
           </div>
 
           <div className="flex gap-3">
-            <button onClick={() => openNew()} className="px-4 py-2 rounded-xl bg-brand-blue hover:bg-brand-blue/90 text-white font-medium shadow-lg">
+            <button onClick={() => openNew()} className="px-4 py-2 rounded-xl bg-brand-blue hover:bg-brand-blue/90 text-white font-medium shadow-lg tap-target">
               New Job
             </button>
           </div>
         </div>
 
         {/* KPIs */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <Card label="Total Jobs" value={kpi.total} accent="blue" />
           <Card label="Open" value={kpi.open} accent="blue" />
           <Card label="In Progress" value={kpi.progress} accent="blue" />
@@ -1783,22 +1793,22 @@ async function save() {
           ) : (
             <div className="divide-y divide-white/5">
               {jobs.map((j) => (
-                <div key={j._id} className="p-6 hover:bg-brand-surface-hover transition-all duration-200 group">
-                  <div className="flex items-center justify-between">
+                <div key={j._id} className="p-4 sm:p-6 hover:bg-brand-surface-hover transition-all duration-200 group">
+                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     {/* Left Section - Job Info */}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-4 mb-3">
-                        <div className="w-10 h-10 bg-brand-blue/20 rounded-xl flex items-center justify-center text-lg">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start sm:items-center gap-3 sm:gap-4 mb-3">
+                        <div className="w-10 h-10 bg-brand-blue/20 rounded-xl flex items-center justify-center text-lg flex-shrink-0">
                           🔧
                         </div>
-                        <div>
-                          <h3 className="text-lg font-semibold text-white group-hover:text-brand-sky transition-colors">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-base sm:text-lg font-semibold text-white group-hover:text-brand-sky transition-colors truncate">
                             {j.title}
                           </h3>
-                          <div className="flex items-center gap-4 text-sm text-text-secondary">
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-secondary">
                             <span className="flex items-center gap-1">
                               <span>👤</span>
-                              {j.technician || 'Unassigned'}
+                              <span className="truncate">{j.technician || 'Unassigned'}</span>
                             </span>
                             <span className="flex items-center gap-1">
                               <span>📅</span>
@@ -1808,55 +1818,53 @@ async function save() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3 mb-3">
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
                         {/* Priority Badge */}
                         <StatusBadge status={j.priority} type="priority" />
                         
                         {/* Status Badge */}
                         <StatusBadge status={j.status} type="status" />
 
-                          {/* Invoice Link */}
-                          {j.invoice && (
-                      <button
-                        type="button"
-                              className="px-3 py-1 rounded-full text-xs font-medium bg-brand-sky/20 text-brand-sky border border-brand-sky/30 hover:bg-brand-sky/30 transition-colors"
-                        onClick={() => nav(`/invoices?q=${encodeURIComponent((j.invoice || '').trim())}`)}
-                              title="View Invoice"
-                      >
-                              Invoice: {j.invoice}
-                      </button>
-                          )}
-                        </div>
-
-                        {/* Job Description Preview */}
-                        {j.description && (
-                          <p className="text-slate-400 text-sm line-clamp-2 max-w-2xl">
-                            {j.description}
-                          </p>
+                        {/* Invoice Link */}
+                        {j.invoice && (
+                          <button
+                            type="button"
+                            className="px-3 py-1 rounded-full text-xs font-medium bg-brand-sky/20 text-brand-sky border border-brand-sky/30 hover:bg-brand-sky/30 transition-colors"
+                            onClick={() => nav(`/invoices?q=${encodeURIComponent((j.invoice || '').trim())}`)}
+                            title="View Invoice"
+                          >
+                            Invoice: {j.invoice}
+                          </button>
                         )}
                       </div>
 
-                      {/* Right Section - Actions */}
-                      <div className="flex items-center gap-3 ml-6">
-                    <div className="flex gap-2">
+                      {/* Job Description Preview */}
+                      {j.description && (
+                        <p className="text-slate-400 text-sm line-clamp-2 max-w-2xl">
+                          {j.description}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Right Section - Actions */}
+                    <div className="flex items-center gap-2 lg:ml-6">
                       <button
                         onClick={() => openEdit(j)}
-                            className="px-4 py-2 bg-brand-blue/20 hover:bg-brand-blue/30 text-brand-sky border border-brand-sky/30 rounded-xl font-medium transition-all duration-200 flex items-center gap-2"
+                        className="px-3 sm:px-4 py-2 bg-brand-blue/20 hover:bg-brand-blue/30 text-brand-sky border border-brand-sky/30 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 tap-target"
                       >
-                            <span>✏️</span>
-                        Edit
+                        <span>✏️</span>
+                        <span className="hidden sm:inline">Edit</span>
                       </button>
                       <button
                         onClick={() => removeJob(j._id)}
-                        className="px-4 py-2 bg-red-600/30 hover:bg-red-600/40 text-red-200 border border-red-500/50 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-lg"
+                        className="px-3 sm:px-4 py-2 bg-red-600/30 hover:bg-red-600/40 text-red-200 border border-red-500/50 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-lg tap-target"
                       >
                         <span className="text-lg">🗑️</span>
-                        Delete
+                        <span className="hidden sm:inline">Delete</span>
                       </button>
                     </div>
-                      </div>
-                    </div>
                   </div>
+                </div>
               ))}
             </div>
           )}
@@ -2772,9 +2780,9 @@ function Card({ label, value, accent = 'default' }) {
   };
 
   return (
-    <div className={`rounded-2xl p-5 bg-gradient-to-br ${accents[accent]} border shadow-soft transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5`}>
-      <div className="text-sm text-slate-300 font-medium mb-1">{label}</div>
-      <div className="text-4xl font-extrabold text-white tracking-tight">{value}</div>
+    <div className={`rounded-xl sm:rounded-2xl p-3 sm:p-5 bg-gradient-to-br ${accents[accent]} border shadow-soft transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5`}>
+      <div className="text-xs sm:text-sm text-slate-300 font-medium mb-1 truncate">{label}</div>
+      <div className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">{value}</div>
     </div>
   );
 }

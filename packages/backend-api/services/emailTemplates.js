@@ -237,10 +237,96 @@ Call-a-Technician System`;
   return { subject, text, html };
 }
 
+/**
+ * Technician account creation - credentials notification
+ */
+function technicianAccountCreated(data) {
+  const { techName, email, tempPassword, portalUrl } = data;
+  const safeTechName = escapeHtml(techName || 'Technician');
+  const safeEmail = escapeHtml(email);
+  const safeTempPassword = escapeHtml(tempPassword || '[Use the password provided by your administrator]');
+  const safePortalUrl = escapeHtml(portalUrl || '/tech-view');
+
+  const subject = 'Your Call-a-Technician Portal Account';
+
+  const text = `Hello ${techName},
+
+Your administrator has created a login account for you on the Call-a-Technician portal.
+
+Login Details:
+Email: ${email}
+Temporary Password: ${tempPassword}
+Portal URL: ${portalUrl}
+
+IMPORTANT SECURITY INFORMATION:
+- Please log in and change your password as soon as possible
+- Do not share your login credentials with anyone
+- The portal contains sensitive customer information
+
+How to log in:
+1. Go to the portal URL above
+2. Enter your email address
+3. Enter your temporary password
+4. Click "Log in"
+
+Once logged in, you can:
+- View your assigned jobs
+- Update job status
+- Submit completion reports
+- View your work schedule
+
+If you have any questions or issues logging in, please contact your administrator.
+
+Best regards,
+Call-a-Technician Admin Team`;
+
+  const html = `<p>Hello ${safeTechName},</p>
+<p>Your administrator has created a <strong>login account</strong> for you on the Call-a-Technician portal.</p>
+
+<h3>Login Details</h3>
+<table style="background:#f5f5f5;padding:15px;margin:15px 0;border-radius:8px;">
+  <tr><td><strong>Email:</strong></td><td>${safeEmail}</td></tr>
+  <tr><td><strong>Temporary Password:</strong></td><td><code style="background:#e0e0e0;padding:2px 6px;border-radius:4px;">${safeTempPassword}</code></td></tr>
+  <tr><td><strong>Portal URL:</strong></td><td><a href="${safePortalUrl}">${safePortalUrl}</a></td></tr>
+</table>
+
+<div style="background:#fff3cd;padding:15px;margin:15px 0;border-radius:8px;border-left:4px solid #ffc107;">
+  <strong>Important Security Information:</strong>
+  <ul>
+    <li>Please log in and change your password as soon as possible</li>
+    <li>Do not share your login credentials with anyone</li>
+    <li>The portal contains sensitive customer information</li>
+  </ul>
+</div>
+
+<h3>How to Log In</h3>
+<ol>
+  <li>Go to the <a href="${safePortalUrl}">portal URL</a></li>
+  <li>Enter your email address</li>
+  <li>Enter your temporary password</li>
+  <li>Click "Log in"</li>
+</ol>
+
+<p>Once logged in, you can:</p>
+<ul>
+  <li>View your assigned jobs</li>
+  <li>Update job status</li>
+  <li>Submit completion reports</li>
+  <li>View your work schedule</li>
+</ul>
+
+<p>If you have any questions or issues logging in, please contact your administrator.</p>
+
+<p>Best regards,<br>Call-a-Technician Admin Team</p>`;
+
+  return { subject, text, html };
+}
+
 module.exports = {
   customerRequestConfirmation,
   technicianAssigned,
   customerTechnicianAssigned,
   jobCompletedAdmin,
   adminNewRequestNotification,
+  technicianAccountCreated,
 };

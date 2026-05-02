@@ -27,8 +27,11 @@ export default function Technicians() {
       name: '', email: '', phone: '', skills: '',
       active: true, notes: '',
       address: '',
-      emergencyContact: '',
-      preferredSuburb: '',          // ✅ unified name
+      emergencyContact: '',  // legacy field
+      emergencyContactName: '',
+      emergencyContactPhone: '',
+      emergencyContactEmail: '',
+      preferredSuburb: '',
     };
   }
 
@@ -50,7 +53,8 @@ export default function Technicians() {
           t.name, t.email, t.phone, t.notes,
           (t.skills || []).join(', '),
           t.address, t.emergencyContact,
-          t.preferredSuburb,                 // ✅ included in search
+          t.emergencyContactName, t.emergencyContactPhone, t.emergencyContactEmail,
+          t.preferredSuburb,
         ].join(' ').toLowerCase();
         const match = !qq || txt.includes(qq);
         const aok = active === 'All' || (active === 'Active' ? t.active : !t.active);
@@ -75,23 +79,108 @@ export default function Technicians() {
       active: !!t.active,
       notes: t.notes || '',
       address: t.address || '',
-      emergencyContact: t.emergencyContact || '',
-      preferredSuburb: t.preferredSuburb || '',    // ✅ unified
+      emergencyContact: t.emergencyContact || '',  // legacy
+      emergencyContactName: t.emergencyContactName || '',
+      emergencyContactPhone: t.emergencyContactPhone || '',
+      emergencyContactEmail: t.emergencyContactEmail || '',
+      preferredSuburb: t.preferredSuburb || '',
     });
     setOpen(true);
   }
 
+  // Australian phone validation regex
+  const phoneRegex = /^(\+?61|0)?[2-478]\d{8}$/;
+
+  function isValidAustralianPhone(phone) {
+    const cleaned = (phone || '').replace(/\s/g, '');
+    return phoneRegex.test(cleaned);
+  }
+
+  function formatPhoneAU(phone) {
+    const s = (phone || '').replace(/\D/g, '');
+    // Handle +61 format
+    if (s.startsWith('61')) {
+      if (s.length <= 11) return `+61 ${s.slice(2, 3)}${s.slice(3, 5)} ${s.slice(5, 8)} ${s.slice(8, 11)}`.trim();
+      return `+61 ${s.slice(2, 4)} ${s.slice(4, 7)} ${s.slice(7, 10)}`.trim();
+    }
+    // Handle 04xx xxx xxx (mobile)
+    if (s.startsWith('04')) {
+      return s.length <= 10
+        ? `${s.slice(0, 4)} ${s.slice(4, 7)} ${s.slice(7, 10)}`.trim()
+        : `${s.slice(0, 4)} ${s.slice(4, 7)} ${s.slice(7, 10)}`;
+    }
+    // Handle landline (02, 03, 07, 08)
+    if (s.startsWith('0') && s.length >= 2) {
+      const areaCode = s.slice(0, 2);
+      const rest = s.slice(2);
+      if (rest.length <= 8) {
+        return `${areaCode} ${rest.slice(0, 4)} ${rest.slice(4, 8)}`.trim();
+      }
+    }
+    return phone; // fallback for partial input
+  }
+
   async function save() {
     console.log('Save function called');
+
+    // Validate required fields
+    if (!form.name?.trim()) {
+      alert('Name is required');
+      return;
+    }
+
+    if (!form.email?.trim()) {
+      alert('Email is required');
+      return;
+    }
+
+    // Validate phone format
+    if (!form.phone?.trim()) {
+      alert('Phone is required');
+      return;
+    }
+
+    if (!isValidAustralianPhone(form.phone)) {
+      alert('Please enter a valid Australian phone number (e.g., 0400 123 456 or +61 400 123 456)');
+      return;
+    }
+
+    // Validate emergency contact: if name provided, must have phone OR email
+    if (form.emergencyContactName?.trim()) {
+      if (!form.emergencyContactPhone?.trim() && !form.emergencyContactEmail?.trim()) {
+        alert('Emergency contact must have either phone or email');
+        return;
+      }
+
+      // Validate emergency contact email format if provided
+      if (form.emergencyContactEmail?.trim()) {
+        const emailRegex = /^\S+@\S+\.\S+$/;
+        if (!emailRegex.test(form.emergencyContactEmail)) {
+          alert('Please enter a valid email for emergency contact');
+          return;
+        }
+      }
+
+      // Validate emergency contact phone format if provided
+      if (form.emergencyContactPhone?.trim()) {
+        if (!isValidAustralianPhone(form.emergencyContactPhone)) {
+          alert('Please enter a valid Australian phone number for emergency contact');
+          return;
+        }
+      }
+    }
+
     const payload = {
       ...form,
+      phone: formatPhoneAU(form.phone), // Format phone before saving
+      emergencyContactPhone: form.emergencyContactPhone ? formatPhoneAU(form.emergencyContactPhone) : '',
       skills: (form.skills || '').split(',').map(s => s.trim()).filter(Boolean),
-      preferredSuburb: (form.preferredSuburb || '').trim(),   // ✅ unified
+      preferredSuburb: (form.preferredSuburb || '').trim(),
     };
     try {
       if (editingId) await api(`/techs/${editingId}`, { method: 'PUT', body: payload });
       else await api('/techs', { method: 'POST', body: payload });
-      
+
       // Add a small delay to prevent auto-closing issues
       setTimeout(() => {
         console.log('Closing modal after save');
@@ -99,7 +188,7 @@ export default function Technicians() {
         setEditingId(null);
         setForm(blank());
       }, 100);
-      
+
       await load();
     } catch (e) { alert(e.message || 'Save failed'); }
   }
@@ -308,10 +397,15 @@ export default function Technicians() {
                                 <span>{technician.address}</span>
                               </div>
                             )}
-                            {technician.emergencyContact && (
+                            {/* Emergency Contact Display */}
+                            {(technician.emergencyContactName || technician.emergencyContact) && (
                               <div className="flex items-start gap-3">
                                 <span>Emergency:</span>
-                                <span>{technician.emergencyContact}</span>
+                                <span>
+                                  {technician.emergencyContactName
+                                    ? `${technician.emergencyContactName}${technician.emergencyContactPhone ? ' - ' + technician.emergencyContactPhone : ''}${technician.emergencyContactEmail ? ' - ' + technician.emergencyContactEmail : ''}`
+                                    : technician.emergencyContact}
+                                </span>
                               </div>
                             )}
                           </div>
@@ -389,9 +483,9 @@ export default function Technicians() {
                   <Field label="Email *" value={form.email}
                          onChange={v => setForm(f => ({ ...f, email: v }))}
                          placeholder="jordan@acme.com" />
-                  <Field label="Phone *" value={form.phone}
-                         onChange={v => setForm(f => ({ ...f, phone: v }))}
-                         placeholder="0400 123 456" />
+                  <Field label="Phone * (AU format)" value={form.phone}
+                         onChange={v => setForm(f => ({ ...f, phone: formatPhoneAU(v) }))}
+                         placeholder="0400 123 456 or +61 400 123 456" />
                   <Field label="Skills (comma-separated)" value={form.skills}
                          onChange={v => setForm(f => ({ ...f, skills: v }))}
                          placeholder="Windows, Networking" />
@@ -407,9 +501,25 @@ export default function Technicians() {
                   <Field label="Address" value={form.address}
                          onChange={v => setForm(f => ({ ...f, address: v }))}
                          placeholder="123 Main Street, Adelaide" />
-                  <Field label="Emergency Contact" value={form.emergencyContact}
-                         onChange={v => setForm(f => ({ ...f, emergencyContact: v }))}
-                         placeholder="Emergency contact details" />
+
+                  {/* Emergency Contact Section */}
+                  <div className="md:col-span-2">
+                    <label className="text-sm font-medium text-brand-sky">Emergency Contact</label>
+                    <p className="text-xs text-slate-400 mt-1 mb-3">
+                      Name is required if adding emergency contact. At least phone OR email must be provided.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <Field label="Name" value={form.emergencyContactName}
+                             onChange={v => setForm(f => ({ ...f, emergencyContactName: v }))}
+                             placeholder="Contact person name" />
+                      <Field label="Phone (AU)" value={form.emergencyContactPhone}
+                             onChange={v => setForm(f => ({ ...f, emergencyContactPhone: formatPhoneAU(v) }))}
+                             placeholder="0400 123 456" />
+                      <Field label="Email" value={form.emergencyContactEmail}
+                             onChange={v => setForm(f => ({ ...f, emergencyContactEmail: v }))}
+                             placeholder="contact@example.com" />
+                    </div>
+                  </div>
                   <Field
                     label="Preferred Work Suburb"
                     value={form.preferredSuburb}

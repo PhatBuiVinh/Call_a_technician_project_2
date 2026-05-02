@@ -251,3 +251,70 @@
 .pb-safe {
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
+
+/* ─────────────────────────────────────────────────────────
+   Mobile Responsiveness Utilities
+   ───────────────────────────────────────────────────────── */
+
+/* Responsive container with safe horizontal padding */
+.container-responsive {
+  @apply w-full mx-auto px-3 sm:px-4 lg:px-6;
+  max-width: 100%;
+}
+
+@media (min-width: 640px) {
+  .container-responsive { max-width: 640px; }
+}
+@media (min-width: 768px) {
+  .container-responsive { max-width: 768px; }
+}
+@media (min-width: 1024px) {
+  .container-responsive { max-width: 1024px; }
+}
+@media (min-width: 1280px) {
+  .container-responsive { max-width: 1280px; }
+}
+
+/* Touch-friendly tap targets on mobile */
+@media (max-width: 768px) {
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Stack buttons vertically on very small screens */
+  .btn-stack-mobile {
+    @apply flex flex-col w-full gap-2;
+  }
+  
+  .btn-stack-mobile > button,
+  .btn-stack-mobile > a {
+    @apply w-full justify-center;
+  }
+  
+  /* Horizontal scroll for tables/cards on mobile */
+  .scroll-x-mobile {
+    @apply overflow-x-auto -mx-3 px-3;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Compact cards on mobile */
+  .card-compact-mobile {
+    @apply p-3 rounded-xl;
+  }
+  
+  /* Smaller text on mobile for dense UIs */
+  .text-compact-mobile {
+    @apply text-xs leading-snug;
+  }
+}
+
+/* Responsive table wrapper */
+.table-responsive {
+  @apply w-full overflow-x-auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive table {
+  @apply min-w-full;
+}

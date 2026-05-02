@@ -22,6 +22,7 @@ const MAX_MSG = 800;
 const MAX_FILES = 3;
 const MAX_MB = 5;
 const DRAFT_KEY = "contact_form_draft_v1";
+const DRAFT_FILES_KEY = "contact_form_draft_files_v1";
 
 export default function ContactFormBlock() {
   const STEPS = [
@@ -64,7 +65,7 @@ export default function ContactFormBlock() {
     const e = {};
     if (!values.name || values.name.trim().length < 2) e.name = "Please enter your full name.";
     if (!values.phone || !phoneOk(values.phone)) e.phone = "Please enter a valid AU phone number.";
-    if (values.email && !emailOk(values.email)) e.email = "Email looks invalid.";
+    if (!values.email || !emailOk(values.email)) e.email = "A valid email is required.";
     if (!values.message || values.message.trim().length < 10) e.message = "Tell us a bit more (10+ chars).";
     if (values.preferredAt) {
       const dt = new Date(values.preferredAt);
@@ -89,21 +90,101 @@ export default function ContactFormBlock() {
   const fileZoneRef = useRef(null);
 
   // -------- Enhancements --------
-  // A) Draft autosave/restore
+  // A) Draft autosave/restore (includes text values and files)
   useEffect(() => {
     try {
+      // Restore text values
       const raw = localStorage.getItem(DRAFT_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
         setValues((v) => ({ ...v, ...parsed, website: "" })); // never restore honeypot
       }
-    } catch {}
+
+      // Restore files from base64
+      const filesRaw = localStorage.getItem(DRAFT_FILES_KEY);
+      if (filesRaw) {
+        const savedFiles = JSON.parse(filesRaw);
+        if (Array.isArray(savedFiles) && savedFiles.length > 0) {
+          // Convert base64 back to file-like objects with blob URLs
+          const restoredFiles = savedFiles.map((savedFile) => ({
+            file: null, // File object can't be restored, but we have base64 for submission
+            url: savedFile.base64, // Use base64 data URL directly
+            base64: savedFile.base64, // Keep base64 for submission
+            name: savedFile.name,
+            type: savedFile.type,
+            size: savedFile.size,
+            error: "",
+            isRestored: true, // Flag to indicate this was restored from draft
+          }));
+          setFiles(restoredFiles);
+        }
+      }
+    } catch (err) {
+      console.error("Error restoring draft:", err);
+    }
   }, []);
+
   useEffect(() => {
-    // do not save honeypot or files
+    // Save text values (do not save honeypot)
     const { website, ...safe } = values;
     localStorage.setItem(DRAFT_KEY, JSON.stringify(safe));
   }, [values]);
+
+  // Save files as base64 when they change
+  useEffect(() => {
+    const saveFiles = async () => {
+      if (files.length === 0) {
+        localStorage.removeItem(DRAFT_FILES_KEY);
+        return;
+      }
+
+      try {
+        const filesToSave = [];
+        for (const fileObj of files) {
+          // Skip files with errors
+          if (fileObj.error) continue;
+
+          // If already restored from draft (has base64), keep it
+          if (fileObj.base64) {
+            filesToSave.push({
+              base64: fileObj.base64,
+              name: fileObj.name || "image.jpg",
+              type: fileObj.type || "image/jpeg",
+              size: fileObj.size || 0,
+            });
+          } else if (fileObj.file) {
+            // Convert File to base64
+            try {
+              const base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(reader.error);
+                reader.readAsDataURL(fileObj.file);
+              });
+              filesToSave.push({
+                base64,
+                name: fileObj.file.name,
+                type: fileObj.file.type,
+                size: fileObj.file.size,
+              });
+            } catch (err) {
+              console.error("Error converting file to base64:", err);
+            }
+          }
+        }
+
+        if (filesToSave.length > 0) {
+          localStorage.setItem(DRAFT_FILES_KEY, JSON.stringify(filesToSave));
+        } else {
+          localStorage.removeItem(DRAFT_FILES_KEY);
+        }
+      } catch (err) {
+        console.error("Error saving draft files:", err);
+      }
+    };
+
+    saveFiles();
+  }, [files]);
 
   // B) Phone auto-format (+61 or 04xx xxx xxx)
   function formatPhoneAU(raw) {
@@ -166,24 +247,32 @@ export default function ContactFormBlock() {
   // Convert files to base64 for submission
   const convertFilesToBase64 = async (fileList) => {
     const base64Images = [];
-    
+
     for (const fileObj of fileList) {
       if (fileObj.error) continue; // Skip files with errors
-      
-      try {
-        const base64 = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = () => reject(reader.error);
-          reader.readAsDataURL(fileObj.file);
-        });
-        
-        base64Images.push(base64);
-      } catch (error) {
-        console.error('Error converting image to base64:', error);
+
+      // If file was restored from draft, it already has base64
+      if (fileObj.base64) {
+        base64Images.push(fileObj.base64);
+        continue;
+      }
+
+      // Otherwise convert File to base64
+      if (fileObj.file) {
+        try {
+          const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(fileObj.file);
+          });
+          base64Images.push(base64);
+        } catch (error) {
+          console.error('Error converting image to base64:', error);
+        }
       }
     }
-    
+
     return base64Images;
   }
   function removeFile(idx) {
@@ -273,8 +362,8 @@ export default function ContactFormBlock() {
 
     try {
       // Basic validation
-      if (!values.name?.trim() || !values.phone?.trim()) {
-        throw new Error("Name and phone are required.");
+      if (!values.name?.trim() || !values.phone?.trim() || !values.email?.trim()) {
+        throw new Error("Name, phone, and email are required.");
       }
 
       // Convert uploaded images to base64
@@ -306,12 +395,18 @@ export default function ContactFormBlock() {
       if (res?.id) setJobRef(`Reference: ${res.id}`);
 
       // Clear form, previews, and draft (same behavior as before)
-      files.forEach((f) => f?.url && URL.revokeObjectURL(f.url));
+      files.forEach((f) => {
+        // Only revoke blob URLs, not base64 data URLs
+        if (f?.url && f.url.startsWith('blob:')) {
+          URL.revokeObjectURL(f.url);
+        }
+      });
       setFiles([]);
       setValues({ name: "", phone: "", email: "", suburb: "", time: "", preferredAt: "", message: "", website: "" });
       setTouched({});
       setActiveStep(1);
       localStorage.removeItem(DRAFT_KEY);
+      localStorage.removeItem(DRAFT_FILES_KEY);
 
     } catch (err) {
       setSubmitting(false);
@@ -458,7 +553,7 @@ export default function ContactFormBlock() {
 
                 <div ref={refs.email}>
                   <Input
-                    label="Email (optional)"
+                    label="Email (required)"
                     type="email"
                     placeholder="you@example.com"
                     autoComplete="email"

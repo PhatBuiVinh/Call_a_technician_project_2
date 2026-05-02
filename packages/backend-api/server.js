@@ -332,7 +332,12 @@ const TechSchema = new mongoose.Schema({
   active:   { type: Boolean, default: true },
   notes:    { type: String, default: '' },
   address:  { type: String, default: '' },
+  // Legacy field - kept for backwards compatibility
   emergencyContact: { type: String, default: '' },
+  // New structured emergency contact fields
+  emergencyContactName: { type: String, trim: true, default: '' },
+  emergencyContactPhone: { type: String, trim: true, default: '' },
+  emergencyContactEmail: { type: String, trim: true, default: '' },
   workingHours: { type: WorkingHoursSchema, default: () => ({}) },
   timeOff:      { type: [TimeOffSchema], default: [] },
   createdBy:{ type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
@@ -868,27 +873,30 @@ app.post('/api/marketing/job-request', async (req, res) => {
 
     const { fullName, phone, description, images } = req.body;
 
-    if (!fullName || !phone || !description) {
+    if (!fullName || !phone || !normalizedEmail || !description) {
       console.log('Validation failed:', {
         hasFullName: Boolean(fullName),
         hasPhone: Boolean(phone),
+        hasEmail: Boolean(normalizedEmail),
         descriptionLength: String(description || '').length
       });
       return res.status(400).json({
-        error: 'Full name, phone, and description are required'
+        error: 'Full name, phone, email, and description are required'
       });
     }
 
-    if (hasEmail && !isEmailAddressValid(normalizedEmail)) {
+    // Validate email format (now required)
+    if (!isEmailAddressValid(normalizedEmail)) {
       return res.status(400).json({
-        error: 'Please enter a valid email address or leave the email field blank.'
+        error: 'Please enter a valid email address'
       });
     }
+
 
     const jobRequest = await IncomingJobRequest.create({
       fullName: fullName.trim(),
       phone: phone.trim(),
-      email: hasEmail ? normalizedEmail : '',
+      email: normalizedEmail,
       description: description.trim(),
       images: images || [],
       status: 'New'
@@ -2030,16 +2038,37 @@ app.post('/api/techs', auth, async (req, res) => {
   const {
     name, email = '', phone = '', skills = [],
     active = true, notes = '', address = '', emergencyContact = '',
+    emergencyContactName = '', emergencyContactPhone = '', emergencyContactEmail = '',
     workingHours, timeOff
   } = req.body || {};
+
   if (!name) return res.status(400).json({ error: 'Name required' });
-  
+
+  // Validate emergency contact: name required, plus at least phone or email
+  if (emergencyContactName) {
+    if (!emergencyContactPhone && !emergencyContactEmail) {
+      return res.status(400).json({ error: 'Emergency contact must have either phone or email' });
+    }
+  }
+
+  // Validate email format if provided
+  if (emergencyContactEmail && !isEmailAddressValid(emergencyContactEmail)) {
+    return res.status(400).json({ error: 'Invalid emergency contact email format' });
+  }
+
   // Generate next technician code atomically
   const seq = await getNextSequence('tech', 'TECH');
   const technicianCode = `TECH-${String(seq).padStart(3, '0')}`;
-  
+
+  // Build legacy emergencyContact string for backwards compatibility
+  const legacyEmergencyContact = emergencyContactName
+    ? `${emergencyContactName}${emergencyContactPhone ? ' - ' + emergencyContactPhone : ''}${emergencyContactEmail ? ' - ' + emergencyContactEmail : ''}`
+    : emergencyContact;
+
   const doc = await Tech.create({
-    name, email, phone, skills, active, notes, address, emergencyContact,
+    name, email, phone, skills, active, notes, address,
+    emergencyContact: legacyEmergencyContact,
+    emergencyContactName, emergencyContactPhone, emergencyContactEmail,
     technicianCode,
     ...(workingHours ? { workingHours } : {}),
     ...(timeOff ? { timeOff } : {}),
@@ -2051,9 +2080,28 @@ app.post('/api/techs', auth, async (req, res) => {
 // update
 app.put('/api/techs/:id', auth, async (req, res) => {
   const { id } = req.params;
+  const update = req.body || {};
+
+  // Validate emergency contact if provided
+  if (update.emergencyContactName !== undefined) {
+    if (update.emergencyContactName && !update.emergencyContactPhone && !update.emergencyContactEmail) {
+      return res.status(400).json({ error: 'Emergency contact must have either phone or email' });
+    }
+
+    // Validate email format if provided
+    if (update.emergencyContactEmail && !isEmailAddressValid(update.emergencyContactEmail)) {
+      return res.status(400).json({ error: 'Invalid emergency contact email format' });
+    }
+
+    // Build legacy emergencyContact string for backwards compatibility
+    if (update.emergencyContactName) {
+      update.emergencyContact = `${update.emergencyContactName}${update.emergencyContactPhone ? ' - ' + update.emergencyContactPhone : ''}${update.emergencyContactEmail ? ' - ' + update.emergencyContactEmail : ''}`;
+    }
+  }
+
   const doc = await Tech.findOneAndUpdate(
     { _id: id, createdBy: req.user.sub },
-    req.body || {},
+    update,
     { new: true }
   );
   if (!doc) return res.status(404).json({ error: 'Technician not found' });
@@ -2065,6 +2113,15 @@ app.delete('/api/techs/:id', auth, async (req, res) => {
   const { id } = req.params;
   const doc = await Tech.findOneAndDelete({ _id: id, createdBy: req.user.sub });
   if (!doc) return res.status(404).json({ error: 'Technician not found' });
+
+  // Also delete any linked user account to prevent orphaned auth records
+  try {
+    await User.deleteOne({ techId: id });
+  } catch (userErr) {
+    // Log but don't fail the deletion if user cleanup fails
+    console.error('Failed to delete linked user account for technician:', id, userErr.message);
+  }
+
   res.json({ ok: true });
 });
 
@@ -2119,6 +2176,26 @@ app.post('/api/techs/:id/create-account', auth, async (req, res) => {
       role: 'technician',
       techId: tech._id
     });
+
+    // Send credentials email to technician (best-effort, non-blocking)
+    try {
+      const portalUrl = process.env.PORTAL_URL || `${req.protocol}://${req.get('host')}/tech-view`;
+      const template = templates.technicianAccountCreated({
+        techName: tech.name,
+        email: normalizedEmail,
+        tempPassword: password,
+        portalUrl
+      });
+      const emailResult = await sendEmail(normalizedEmail, template.subject, template.text, template.html);
+      if (emailResult.sent) {
+        console.log('[EMAIL] Technician credentials sent to:', normalizedEmail);
+      } else {
+        console.log('[EMAIL] Failed to send credentials:', emailResult.reason || emailResult.error);
+      }
+    } catch (emailErr) {
+      console.error('[EMAIL] Error sending technician credentials:', emailErr.message);
+      // Don't fail the request if email fails - account is still created
+    }
 
     res.status(201).json({
       message: 'Login account created successfully',
