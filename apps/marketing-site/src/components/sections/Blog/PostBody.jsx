@@ -12,7 +12,7 @@ export default function PostBody({ content = [] }) {
         const blockType = block._type || block.type
         
         switch (blockType) {
-          case "block":
+          case "block": {
             // Render based on style (h2, h3, normal, etc.)
             const style = block.style || 'normal'
             const text = extractText(block)
@@ -25,6 +25,7 @@ export default function PostBody({ content = [] }) {
               // Normal paragraph
               return <p key={i} className="mb-4 leading-relaxed">{text}</p>
             }
+          }
           
           case "h2":
             return <h2 key={i}>{block.text}</h2>

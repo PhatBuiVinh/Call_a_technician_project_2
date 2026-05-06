@@ -126,7 +126,8 @@ export default function ContactFormBlock() {
 
   useEffect(() => {
     // Save text values (do not save honeypot)
-    const { website, ...safe } = values;
+    const safe = { ...values };
+    delete safe.website;
     localStorage.setItem(DRAFT_KEY, JSON.stringify(safe));
   }, [values]);
 

@@ -70,6 +70,7 @@ export function MotionPreferenceProvider({ children }) {
   );
 }
 
+/* eslint-disable-next-line react-refresh/only-export-components */
 export function useMotionPreference() {
   return useContext(MotionPreferenceContext);
 }

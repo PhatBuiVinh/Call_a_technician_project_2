@@ -39,7 +39,7 @@ export default function ContactNextSteps() {
         </p>
 
         <div className="mt-8 grid md:grid-cols-3 gap-6">
-          {STEPS.map((s, i) => (
+          {STEPS.map((s) => (
             <div
               key={s.title}
               className="rounded-2xl border bg-white p-6 shadow-sm hover:shadow-md transition"

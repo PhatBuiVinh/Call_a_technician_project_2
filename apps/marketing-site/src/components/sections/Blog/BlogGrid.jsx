@@ -6,7 +6,7 @@ import Button from "../../atoms/Button";
 
 const PAGE_SIZE = 6;
 
-export default function BlogGrid({ posts = [], onPickCategory }) {
+export default function BlogGrid({ posts = [] }) {
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
 

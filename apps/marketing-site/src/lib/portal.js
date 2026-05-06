@@ -6,7 +6,7 @@ async function handle(res) {
   const text = await res.text();
   if (!res.ok) {
     let msg = text;
-    try { const j = JSON.parse(text); msg = j.message || j.error || text; } catch {}
+    try { const j = JSON.parse(text); msg = j.message || j.error || text; } catch { msg = text; }
     const err = new Error(`${res.status} ${res.statusText} – ${msg || "Request failed"}`);
     err.status = res.status; err.body = text; throw err;
   }
