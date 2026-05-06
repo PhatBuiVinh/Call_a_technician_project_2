@@ -2,6 +2,8 @@
 
 This is a unified project containing both the marketing website and admin portal for Call-a-Technician, with a shared backend API.
 
+For a presentation-ready walkthrough, see [docs/DEMO-SMOKE-CHECKLIST.md](docs/DEMO-SMOKE-CHECKLIST.md).
+
 ## Project Structure
 
 ```
