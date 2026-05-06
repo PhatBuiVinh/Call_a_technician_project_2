@@ -41,3 +41,4 @@ Use this checklist for a student capstone or product launch presentation.
 - Customer request flow tested.
 - Technician flow tested.
 - Invoice/report screen tested.
+- Rate limiting left enabled for the demo.

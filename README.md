@@ -152,6 +152,7 @@ npm run dev:portal
 - `JWT_SECRET` - Secret for JWT tokens
 - `CLIENT_ORIGIN` - Admin portal URL
 - `MARKETING_ORIGIN` - Marketing site URL
+- `RATE_LIMIT_ENABLED` - Keep enabled for demos and normal local testing; only set `false` temporarily in your own local `.env` for controlled testing
 
 ### Marketing Site
 - `VITE_API_BASE` - API base path, use `/api` in local development
