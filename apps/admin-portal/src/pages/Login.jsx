@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthProvider';
-import logo from '../assets/logo-high.jpg';
+import logo from '../assets/logo-high.webp';
 
 export default function Login() {
   const { login } = useAuth();

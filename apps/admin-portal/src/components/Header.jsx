@@ -25,7 +25,7 @@ export default function Header() {
           {/* Brand logo (served from /public) */}
           <Link to="/app" className="flex items-center gap-2">
             <img
-              src="/logo.png"
+              src="/logo.webp"
               alt="Call-a-Technician"
               className="h-8 w-auto rounded-sm"
             />

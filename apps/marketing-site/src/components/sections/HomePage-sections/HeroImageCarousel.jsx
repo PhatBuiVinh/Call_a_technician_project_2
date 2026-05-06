@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import heroImg1 from "../../../assets/hero-team1.png";
-import heroImg2 from "../../../assets/hero-team2.png";
+import heroImg1 from "../../../assets/hero-team1.webp";
+import heroImg2 from "../../../assets/hero-team2.webp";
 
 
 const BASE_IMAGES = [
