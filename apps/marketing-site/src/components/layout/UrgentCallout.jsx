@@ -77,7 +77,7 @@ return (
                                     className="px-3 py-1.5 text-sm"
                                     to="/contact"
                                 >
-                                    Book Now
+                                    Contact Us
                                 </Button>
                                 <button
                                     aria-label="Dismiss"

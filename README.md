@@ -33,22 +33,22 @@ This is a unified project containing both the marketing website and admin portal
    
    **packages/backend-api/.env:**
    ```env
-   PORT=3000
+   PORT=5000
    MONGODB_URI=mongodb://localhost:27017/call-a-technician
-   JWT_SECRET=your-super-secret-jwt-key
+   JWT_SECRET=replace_with_a_random_local_secret
    CLIENT_ORIGIN=http://localhost:5173
    MARKETING_ORIGIN=http://localhost:5174
    ```
    
    **apps/marketing-site/.env:**
    ```env
-   VITE_API_URL=http://localhost:3000
+   VITE_API_BASE=/api
    VITE_PORTAL_URL=http://localhost:5173
    ```
    
    **apps/admin-portal/.env:**
    ```env
-   VITE_API_URL=http://localhost:3000
+   VITE_API_BASE=/api
    ```
 
 3. **Start MongoDB** (if running locally)
@@ -59,9 +59,11 @@ This is a unified project containing both the marketing website and admin portal
    ```
 
    This will start:
-   - Backend API on http://localhost:3000
+   - Backend API on http://localhost:5000
    - Marketing site on http://localhost:5174
    - Admin portal on http://localhost:5173
+
+   The Vite dev servers proxy `/api` to `http://localhost:5000`, so the frontends call the backend through the same `/api` path in local development.
 
 ## Individual Commands
 
@@ -150,11 +152,13 @@ npm run dev:portal
 - `MARKETING_ORIGIN` - Marketing site URL
 
 ### Marketing Site
-- `VITE_API_URL` - Backend API URL
+- `VITE_API_BASE` - API base path, use `/api` in local development
 - `VITE_PORTAL_URL` - Admin portal URL
 
 ### Admin Portal
-- `VITE_API_URL` - Backend API URL
+- `VITE_API_BASE` - API base path, use `/api` in local development
+
+`VITE_API_URL` is legacy and not used by the current frontend API clients.
 
 ## License
 

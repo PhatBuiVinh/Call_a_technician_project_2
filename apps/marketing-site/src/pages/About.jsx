@@ -229,8 +229,8 @@ export default function About() {
         <div className="container-app">
           <NeedHelpBand
             title="Ready for stress-free tech support?"
-            description="Book a technician today — we’ll get you back on track quickly."
-            primaryLabel="Book Now"
+            description="Request help today — we’ll get you back on track quickly."
+            primaryLabel="Contact Us"
             primaryTo="/contact"
             secondaryLabel="1300 551 350"
             secondaryHref="tel:1300551350"

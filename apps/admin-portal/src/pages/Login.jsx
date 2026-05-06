@@ -4,11 +4,9 @@ import { useAuth } from '../context/AuthProvider';
 import logo from '../assets/logo-high.jpg';
 
 export default function Login() {
-  const { login, register } = useAuth();
+  const { login } = useAuth();
   const nav = useNavigate();
 
-  const [mode, setMode] = useState('login'); // 'login' | 'register'
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [pwd, setPwd] = useState('');
   const [remember, setRemember] = useState(true);
@@ -22,9 +20,7 @@ export default function Login() {
     setMsg('');
     setLoading(true);
     try {
-      const result = mode === 'login'
-        ? await login(email.trim(), pwd, remember)
-        : await register(name.trim(), email.trim(), pwd, remember);
+      const result = await login(email.trim(), pwd, remember);
       
       // Redirect based on user role
       const userRole = result?.user?.role;
@@ -45,21 +41,11 @@ export default function Login() {
       <div className="panel w-full max-w-lg p-8">
         <div className="flex flex-col items-center mb-6">
           <img src={logo} alt="Call-a-Technician" className="h-12 w-auto rounded-md mb-2" />
-          <h1 className="text-3xl font-extrabold">
-            {mode === 'login' ? 'Welcome back' : 'Create your account'}
-          </h1>
-          <p className="text-white/80 mt-1">
-            {mode === 'login' ? 'Log in to access your dashboard.' : 'Just a few details to get started.'}
-          </p>
+          <h1 className="text-3xl font-extrabold">Welcome back</h1>
+          <p className="text-white/80 mt-1">Log in to access your dashboard.</p>
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4">
-          {mode === 'register' && (
-            <div>
-              <label className="text-sm text-slate-300">Name</label>
-              <input className="input mt-1" value={name} onChange={e=>setName(e.target.value)} placeholder="Your name" required />
-            </div>
-          )}
           <div>
             <label className="text-sm text-slate-300">Email</label>
             <input type="email" className="input mt-1" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" required />
@@ -79,14 +65,15 @@ export default function Login() {
               <input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)} />
               Remember me
             </label>
-            <button type="button" onClick={()=>setMode(m=>m==='login'?'register':'login')} className="text-brand-sky hover:underline">
-              {mode==='login' ? 'Create account' : 'I already have an account'}
-            </button>
           </div>
+
+          <p className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/75">
+            Accounts are created by an administrator.
+          </p>
 
           <div className="flex gap-3">
             <button type="submit" disabled={loading} className="btn btn-blue disabled:opacity-60 disabled:cursor-not-allowed">
-              {loading ? (mode==='login' ? 'Logging in…' : 'Creating…') : (mode==='login' ? 'Log in' : 'Create account')}
+              {loading ? 'Logging in…' : 'Log in'}
             </button>
           </div>
           {msg && <p className="text-rose-300 text-sm">{msg}</p>}

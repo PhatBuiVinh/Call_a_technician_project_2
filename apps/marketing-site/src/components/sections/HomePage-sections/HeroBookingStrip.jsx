@@ -19,10 +19,10 @@ export default function HeroBookingStrip() {
     },
     {
       icon: CalendarCheck,
-      label: "Book Online",
+      label: "Request Service",
       href: "/contact",
       variant: "tertiary",
-      description: "Schedule your appointment",
+      description: "Send us your details",
     },
   ];
 

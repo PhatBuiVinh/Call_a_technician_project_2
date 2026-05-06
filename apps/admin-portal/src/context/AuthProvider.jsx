@@ -25,6 +25,8 @@ export function AuthProvider({ children }) {
     // ensure the other store is clean
     (remember ? sessionStorage : localStorage).removeItem('cat_user');
     (remember ? sessionStorage : localStorage).removeItem('cat_token');
+
+    return { token, user };
   };
 
   const register = async (name, email, password, remember=true) => {
@@ -35,6 +37,8 @@ export function AuthProvider({ children }) {
     store.setItem('cat_token', token);
     (remember ? sessionStorage : localStorage).removeItem('cat_user');
     (remember ? sessionStorage : localStorage).removeItem('cat_token');
+
+    return { token, user };
   };
 
   const logout = () => {

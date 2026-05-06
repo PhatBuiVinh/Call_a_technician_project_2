@@ -7,7 +7,6 @@
 // import Location from "./pages/Location";
 // import Blog from "./pages/Blog";
 // import Contact from "./pages/contact";
-// import Login from "./pages/Login";
 
 // export default function App() {
 //   return (
@@ -21,7 +20,6 @@
 //           <Route path="/location" element={<Location />} />
 //           <Route path="/blog" element={<Blog />} />
 //           <Route path="/contact" element={<Contact />} />
-//           <Route path="/login" element={<Login />} />
 //           <Route path="*" element={<Home />} />
 //         </Routes>
 //       </div>
@@ -51,7 +49,6 @@ const Location = lazy(() => import("./pages/Location"));
 const Blog = lazy(() => import("./pages/Blog"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
 const Contact = lazy(() => import("./pages/contact"));
-const Login = lazy(() => import("./pages/Login"));
 const TRANSITION_PATHS = new Set(["/", "/about", "/services"]);
 
 function PageFallback() {
@@ -104,7 +101,6 @@ export default function App() {
                   <Route path="/blog" element={<Blog />} />
                   <Route path="/blog/:id" element={<BlogPost />} />
                   <Route path="/contact" element={<Contact />} />
-                  <Route path="/login" element={<Login />} />
                   <Route path="*" element={<Home />} />
                 </Routes>
               </motion.div>
