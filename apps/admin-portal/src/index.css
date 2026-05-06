@@ -93,6 +93,12 @@
   .page { @apply min-h-screen bg-brand-bg text-white; }
   .panel { @apply rounded-2xl bg-white/5 border border-white/10; box-shadow: var(--shadow-soft); }
   .card  { @apply rounded-2xl bg-white/5 border border-white/10; }
+  .container-app { @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8; }
+  .surface {
+    @apply bg-white/5 border border-white/10;
+    box-shadow: var(--shadow-soft);
+  }
+  .border-surf { border-color: rgba(82, 213, 255, 0.18); }
 
   /* Inputs */
   .input, .select, .textarea {
@@ -106,14 +112,26 @@
   }
 
   /* Buttons */
-  .btn { @apply inline-flex items-center justify-center rounded-xl px-4 py-2 font-medium transition; min-height: 44px; }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 font-medium transition shadow-sm;
+    min-height: 44px;
+  }
+  .btn:focus-visible {
+    outline: 2px solid rgba(82,213,255,.85);
+    outline-offset: 2px;
+  }
+  .btn:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+  }
+
   .btn-primary {
     /* brand green primary */
     background: #31EE88;
     color: #000154;
     border: 1px solid #29d77a;
   }
-  .btn-primary:hover { background:#29d77a; border-color:#22c46e; }
+  .btn-primary:hover:not(:disabled) { background:#29d77a; border-color:#22c46e; }
 
   .btn-blue {
     /* brand blue secondary */
@@ -121,12 +139,41 @@
     color:#fff;
     border:1px solid rgba(255,255,255,.1);
   }
-  .btn-blue:hover { background:#1548ae; }
+  .btn-blue:hover:not(:disabled) { background:#1548ae; }
 
   .btn-ghost {
-    @apply bg-white/8 text-white border border-white/10;
+    background: rgba(255,255,255,.08);
+    color:#fff;
+    border:1px solid rgba(255,255,255,.1);
   }
-  .btn-ghost:hover { @apply bg-white/12; }
+  .btn-ghost:hover:not(:disabled) { background: rgba(255,255,255,.12); }
+
+  .btn-green, .btn-success {
+    @apply bg-emerald-400 text-slate-950 border border-emerald-300;
+  }
+  .btn-green:hover:not(:disabled),
+  .btn-success:hover:not(:disabled) { @apply bg-emerald-300; }
+
+  .btn-yellow, .btn-warning {
+    @apply bg-amber-300 text-slate-950 border border-amber-200;
+  }
+  .btn-yellow:hover:not(:disabled),
+  .btn-warning:hover:not(:disabled) { @apply bg-amber-200; }
+
+  .btn-orange {
+    @apply bg-orange-400 text-slate-950 border border-orange-300;
+  }
+  .btn-orange:hover:not(:disabled) { @apply bg-orange-300; }
+
+  .btn-pink {
+    @apply bg-fuchsia-400 text-slate-950 border border-fuchsia-300;
+  }
+  .btn-pink:hover:not(:disabled) { @apply bg-fuchsia-300; }
+
+  .btn-danger {
+    @apply bg-rose-600 text-white border border-rose-500;
+  }
+  .btn-danger:hover:not(:disabled) { @apply bg-rose-500; }
 
   @media (max-width: 768px) {
     .btn {

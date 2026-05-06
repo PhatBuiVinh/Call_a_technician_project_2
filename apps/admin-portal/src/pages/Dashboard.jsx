@@ -1563,7 +1563,7 @@ async function save() {
           </div>
 
           <div className="flex gap-3">
-            <button onClick={() => openNew()} className="px-4 py-2 rounded-xl bg-brand-blue hover:bg-brand-blue/90 text-white font-medium shadow-lg tap-target">
+            <button onClick={() => openNew()} className="btn btn-primary tap-target">
               New Job
             </button>
           </div>
@@ -1586,7 +1586,7 @@ async function save() {
             </div>
             <button
               onClick={loadDashboardSummary}
-              className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-sm text-white"
+              className="btn btn-ghost text-sm"
               type="button"
             >
               Refresh
@@ -1645,7 +1645,7 @@ async function save() {
               {!loading && !err && (
                 <button
                   onClick={openNew}
-                  className="px-6 py-3 bg-brand-blue hover:bg-brand-blue/90 text-text-primary rounded-xl font-medium transition-all duration-200 shadow-soft"
+                  className="btn btn-primary"
                 >
                   Create New Job
                 </button>
@@ -1690,7 +1690,7 @@ async function save() {
                         {j.invoice && (
                           <button
                             type="button"
-                            className="px-3 py-1 rounded-full text-xs font-medium bg-brand-sky/20 text-brand-sky border border-brand-sky/30 hover:bg-brand-sky/30 transition-colors"
+                            className="btn btn-ghost min-h-0 px-3 py-1 rounded-full text-xs"
                             onClick={() => nav(`/invoices?q=${encodeURIComponent((j.invoice || '').trim())}`)}
                             title="View Invoice"
                           >
@@ -1711,14 +1711,14 @@ async function save() {
                     <div className="flex items-center gap-2 lg:ml-6">
                       <button
                         onClick={() => openEdit(j)}
-                        className="px-3 sm:px-4 py-2 bg-brand-blue/20 hover:bg-brand-blue/30 text-brand-sky border border-brand-sky/30 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 tap-target"
+                        className="btn btn-blue px-3 sm:px-4 tap-target"
                       >
                         <span>✏️</span>
                         <span className="hidden sm:inline">Edit</span>
                       </button>
                       <button
                         onClick={() => removeJob(j._id)}
-                        className="px-3 sm:px-4 py-2 bg-red-600/30 hover:bg-red-600/40 text-red-200 border border-red-500/50 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-lg tap-target"
+                        className="btn btn-danger px-3 sm:px-4 tap-target"
                       >
                         <span className="text-lg">🗑️</span>
                         <span className="hidden sm:inline">Delete</span>
@@ -1750,7 +1750,7 @@ async function save() {
               {/* header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-brand-border flex-shrink-0 rounded-t-2xl" style={{ backgroundColor: '#0c1450' }}>
                 <h3 className="text-xl font-bold text-white">{editingId ? 'Edit Job' : 'New Job'}</h3>
-                <button onClick={() => setOpen(false)} className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors">
+                <button onClick={() => setOpen(false)} className="btn btn-ghost text-sm px-3 py-1">
                   Close
                 </button>
               </div>
@@ -1823,7 +1823,7 @@ async function save() {
                         />
                         <button
                           type="button"
-                          className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-sm"
+                          className="btn btn-ghost text-sm px-3"
                           onClick={() => setForm(f => ({ ...f, customerId: generateCustomerCode() }))}
                           title="Generate new code"
                         >
@@ -1999,7 +1999,7 @@ async function save() {
                               setForm({ ...form, status: 'Closed' });
                             }
                           }}
-                          className="px-3 py-2 bg-green-600/30 hover:bg-green-600/40 text-green-200 text-sm rounded border border-green-500/30 transition-colors whitespace-nowrap"
+                          className="btn btn-warning text-sm px-3 whitespace-nowrap"
                         >
                           Close Job
                         </button>
@@ -2013,7 +2013,7 @@ async function save() {
                               setForm({ ...form, status: 'Completed' });
                             }
                           }}
-                          className="px-3 py-2 bg-blue-600/30 hover:bg-blue-600/40 text-blue-200 text-sm rounded border border-blue-500/30 transition-colors whitespace-nowrap"
+                          className="btn btn-blue text-sm px-3 whitespace-nowrap"
                         >
                           Reopen Job
                         </button>
@@ -2075,7 +2075,7 @@ async function save() {
                               <button
                                 type="button"
                                 onClick={() => setConfirmedAssignmentWithoutAccount(true)}
-                                className="mt-2 px-3 py-1 bg-red-600/30 hover:bg-red-600/40 text-red-200 text-xs rounded border border-red-500/30 transition-colors"
+                                className="btn btn-danger mt-2 text-xs px-3 py-1"
                               >
                                 I understand, assign anyway
                               </button>
@@ -2099,7 +2099,7 @@ async function save() {
                               <button
                                 type="button"
                                 onClick={() => setConfirmedAssignmentWithoutAccount(true)}
-                                className="mt-2 px-3 py-1 bg-amber-600/30 hover:bg-amber-600/40 text-amber-200 text-xs rounded border border-amber-500/30 transition-colors"
+                                className="btn btn-warning mt-2 text-xs px-3 py-1"
                               >
                                 I understand, assign anyway
                               </button>
@@ -2194,14 +2194,14 @@ async function save() {
                             <button
                               type="button"
                               data-software-save={index}
-                              className="flex-1 px-3 py-2 rounded-lg bg-brand-blue hover:bg-brand-blue/90 text-white font-medium transition-colors"
+                              className="btn btn-blue flex-1 px-3"
                               onClick={() => saveSoftwareItem(index)}
                             >
                               Save
                             </button>
                             <button
                               type="button"
-                              className="px-3 py-2 rounded-lg bg-rose-600/80 hover:bg-rose-600 text-white"
+                              className="btn btn-danger px-3"
                               onClick={() => {
                                 const newSoftware = form.software.filter((_, i) => i !== index);
                                 // Recalculate total price when removing software
@@ -2233,7 +2233,7 @@ async function save() {
                     ))}
                     <button
                       type="button"
-                      className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white"
+                      className="btn btn-ghost"
                       onClick={() => {
                         const newSoftware = [...form.software, { name: '', value: 0 }];
                         // Recalculate total price when adding software
@@ -2513,7 +2513,7 @@ async function save() {
                       <button
                         type="button"
                         onClick={downloadCompletionReport}
-                        className="px-4 py-2 rounded-lg bg-green-600/20 hover:bg-green-600/30 text-green-200 border border-green-500/40 text-sm font-medium transition-all duration-200"
+                        className="btn btn-success text-sm"
                       >
                         Download Report
                       </button>
@@ -2600,7 +2600,7 @@ async function save() {
                     {editingId && (
                       <button
                         onClick={() => removeJob(editingId)}
-                        className="px-4 py-2 rounded-lg bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 font-medium transition-all duration-200 flex items-center gap-2"
+                        className="btn btn-danger"
                       >
                         Delete Job
                       </button>
@@ -2609,13 +2609,13 @@ async function save() {
                   <div className="flex gap-3">
                     <button
                       onClick={() => setOpen(false)}
-                      className="px-6 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium transition-all duration-200"
+                      className="btn btn-ghost px-6"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={save}
-                      className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium transition-all duration-200 shadow-lg"
+                      className="btn btn-primary px-6"
                     >
                       {editingId ? 'Save Job' : 'Create Job'} - {currency.format(
                         form.amount || (BASE_PRICE + getExtraPrice(Number(form.additionalMins)||0))
