@@ -248,6 +248,46 @@ function makeNotePreview(text) {
     .slice(0, 140);
 }
 
+const MAX_JOB_REQUEST_IMAGES = 5;
+const MAX_JOB_REQUEST_IMAGE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_JOB_REQUEST_IMAGE_TYPES = new Set(['png', 'jpeg', 'jpg', 'webp']);
+
+function validateJobRequestImages(images) {
+  if (images === undefined || images === null) return [];
+  if (!Array.isArray(images)) {
+    throw new Error('Images must be sent as an array of image data URLs.');
+  }
+  if (images.length > MAX_JOB_REQUEST_IMAGES) {
+    throw new Error(`You can upload up to ${MAX_JOB_REQUEST_IMAGES} images.`);
+  }
+
+  return images.map((image, index) => {
+    if (typeof image !== 'string') {
+      throw new Error(`Image ${index + 1} must be a data URL string.`);
+    }
+
+    const trimmed = image.trim();
+    const match = trimmed.match(/^data:image\/(png|jpe?g|webp);base64,([A-Za-z0-9+/=]+)$/i);
+    if (!match) {
+      throw new Error(`Image ${index + 1} must be a valid PNG, JPEG, or WEBP data URL.`);
+    }
+
+    const mimeType = match[1].toLowerCase();
+    if (!ALLOWED_JOB_REQUEST_IMAGE_TYPES.has(mimeType)) {
+      throw new Error(`Image ${index + 1} must be PNG, JPEG, JPG, or WEBP.`);
+    }
+
+    const base64Payload = match[2];
+    const padding = base64Payload.endsWith('==') ? 2 : base64Payload.endsWith('=') ? 1 : 0;
+    const approxBytes = Math.floor((base64Payload.length * 3) / 4) - padding;
+    if (approxBytes > MAX_JOB_REQUEST_IMAGE_BYTES) {
+      throw new Error(`Image ${index + 1} is too large. Please keep each image under 5MB.`);
+    }
+
+    return trimmed;
+  });
+}
+
 function toOptionalNumber(value) {
   if (value === undefined || value === null || value === '') return undefined;
   const parsed = Number(value);
@@ -910,13 +950,22 @@ app.post('/api/marketing/job-request', async (req, res) => {
       });
     }
 
+    let validatedImages;
+    try {
+      validatedImages = validateJobRequestImages(images);
+    } catch (validationError) {
+      return res.status(400).json({
+        error: validationError.message || 'Invalid images payload'
+      });
+    }
+
 
     const jobRequest = await IncomingJobRequest.create({
       fullName: fullName.trim(),
       phone: phone.trim(),
       email: normalizedEmail,
       description: description.trim(),
-      images: images || [],
+      images: validatedImages,
       status: 'New'
     });
 
