@@ -1749,36 +1749,45 @@ async function save() {
 
         {/* New/Edit Job Modal */}
         {open && (
-            <div
-              className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50"
-              onClick={(e) => { 
-                if (e.target === e.currentTarget) {
-                  setOpen(false);
-                }
-              }}
-            >
-
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-4"
+            onClick={(e) => { 
+              if (e.target === e.currentTarget) {
+                setOpen(false);
+              }
+            }}
+          >
             <div 
-              className="w-full max-w-4xl rounded-2xl border border-brand-border max-h-[90vh] flex flex-col shadow-2xl"
+              className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0c1450] shadow-2xl"
               onClick={(e) => e.stopPropagation()}
-              style={{ backgroundColor: '#0c1450' }}
             >
               {/* header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-brand-border flex-shrink-0 rounded-t-2xl" style={{ backgroundColor: '#0c1450' }}>
-                <h3 className="text-xl font-bold text-white">{editingId ? 'Edit Job' : 'New Job'}</h3>
-                <button onClick={() => setOpen(false)} className="btn btn-ghost text-sm px-3 py-1">
-                  Close
-                </button>
+              <div className="flex-shrink-0 border-b border-white/10 bg-white/[0.03] px-4 py-4 sm:px-6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-xl font-bold text-white">{editingId ? 'Edit Job' : 'New Job'}</h3>
+                      <StatusBadge status={form.status} type="status" />
+                      <StatusBadge status={form.priority} type="priority" />
+                    </div>
+                    <p className="mt-1 text-sm text-slate-400">
+                      Customer details, scheduling, assignment, software, pricing, and completion records.
+                    </p>
+                  </div>
+                  <button onClick={() => setOpen(false)} className="btn btn-ghost text-sm px-3 py-1">
+                    Close
+                  </button>
+                </div>
               </div>
 
               {/* scrollable content */}
-              <div className="px-6 py-6 overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent hover:scrollbar-thumb-white/30" style={{ backgroundColor: '#0c1450' }}>
+              <div className="flex-1 space-y-5 overflow-y-auto px-4 py-5 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent hover:scrollbar-thumb-white/30 sm:px-6">
                 {/* Customer Details Section */}
-                <div className="mb-6 rounded-2xl p-6 border border-brand-sky/20" style={{ backgroundColor: '#0c1450' }}>
-                  <div className="flex items-center justify-between mb-4">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 shadow-soft sm:p-5">
+                  <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
                     <h4 className="text-lg font-semibold text-brand-sky">Customer Details</h4>
                   </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     {/* Customer Name with Auto-suggestions */}
                     <Field label="Customer Name *">
                       <div className="relative">
@@ -1950,11 +1959,11 @@ async function save() {
                 </div>
 
                 {/* Job Details Section */}
-                <div className="mb-6 rounded-2xl p-6 border border-brand-sky/20" style={{ backgroundColor: '#0c1450' }}>
-                  <div className="flex items-center justify-between mb-4">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 shadow-soft sm:p-5">
+                  <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
                     <h4 className="text-lg font-semibold text-brand-sky">Job Details</h4>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     {/* Job Title */}
                     <Field label="Job Title *">
                     <input
@@ -2149,8 +2158,8 @@ async function save() {
                   </div>
 
                 {/* Software Section */}
-                <div className="mb-8 bg-gradient-to-br from-brand-blue/5 to-brand-sky/5 rounded-3xl p-8 border border-brand-sky/20 shadow-soft">
-                  <h4 className="text-2xl font-bold text-brand-sky mb-6 flex items-center gap-3">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 shadow-soft sm:p-5">
+                  <h4 className="mb-4 flex items-center gap-3 border-b border-white/10 pb-3 text-lg font-semibold text-brand-sky">
                     <span>💿</span> Software
                   </h4>
                   <div className="space-y-3">
@@ -2274,11 +2283,11 @@ async function save() {
                 </div>
 
                 {/* Pricing Section */}
-                <div className="mb-8 bg-gradient-to-br from-brand-blue/5 to-brand-sky/5 rounded-3xl p-8 border border-brand-sky/20 shadow-soft">
-                  <h4 className="text-2xl font-bold text-brand-sky mb-6 flex items-center gap-3">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 shadow-soft sm:p-5">
+                  <h4 className="mb-4 flex items-center gap-3 border-b border-white/10 pb-3 text-lg font-semibold text-brand-sky">
                     <span>💰</span> Pricing
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     {/* Base Time */}
                     <Field label="Base Time">
   <input
@@ -2435,10 +2444,10 @@ async function save() {
                 </div>
 
                 {/* Troubleshooting Section (Admin/Technician Only) */}
-                <div className="mb-8 bg-gradient-to-br from-brand-blue/5 to-brand-sky/5 rounded-3xl p-8 border border-brand-sky/20 shadow-soft">
-                  <h4 className="text-2xl font-bold text-brand-sky mb-6 flex items-center gap-3">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 shadow-soft sm:p-5">
+                  <h4 className="mb-4 flex flex-wrap items-center gap-3 border-b border-white/10 pb-3 text-lg font-semibold text-brand-sky">
                     <span>🔧</span> Troubleshooting & Resolution
-                    <span className="text-xs bg-yellow-600/20 text-yellow-300 px-2 py-1 rounded">Admin/Technician Only</span>
+                    <span className="badge badge-amber">Admin/Technician Only</span>
                   </h4>
                   <div>
                     <Field label="Troubleshooting Steps & Resolution">
@@ -2459,10 +2468,10 @@ async function save() {
 
                 {/* Job Events Timeline (Read-only) */}
                 {editingId && (
-                  <div className="mb-8 bg-gradient-to-br from-slate-500/5 to-sky-500/5 rounded-3xl p-8 border border-slate-500/20 shadow-soft">
-                    <h4 className="text-2xl font-bold text-sky-300 mb-6 flex items-center gap-3">
+                  <div className="rounded-2xl border border-slate-400/20 bg-slate-500/[0.04] p-4 shadow-soft sm:p-5">
+                    <h4 className="mb-4 flex flex-wrap items-center gap-3 border-b border-white/10 pb-3 text-lg font-semibold text-sky-300">
                       <span>Job Events Timeline</span>
-                      <span className="text-xs bg-slate-600/30 text-slate-200 px-2 py-1 rounded">
+                      <span className="badge badge-slate">
                         {timelineEvents.length} {timelineEvents.length === 1 ? 'event' : 'events'}
                       </span>
                     </h4>
@@ -2520,11 +2529,11 @@ async function save() {
 
                 {/* Completion Evidence Section (Read-only - shown when technician actually submitted evidence) */}
                 {editingId && form.completionForm?.submittedAt && (
-                  <div className="mb-8 bg-gradient-to-br from-green-500/5 to-emerald-500/5 rounded-3xl p-8 border border-green-500/20 shadow-soft">
-                    <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-                      <h4 className="text-2xl font-bold text-green-400 flex items-center gap-3">
+                  <div className="rounded-2xl border border-green-500/20 bg-green-500/[0.04] p-4 shadow-soft sm:p-5">
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
+                      <h4 className="flex items-center gap-3 text-lg font-semibold text-green-400">
                         <span>📋</span> Completion Evidence
-                        <span className="text-xs bg-green-600/20 text-green-300 px-2 py-1 rounded">Technician Submitted</span>
+                        <span className="badge badge-emerald">Technician Submitted</span>
                       </h4>
                       <button
                         type="button"
@@ -2610,9 +2619,9 @@ async function save() {
               </div>
 
               {/* sticky footer */}
-              <div className="px-6 py-4 border-t border-brand-border rounded-b-2xl" style={{ backgroundColor: '#0c1450' }}>
-                <div className="flex justify-between items-center">
-                  <div>
+              <div className="flex-shrink-0 border-t border-white/10 bg-white/[0.03] px-4 py-4 sm:px-6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-h-10">
                     {editingId && (
                       <button
                         onClick={() => removeJob(editingId)}
@@ -2622,16 +2631,16 @@ async function save() {
                       </button>
                     )}
                   </div>
-                  <div className="flex gap-3">
+                  <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                     <button
                       onClick={() => setOpen(false)}
-                      className="btn btn-ghost px-6"
+                      className="btn btn-ghost w-full px-6 sm:w-auto"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={save}
-                      className="btn btn-primary px-6"
+                      className="btn btn-primary w-full px-6 sm:w-auto"
                     >
                       {editingId ? 'Save Job' : 'Create Job'} - {currency.format(
                         form.amount || (BASE_PRICE + getExtraPrice(Number(form.additionalMins)||0))
@@ -2738,9 +2747,15 @@ function StatusBadge({ status, type = 'status' }) {
 }
 
 function Field({ label, children, className = '' }) {
+  const isRequired = typeof label === 'string' && label.trim().endsWith('*');
+  const displayLabel = isRequired ? label.replace(/\s*\*$/, '') : label;
+
   return (
     <label className={`block ${className}`}>
-      <div className="text-sm text-slate-300 mb-1">{label}</div>
+      <div className="mb-1 flex items-center gap-1 text-sm font-medium text-slate-300">
+        <span>{displayLabel}</span>
+        {isRequired && <span className="text-rose-300">*</span>}
+      </div>
       {children}
     </label>
   );
