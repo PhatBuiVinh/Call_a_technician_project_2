@@ -248,6 +248,24 @@ function makeNotePreview(text) {
     .slice(0, 140);
 }
 
+function toOptionalNumber(value) {
+  if (value === undefined || value === null || value === '') return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function toOptionalBoolean(value) {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) return undefined;
+    if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
+    if (['false', '0', 'no', 'off'].includes(normalized)) return false;
+  }
+  return Boolean(value);
+}
+
 // User
 const UserSchema = new mongoose.Schema({
   name:         { type: String, default: 'Admin' },
@@ -1053,8 +1071,11 @@ app.get('/api/jobs', auth, async (req, res) => {
 app.post('/api/jobs', auth, async (req, res) => {
   try {
     let { 
-      title, invoice, priority, status, technician, phone, description, 
-      startAt, endAt, sourceRequestId, customerEmail 
+      title, invoice, priority, status, technician, phone, description,
+      startAt, endAt, sourceRequestId, customerEmail,
+      durationMins, additionalMins, amount, customerName, customerId,
+      customerAddress, software, pensionYearDiscount, socialMediaDiscount,
+      troubleshooting
     } = req.body;
     if (!title || !invoice) return sendErr(res, 400, 'Title and Invoice are required');
 
@@ -1126,6 +1147,19 @@ app.post('/api/jobs', auth, async (req, res) => {
       owner: req.user.sub,
       assignedTo,  // proper technician reference (null if no technician)
       customerEmail: customerEmail || undefined,
+      durationMins: toOptionalNumber(durationMins),
+      additionalMins: toOptionalNumber(additionalMins),
+      amount: toOptionalNumber(amount),
+      customerName: customerName ? String(customerName).trim() : undefined,
+      customerId: customerId ? String(customerId).trim() : undefined,
+      customerAddress: customerAddress ? String(customerAddress).trim() : undefined,
+      software: Array.isArray(software) ? software.map((item) => ({
+        name: String(item?.name || '').trim(),
+        value: toOptionalNumber(item?.value) ?? 0,
+      })).filter((item) => item.name) : undefined,
+      pensionYearDiscount: toOptionalBoolean(pensionYearDiscount),
+      socialMediaDiscount: toOptionalBoolean(socialMediaDiscount),
+      troubleshooting: troubleshooting ? String(troubleshooting).trim() : undefined,
       ...(status === 'Assigned' && assignedTo && { assignedAt: new Date() }),  // Set timestamp if assigned
       events: initialEvents,
       ...(sourceRequestId && { sourceRequestId })
