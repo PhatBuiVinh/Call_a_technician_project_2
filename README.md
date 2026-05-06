@@ -74,6 +74,8 @@ For a presentation-ready walkthrough, see [docs/DEMO-SMOKE-CHECKLIST.md](docs/DE
 npm run dev:backend
 ```
 
+To run the read-only backend smoke test, use `npm test --workspace packages/backend-api`. It checks `GET /api/health` and does not create, update, or delete any records.
+
 ### Marketing Site
 ```bash
 npm run dev:marketing

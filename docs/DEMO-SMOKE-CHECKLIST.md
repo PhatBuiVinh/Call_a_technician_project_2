@@ -25,6 +25,8 @@ Use this checklist for a student capstone or product launch presentation.
 8. Progress the job through the normal workflow until it is marked complete.
 9. Sign back in as admin and review the completion details, report, and invoice screen.
 
+Before demo day, you can also run `npm test --workspace packages/backend-api` to confirm the backend health endpoint responds without touching the database.
+
 ## Do Not Show During Demo
 
 - Do not show .env secrets.
