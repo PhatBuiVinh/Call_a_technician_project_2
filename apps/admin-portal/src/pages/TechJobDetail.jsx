@@ -331,13 +331,23 @@ export default function TechJobDetail() {
 
   function getStatusColor(status) {
     switch (status) {
-      case 'Assigned': return 'bg-blue-500/20 text-blue-200 border border-blue-400/40';
-      case 'Accepted': return 'bg-indigo-500/20 text-indigo-200 border border-indigo-400/40';
-      case 'En Route': return 'bg-amber-500/20 text-amber-200 border border-amber-400/40';
-      case 'On Site': return 'bg-orange-500/20 text-orange-200 border border-orange-400/40';
-      case 'In Progress': return 'bg-fuchsia-500/20 text-fuchsia-200 border border-fuchsia-400/40';
-      case 'Completed': return 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/40';
-      default: return 'bg-slate-500/20 text-slate-200 border border-slate-400/40';
+      case 'Assigned': return 'badge-blue';
+      case 'Accepted': return 'badge-sky';
+      case 'En Route': return 'badge-amber';
+      case 'On Site': return 'badge-orange';
+      case 'In Progress': return 'badge-fuchsia';
+      case 'Completed': return 'badge-emerald';
+      default: return 'badge-slate';
+    }
+  }
+
+  function getPriorityColor(priority) {
+    switch (priority) {
+      case 'Low': return 'badge-slate';
+      case 'Medium': return 'badge-amber';
+      case 'High': return 'badge-orange';
+      case 'Urgent': return 'badge-rose';
+      default: return 'badge-neutral';
     }
   }
 
@@ -400,28 +410,39 @@ export default function TechJobDetail() {
           </div>
         )}
 
-        <div className="surface p-5 rounded-xl">
+        <div className="surface p-4 sm:p-5 rounded-2xl">
           <div className="flex items-center gap-2 mb-4 flex-wrap">
-            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(job.status)}`}>
+            <span className={`badge badge-lg ${getStatusColor(job.status)}`}>
               {job.status}
             </span>
             {job.priority && (
-              <span className="px-3 py-1 rounded-full text-xs font-medium bg-white/5 border border-white/10 text-slate-200">
+              <span className={`badge ${getPriorityColor(job.priority)}`}>
                 Priority: {job.priority}
               </span>
             )}
+            <span className="badge badge-neutral">
+              {job.invoice || 'No invoice assigned'}
+            </span>
+          </div>
+
+          <div className="mb-5">
+            <h2 className="text-xl sm:text-2xl font-semibold leading-tight text-white">{job.title}</h2>
+            <p className="mt-1 text-sm text-slate-400">
+              {isCompleted ? 'Completed job - read only' : 'Review the details below, then take the next workflow action.'}
+            </p>
           </div>
 
           <div className="grid gap-3 text-sm sm:grid-cols-2">
-            <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+            <div className="rounded-xl bg-white/[0.03] border border-white/10 p-3">
               <p className="text-xs uppercase tracking-wide text-slate-500">Customer</p>
-              <div>
-                <div className="text-slate-200 mt-1">{job.customerName || 'No customer name'}</div>
+              <div className="mt-1 space-y-1">
+                <div className="font-semibold text-slate-100">{job.customerName || 'No customer name'}</div>
                 <div className="text-slate-400">{job.phone || 'No phone'}</div>
+                {job.customerEmail && <div className="text-slate-400">{job.customerEmail}</div>}
               </div>
             </div>
 
-            <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+            <div className="rounded-xl bg-white/[0.03] border border-white/10 p-3">
               <p className="text-xs uppercase tracking-wide text-slate-500">Schedule</p>
               <div className="text-slate-200 mt-1">
                 {formatDate(job.startAt)}
@@ -429,13 +450,13 @@ export default function TechJobDetail() {
               </div>
             </div>
 
-            <div className="rounded-xl bg-white/5 border border-white/10 p-3 sm:col-span-2">
+            <div className="rounded-xl bg-brand-blue/10 border border-brand-sky/20 p-3 sm:col-span-2">
               <p className="text-xs uppercase tracking-wide text-slate-500">Service Address</p>
-              <div className="text-slate-200 mt-1">{job.customerAddress || 'No address provided'}</div>
+              <div className="text-slate-100 mt-1 leading-relaxed">{job.customerAddress || 'No address provided'}</div>
             </div>
 
             {job.description && (
-              <div className="rounded-xl bg-white/5 border border-white/10 p-3 sm:col-span-2">
+              <div className="rounded-xl bg-white/[0.03] border border-white/10 p-3 sm:col-span-2">
                 <p className="text-xs uppercase tracking-wide text-slate-500">Job Description</p>
                 <div className="text-slate-200 whitespace-pre-wrap mt-1">{job.description}</div>
               </div>
@@ -458,9 +479,14 @@ export default function TechJobDetail() {
         </div>
 
         {!isCompleted && workflowStep && job.status !== 'In Progress' && (
-          <div className="surface p-4 rounded-xl">
-            <h3 className="font-medium mb-1">Next Step</h3>
-            <p className="text-sm text-slate-400 mb-3">Move this job to the next workflow stage.</p>
+          <div className="surface p-4 sm:p-5 rounded-2xl border-brand-sky/30 bg-brand-blue/10">
+            <div className="mb-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-brand-sky">Next Action</p>
+              <h3 className="mt-1 text-lg font-semibold text-white">{workflowStep.label}</h3>
+              <p className="mt-1 text-sm text-slate-300">
+                Move this job from {job.status} to {workflowStep.next}.
+              </p>
+            </div>
             <button
               onClick={handleStatusUpdate}
               disabled={actionLoading}
@@ -473,9 +499,12 @@ export default function TechJobDetail() {
         )}
 
         {job.status === 'In Progress' && (
-          <div className="surface p-4 rounded-xl">
-            <h3 className="font-medium mb-1">Completion Evidence</h3>
-            <p className="text-sm text-slate-400 mb-3">Submit final work notes and optional photos before closing this task.</p>
+          <div className="surface p-4 sm:p-5 rounded-2xl border-emerald-400/30 bg-emerald-500/10">
+            <div className="mb-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-emerald-200">Ready To Complete</p>
+              <h3 className="mt-1 text-lg font-semibold text-white">Completion Evidence</h3>
+              <p className="mt-1 text-sm text-slate-300">Submit final work notes and optional photos before closing this task.</p>
+            </div>
             <button
               onClick={() => setShowCompletionModal(true)}
               disabled={actionLoading}
@@ -533,23 +562,32 @@ export default function TechJobDetail() {
           </div>
         )}
 
-        <div className="surface p-4 rounded-xl">
-          <h3 className="font-medium mb-1">Work Notes</h3>
-          <p className="text-sm text-slate-400 mb-3">
-            {isCompleted ? 'Notes from when this job was active.' : 'Track progress details for internal reference.'}
-          </p>
+        <div className="surface p-4 sm:p-5 rounded-2xl">
+          <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-white">Work Notes</h3>
+              <p className="text-sm text-slate-400">
+                {isCompleted ? 'Notes from when this job was active.' : 'Track progress details for internal reference.'}
+              </p>
+            </div>
+            <span className="badge badge-neutral w-fit">
+              {notes.length} {notes.length === 1 ? 'note' : 'notes'}
+            </span>
+          </div>
 
           <div className="space-y-2 mb-4">
             {notes.length === 0 ? (
-              <p className="text-slate-500 text-sm italic">No notes recorded</p>
+              <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.03] p-4 text-sm text-slate-500">
+                No notes recorded
+              </div>
             ) : (
               notes.map((note, idx) => (
                 <div
                   key={idx}
-                  className={`p-3 rounded-lg text-sm border ${note.isAdminOnly ? 'bg-amber-500/10 border-amber-500/40' : 'bg-white/5 border-white/10'}`}
+                  className={`p-3 rounded-xl text-sm border ${note.isAdminOnly ? 'bg-amber-500/10 border-amber-500/40' : 'bg-white/[0.03] border-white/10'}`}
                 >
                   {note.isAdminOnly && (
-                    <span className="inline-flex items-center mb-2 px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/20 text-amber-200 border border-amber-500/40">
+                    <span className="badge badge-sm badge-amber mb-2">
                       Admin-Only
                     </span>
                   )}
@@ -563,30 +601,32 @@ export default function TechJobDetail() {
           </div>
 
           {!isCompleted && (
-            <form onSubmit={handleAddNote} className="space-y-2">
+            <form onSubmit={handleAddNote} className="rounded-xl border border-white/10 bg-white/[0.03] p-3 space-y-3">
               <textarea
                 value={newNote}
                 onChange={(e) => setNewNote(e.target.value)}
                 placeholder="Add a work note"
-                className="input w-full text-sm"
+                className="input w-full text-sm bg-transparent"
                 rows={2}
               />
-              <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={isAdminOnlyNote}
-                  onChange={(e) => setIsAdminOnlyNote(e.target.checked)}
-                  className="w-5 h-5 rounded border-slate-600"
-                />
-                Make this note admin-only
-              </label>
-              <button
-                type="submit"
-                disabled={noteLoading || !newNote.trim()}
-                className={`btn btn-primary text-sm ${noteLoading || !newNote.trim() ? 'opacity-60' : ''}`}
-              >
-                {noteLoading ? 'Adding...' : 'Add Note'}
-              </button>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={isAdminOnlyNote}
+                    onChange={(e) => setIsAdminOnlyNote(e.target.checked)}
+                    className="w-5 h-5 rounded border-slate-600"
+                  />
+                  Make this note admin-only
+                </label>
+                <button
+                  type="submit"
+                  disabled={noteLoading || !newNote.trim()}
+                  className={`btn btn-primary text-sm ${noteLoading || !newNote.trim() ? 'opacity-60' : ''}`}
+                >
+                  {noteLoading ? 'Adding...' : 'Add Note'}
+                </button>
+              </div>
             </form>
           )}
         </div>
