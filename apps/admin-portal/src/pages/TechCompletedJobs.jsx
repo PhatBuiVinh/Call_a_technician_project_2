@@ -104,7 +104,7 @@ export default function TechCompletedJobs() {
                   {/* Header */}
                   <div className="flex items-start justify-between gap-3 mb-4">
                     <div className="min-w-0 flex-1">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border bg-brand-teal/20 text-brand-teal border-brand-teal/40">
+                      <span className="badge badge-lg badge-emerald">
                         <span>✓</span>
                         <span>Completed</span>
                       </span>
@@ -144,19 +144,19 @@ export default function TechCompletedJobs() {
                   {/* Indicators */}
                   <div className="flex flex-wrap items-center gap-2">
                     {job.completionForm?.followUpRequired && (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      <span className="badge badge-amber">
                         <span>⚠️</span>
                         <span>Follow-up Required</span>
                       </span>
                     )}
                     {job.completionPhotos?.length > 0 && (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium bg-brand-blue/20 text-brand-sky border border-brand-blue/30">
+                      <span className="badge badge-blue">
                         <span>📷</span>
                         <span>{job.completionPhotos.length} photo{job.completionPhotos.length !== 1 ? 's' : ''}</span>
                       </span>
                     )}
                     {job.completionForm?.partsUsed && (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium bg-white/10 text-slate-300 border border-white/10">
+                      <span className="badge badge-neutral">
                         <span>🔧</span>
                         <span>Parts recorded</span>
                       </span>

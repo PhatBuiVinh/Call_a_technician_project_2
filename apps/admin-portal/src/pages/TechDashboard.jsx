@@ -16,11 +16,37 @@ const STATUS_CONFIG = {
 function StatusBadge({ status }) {
   const config = STATUS_CONFIG[status] || STATUS_CONFIG['Assigned'];
   return (
-    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border ${config.color}`}>
+    <span className={`badge badge-lg ${getStatusBadgeClass(status)}`}>
       <span>{config.icon}</span>
       <span>{status}</span>
     </span>
   );
+}
+
+function getStatusBadgeClass(status) {
+  const styles = {
+    'Assigned': 'badge-blue',
+    'Accepted': 'badge-sky',
+    'En Route': 'badge-amber',
+    'On Site': 'badge-orange',
+    'In Progress': 'badge-fuchsia',
+    'Completed': 'badge-emerald',
+  };
+
+  return styles[status] || 'badge-blue';
+}
+
+function getStatusActionClass(status) {
+  const styles = {
+    'Assigned': 'bg-blue-500/20 text-blue-200 border border-blue-400/35',
+    'Accepted': 'bg-sky-500/20 text-sky-200 border border-sky-400/35',
+    'En Route': 'bg-amber-500/20 text-amber-200 border border-amber-400/35',
+    'On Site': 'bg-orange-500/20 text-orange-200 border border-orange-400/35',
+    'In Progress': 'bg-fuchsia-500/20 text-fuchsia-200 border border-fuchsia-400/35',
+    'Completed': 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/35',
+  };
+
+  return styles[status] || styles.Assigned;
 }
 
 function StatCard({ label, value, accent = 'default' }) {
@@ -50,8 +76,6 @@ function JobCard({ job, onClick }) {
       minute: '2-digit'
     });
   };
-
-  const config = STATUS_CONFIG[job.status] || STATUS_CONFIG['Assigned'];
 
   return (
     <div 
@@ -123,7 +147,7 @@ function JobCard({ job, onClick }) {
       {/* Action Button */}
       <button 
         className={`w-full py-3 rounded-xl font-medium text-sm transition-all duration-200
-                   ${config.color} hover:brightness-110 active:scale-[0.98]`}
+                   ${getStatusActionClass(job.status)} hover:brightness-110 active:scale-[0.98]`}
       >
         Open Job Details →
       </button>

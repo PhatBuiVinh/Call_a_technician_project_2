@@ -9,6 +9,22 @@ const currency = new Intl.NumberFormat(undefined, {
   currency: 'USD',
 });
 
+function InvoiceStatusBadge({ status }) {
+  const styles = {
+    Unpaid: 'badge-amber',
+    Pending: 'badge-sky',
+    Paid: 'badge-emerald',
+    Overdue: 'badge-rose',
+    Void: 'badge-slate',
+  };
+
+  return (
+    <span className={`badge ${styles[status] || 'badge-slate'}`}>
+      {status || 'Unpaid'}
+    </span>
+  );
+}
+
 // Pricing rules
 const BASE_PRICE = 165; // fixed, covers up to 2 hours
 const EXTRA_PRICE = {
@@ -316,7 +332,7 @@ export default function Invoices() {
             <div className="flex flex-col lg:flex-row lg:items-center gap-4 w-full">
               <h2 className="text-3xl font-bold text-white flex items-center gap-4">
                 Invoices
-                <span className="text-sm font-normal text-brand-sky bg-brand-blue/20 px-4 py-2 rounded-full border border-brand-border">
+                <span className="badge badge-lg badge-blue">
                   {filtered.length} {filtered.length === 1 ? 'invoice' : 'invoices'}
                 </span>
               </h2>
@@ -414,7 +430,9 @@ export default function Invoices() {
                       <td className="py-2">
                         {currency.format(Number(inv.amount) || 0)}
                       </td>
-                      <td className="py-2">{inv.status}</td>
+                      <td className="py-2">
+                        <InvoiceStatusBadge status={inv.status} />
+                      </td>
                       <td className="py-2">
                         {new Date(inv.date || inv.createdAt).toLocaleDateString()}
                       </td>

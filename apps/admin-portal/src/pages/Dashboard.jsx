@@ -927,38 +927,38 @@ async function save() {
     const map = {
       job_created: {
         label: 'Job Created',
-        badgeClass: 'text-green-300 border-green-500/40 bg-green-500/10',
+        badgeClass: 'badge-emerald',
         dotClass: 'bg-green-400/30 border-green-400'
       },
       status_changed: {
         label: 'Status Changed',
-        badgeClass: 'text-sky-300 border-sky-500/40 bg-sky-500/10',
+        badgeClass: 'badge-sky',
         dotClass: 'bg-sky-400/30 border-sky-400'
       },
       technician_assigned: {
         label: 'Technician Assigned',
-        badgeClass: 'text-cyan-300 border-cyan-500/40 bg-cyan-500/10',
+        badgeClass: 'badge-blue',
         dotClass: 'bg-cyan-400/30 border-cyan-400'
       },
       note_added: {
         label: 'Note Added',
-        badgeClass: 'text-amber-300 border-amber-500/40 bg-amber-500/10',
+        badgeClass: 'badge-amber',
         dotClass: 'bg-amber-400/30 border-amber-400'
       },
       completion_submitted: {
         label: 'Completion Submitted',
-        badgeClass: 'text-emerald-300 border-emerald-500/40 bg-emerald-500/10',
+        badgeClass: 'badge-emerald',
         dotClass: 'bg-emerald-400/30 border-emerald-400'
       },
       job_closed: {
         label: 'Job Closed',
-        badgeClass: 'text-rose-300 border-rose-500/40 bg-rose-500/10',
+        badgeClass: 'badge-slate',
         dotClass: 'bg-rose-400/30 border-rose-400'
       }
     };
     return map[type] || {
       label: 'Event',
-      badgeClass: 'text-slate-300 border-slate-500/40 bg-slate-500/10',
+      badgeClass: 'badge-slate',
       dotClass: 'bg-slate-400/30 border-slate-400'
     };
   }
@@ -2474,7 +2474,7 @@ async function save() {
                                   <div className="flex items-start justify-between gap-3">
                                     <div className="min-w-0">
                                       <div className="flex items-center gap-2 flex-wrap">
-                                        <span className={`text-xs px-2 py-1 rounded-full border ${meta.badgeClass}`}>
+                                        <span className={`badge badge-sm ${meta.badgeClass}`}>
                                           {meta.label}
                                         </span>
                                         <span className="text-sm text-slate-200 font-medium">
@@ -2651,23 +2651,28 @@ function Card({ label, value, accent = 'default' }) {
 function StatusBadge({ status, type = 'status' }) {
   const styles = {
     status: {
-      'Open': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-      'In Progress': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-      'Completed': 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-      'Closed': 'bg-slate-500/20 text-slate-400 border-slate-500/30',
+      'Open': 'badge-blue',
+      'Assigned': 'badge-blue',
+      'Accepted': 'badge-sky',
+      'Scheduled': 'badge-sky',
+      'En Route': 'badge-amber',
+      'On Site': 'badge-orange',
+      'In Progress': 'badge-fuchsia',
+      'Completed': 'badge-emerald',
+      'Closed': 'badge-slate',
     },
     priority: {
-      'Low': 'bg-slate-500/20 text-slate-300 border-slate-500/30',
-      'Medium': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-      'High': 'bg-orange-500/20 text-orange-300 border-orange-500/30',
-      'Urgent': 'bg-red-500/20 text-red-300 border-red-500/30',
+      'Low': 'badge-slate',
+      'Medium': 'badge-amber',
+      'High': 'badge-orange',
+      'Urgent': 'badge-rose',
     },
   };
 
   const statusStyle = styles[type][status] || styles[type]['Open'];
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${statusStyle}`}>
+    <span className={`badge ${statusStyle}`}>
       {status}
     </span>
   );
