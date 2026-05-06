@@ -27,7 +27,7 @@ export async function api(path, { method='GET', body, headers={} } = {}){
   }
 
   const text = await res.text();
-  let data = null; try{ data = text ? JSON.parse(text) : null }catch{}
+  let data = null; try{ data = text ? JSON.parse(text) : null }catch{ void 0; }
   if(!res.ok) throw new Error((data && (data.error || data.message)) || res.statusText);
   return data;
 }

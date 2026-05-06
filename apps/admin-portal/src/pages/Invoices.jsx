@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '../components/Header';
 import { api } from '../lib/api';
-import { exportCSV } from '../lib/csv';
 
 const currency = new Intl.NumberFormat(undefined, {
   style: 'currency',
@@ -284,23 +283,6 @@ export default function Invoices() {
     } catch (e) {
       alert(e.message || 'Delete failed');
     }
-  }
-
-  function exportFilteredCSV() {
-    const cols = [
-      { key: 'number', label: 'Number' },
-      { key: 'customer', label: 'Customer' },
-      { key: 'amount', label: 'Amount' },
-      { key: 'status', label: 'Status' },
-      { key: 'date', label: 'Date' },
-      { key: 'description', label: 'Description' },
-    ];
-    const rows = filtered.map(i => ({
-      ...i,
-      description: i.description || i.notes || '',
-      date: new Date(i.date || i.createdAt).toLocaleDateString(),
-    }));
-    exportCSV('invoices', cols, rows);
   }
 
   return (

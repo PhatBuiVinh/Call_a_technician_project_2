@@ -38,17 +38,6 @@ export default function TechCompletedJobs() {
     });
   }
 
-  function formatDateTime(dateStr) {
-    if (!dateStr) return '-';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  }
-
   const jobsWithFollowUp = jobs.filter(job => job.completionForm?.followUpRequired).length;
   const jobsWithPhotos = jobs.filter(job => job.completionPhotos?.length > 0).length;
   const totalJobs = jobs.length;

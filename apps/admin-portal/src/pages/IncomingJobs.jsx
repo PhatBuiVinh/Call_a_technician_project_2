@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { incomingJobsApi } from '../lib/api';
@@ -43,15 +43,6 @@ export default function IncomingJobs() {
     queryFn: () => incomingJobsApi.getIncomingJobs({ q: searchQuery }),
   });
 
-  // Update job mutation
-  const updateJobMutation = useMutation({
-    mutationFn: ({ id, updates }) => incomingJobsApi.updateIncomingJob(id, updates),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['incomingJobs'] });
-      setSelectedJob(null);
-    },
-  });
-
   // Delete job mutation
   const deleteJobMutation = useMutation({
     mutationFn: (id) => incomingJobsApi.deleteIncomingJob(id),
@@ -61,18 +52,6 @@ export default function IncomingJobs() {
     },
   });
 
-
-  const handleNotesUpdate = (jobId, notes) => {
-    updateJobMutation.mutate({ id: jobId, updates: { notes } });
-  };
-
-  const handleStatusChange = (jobId, status) => {
-    updateJobMutation.mutate({ id: jobId, updates: { status } });
-  };
-
-  const handleAssignmentChange = (jobId, assignedTo) => {
-    updateJobMutation.mutate({ id: jobId, updates: { assignedTo } });
-  };
 
   const handleConvertToJob = async (job) => {
     setConvertingId(job._id);

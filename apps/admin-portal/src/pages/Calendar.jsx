@@ -1,5 +1,5 @@
 // src/pages/Calendar.jsx
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Header from '../components/Header';
 import { api } from '../lib/api';
 import FullCalendar from '@fullcalendar/react';
@@ -10,7 +10,6 @@ import interactionPlugin from '@fullcalendar/interaction';
 const SLOT = '00:30:00'; // 30-min cells
 
 export default function CalendarPage() {
-  const mainRef = useRef(null);
   const calendarRef = useRef(null);
 
   // technicians
@@ -291,7 +290,6 @@ export default function CalendarPage() {
                 center: 'title',
                 right: 'timeGridWeek,dayGridMonth,timeGridDay'
               }}
-              events={eventsFetcher}
               eventSources={[
                 eventsFetcher,
                 timeoffBgEvents,
@@ -302,7 +300,6 @@ export default function CalendarPage() {
           <TechColumns
             techs={techFilter==='All' ? techs : [techFilter]}
             fcCommon={fcCommon}
-            eventsFetcher={eventsFetcher}
             timeoffBgEvents={timeoffBgEvents}
           />
         )}
@@ -390,7 +387,7 @@ export default function CalendarPage() {
 }
 
 /* ---------- Technician columns (no premium) ---------- */
-function TechColumns({ techs, fcCommon, eventsFetcher, timeoffBgEvents }) {
+function TechColumns({ techs, fcCommon, timeoffBgEvents }) {
   // each technician gets its own calendar; share the same toolbar above each
   // You can style the header to appear once if desired (kept simple here).
   return (
@@ -403,7 +400,6 @@ function TechColumns({ techs, fcCommon, eventsFetcher, timeoffBgEvents }) {
             {...fcCommon}
             headerToolbar={{ left: 'prev,next today', center: 'title', right: 'timeGridWeek,timeGridDay' }}
             events={(info, success, failure) => {
-              // same fetcher but force technician
               const wrapped = async () => {
                 try {
                   const p = new URLSearchParams({ scheduled:'true', from:info.startStr, to:info.endStr, technician:t });
@@ -426,7 +422,6 @@ function TechColumns({ techs, fcCommon, eventsFetcher, timeoffBgEvents }) {
             }}
             eventSources={[
               (info, success) => {
-                const within = (Array.isArray(fcCommon.datesSet) ? [] : []); // dummy to satisfy shape
                 timeoffBgEvents(info, success);
               }
             ]}

@@ -259,7 +259,7 @@ export default function TechJobDetail() {
       setPhotoLoading(true);
       const base64Photos = await Promise.all(files.map(fileToBase64));
       setCompletionPhotos(prev => [...prev, ...base64Photos].slice(0, 3));
-    } catch (err) {
+    } catch {
       setError('Failed to process photos');
     } finally {
       setPhotoLoading(false);

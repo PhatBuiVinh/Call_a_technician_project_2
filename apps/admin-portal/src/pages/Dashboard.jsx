@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import { api, reportsApi } from '../lib/api';
@@ -76,27 +76,6 @@ export default function Dashboard() {
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
   const [savedSoftware, setSavedSoftware] = useState([]);
 
-  // Calculate job counts by status
-  const jobCounts = useMemo(() => {
-    const counts = {
-      'Open': 0,
-      'In Progress': 0,
-      'Completed': 0,
-      'Closed': 0
-    };
-
-    jobs.forEach(job => {
-      const status = job.status || 'Open';
-      if (counts.hasOwnProperty(status)) {
-        counts[status]++;
-      } else {
-        counts['Open']++; // Default to Open if status is unknown
-      }
-    });
-
-    return counts;
-  }, [jobs]);
-
   const timelineEvents = useMemo(() => {
     if (!Array.isArray(form.events)) return [];
     return [...form.events].sort((a, b) => {
@@ -124,8 +103,6 @@ export default function Dashboard() {
   }, [form.additionalMins, form.software, form.pensionYearDiscount, form.socialMediaDiscount]);
 
   // ----- file input for Import -----
-  const fileRef = useRef(null);
-
   const [customers, setCustomers] = useState([]);
   useEffect(() => { (async () => {
     try { setCustomers(await api('/customers')); } catch { 
@@ -324,13 +301,6 @@ useEffect(() => {
   const [confirmedAssignmentWithoutAccount, setConfirmedAssignmentWithoutAccount] = useState(false);
 
   // ----- UI actions -----
-  function toggleTheme() {
-    const root = document.documentElement;
-    const next = root.dataset.theme === 'light' ? 'dark' : 'light';
-    root.dataset.theme = next;
-    localStorage.setItem('cat_theme', next);
-  }
-
   async function openNew(prefill = {}) {
     // Refresh jobs data to ensure accurate counts
     await load();
@@ -342,7 +312,6 @@ useEffect(() => {
       new Date().getHours(), 0, 0
     ).toISOString();
 
-    const existingIds = new Set((customers || []).map(c => String(c.customerId)));
     const duration = Number(prefill.durationMins ?? 120);
     const extra = Number(prefill.additionalMins ?? 0);
     const endIso = addMinutesISO(startIso, duration + extra);
@@ -352,7 +321,7 @@ useEffect(() => {
     try {
       const response = await api('/invoices/next-number');
       newInvoice = response.number;
-    } catch (e) {
+    } catch {
       // Fallback to random if API fails
       const existingInvoices = jobs.map(j => j.invoice).filter(Boolean);
       do {
@@ -383,31 +352,6 @@ useEffect(() => {
   async function openEdit(j) {
   // Refresh jobs data to ensure accurate counts (MUST await to prevent race condition)
   await load();
-  
-  // Create a safe copy without circular references
-  const safeJobData = {
-    _id: j._id,
-    title: j.title,
-    invoice: j.invoice,
-    priority: j.priority,
-    status: j.status,
-    technician: j.technician,
-    phone: j.phone,
-    description: j.description,
-    startAt: j.startAt,
-    endAt: j.endAt,
-    durationMins: j.durationMins,
-    additionalMins: j.additionalMins,
-    amount: j.amount,
-    customerName: j.customerName,
-    customerId: j.customerId,
-    customerAddress: j.customerAddress,
-    customerEmail: j.customerEmail,
-    software: j.software,
-    pensionYearDiscount: j.pensionYearDiscount,
-    socialMediaDiscount: j.socialMediaDiscount,
-    troubleshooting: j.troubleshooting
-  };
   
   const add = Number(j.additionalMins || 0);
   const amt = BASE_PRICE + getExtraPrice(add);
@@ -697,7 +641,7 @@ async function save() {
             updatedAt: new Date().toISOString()
           };
           
-          const updatedInvoice = await api(`/invoices/${existingInvoice._id}`, {
+          await api(`/invoices/${existingInvoice._id}`, {
             method: 'PUT',
             body: invoiceUpdateData
           });
@@ -730,7 +674,7 @@ async function save() {
             updatedAt: new Date().toISOString()
           };
           
-          const newInvoice = await api('/invoices', {
+          await api('/invoices', {
             method: 'POST',
             body: invoiceData
           });
@@ -933,82 +877,6 @@ async function save() {
     }
   }
 
-  function exportCSV() {
-    const header = [
-      'Title',
-      'Invoice',
-      'Priority',
-      'Status',
-      'Technician',
-      'Phone',
-      'Created',
-      'Work Performed',
-      'Parts Used',
-      'Follow Up Required',
-      'Follow Up Notes',
-      'Completion Submitted At',
-      'Completion Technician Name'
-    ];
-    const rows = jobs.map((j) => [
-      j.title,
-      j.invoice,
-      j.priority,
-      j.status,
-      j.technician,
-      j.phone,
-      j.createdAt ? new Date(j.createdAt).toLocaleString() : '',
-      j.completionForm?.workPerformed || '',
-      j.completionForm?.partsUsed || '',
-      j.completionForm?.followUpRequired ? 'Yes' : 'No',
-      j.completionForm?.followUpNotes || '',
-      j.completionForm?.submittedAt ? new Date(j.completionForm.submittedAt).toLocaleString() : '',
-      j.technician || '',
-    ]);
-    const csv = [header, ...rows]
-      .map((r) => r.map((x) => `"${(x ?? '').toString().replace(/"/g, '""')}"`).join(','))
-      .join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'jobs.csv';
-    a.click();
-    URL.revokeObjectURL(a.href);
-  }
-
-  function importClick() {
-    fileRef.current?.click();
-  }
-  async function onImport(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const text = await file.text();
-    const lines = text.split(/\r?\n/).filter(Boolean);
-    const [, ...rest] = lines;
-    const items = rest
-      .map((line) => {
-        const parts = line.split(',').map((s) => s.replace(/^"|"$/g, '').replace(/""/g, '"'));
-        return {
-          title: parts[0],
-          invoice: parts[1],
-          priority: parts[2],
-          status: parts[3],
-          technician: parts[4],
-          phone: parts[5],
-        };
-      })
-      .filter((r) => r.title && r.invoice);
-
-    for (const row of items) {
-      try {
-        const created = await api('/jobs', { method: 'POST', body: row });
-        setJobs((prev) => [created, ...prev]);
-      } catch (e) {
-        console.warn('Import row failed', row, e);
-      }
-    }
-    e.target.value = '';
-  }
-
   // helpers
   function toLocal(iso) {
     if (!iso) return '';
@@ -1029,13 +897,6 @@ async function save() {
   function genCustomerId5() {
     return String(Math.floor(10000 + Math.random() * 90000));
   }
-  function genUniqueCustomerId(existingIds) {
-  let id;
-  do { id = String(Math.floor(10000 + Math.random() * 90000)); }
-  while (existingIds.has(id));
-  return id;
-}
-
   function formatRelativeTime(isoLike) {
     if (!isoLike) return 'Unknown time';
     const ts = new Date(isoLike).getTime();

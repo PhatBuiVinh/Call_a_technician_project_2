@@ -42,7 +42,7 @@ export default function InvoicePrint() {
   useEffect(() => {
     if (!loading && inv) {
       const t = setTimeout(() => {
-        try { window.print(); } catch {}
+        try { window.print(); } catch { void 0; }
       }, 300); // small delay lets the browser layout first
       return () => clearTimeout(t);
     }
