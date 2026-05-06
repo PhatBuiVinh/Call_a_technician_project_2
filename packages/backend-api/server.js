@@ -166,6 +166,17 @@ function requireAdmin(req, res, next) {
   return next();
 }
 
+function getJobAccessState(req, job) {
+  const isAdmin = req.user?.role === 'admin';
+  const userTechId = req.user?.techId ? req.user.techId.toString() : null;
+  const jobOwner = job?.owner ? String(job.owner) : null;
+  const jobAssignedTo = job?.assignedTo ? job.assignedTo.toString() : null;
+  const isOwnedByAdmin = isAdmin && jobOwner && jobOwner === String(req.user?.sub || '');
+  const isAssignedTech = req.user?.role === 'technician' && jobAssignedTo && jobAssignedTo === userTechId;
+
+  return { isAdmin, isOwnedByAdmin, isAssignedTech, jobAssignedTo };
+}
+
 function parseDateOnlyUTC(value, fieldName) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     throw new Error(`${fieldName} must be YYYY-MM-DD`);
@@ -1603,15 +1614,10 @@ app.put('/api/jobs/:id/status', auth, async (req, res) => {
     const currentStatus = job.status;
     
     // Authorization checks with safe null handling
-    const isAdmin = req.user.role === 'admin';
-    const userTechId = req.user.techId ? req.user.techId.toString() : null;
-    const jobAssignedTo = job.assignedTo ? job.assignedTo.toString() : null;
-    const isAssignedTech = req.user.role === 'technician' && 
-                           jobAssignedTo && 
-                           jobAssignedTo === userTechId;
+    const { isAdmin, isOwnedByAdmin, isAssignedTech, jobAssignedTo } = getJobAccessState(req, job);
     
-    // Only assigned technician or admin can update
-    if (!isAdmin && !isAssignedTech) {
+    // Only the owning admin or assigned technician can update
+    if ((!isAdmin || !isOwnedByAdmin) && !isAssignedTech) {
       return sendErr(res, 403, 'Not authorized to update this job');
     }
     
@@ -1885,15 +1891,10 @@ app.post('/api/jobs/:id/tech-notes', auth, async (req, res) => {
     }
     
     // Authorization checks
-    const isAdmin = req.user.role === 'admin';
-    const userTechId = req.user.techId ? req.user.techId.toString() : null;
-    const jobAssignedTo = job.assignedTo ? job.assignedTo.toString() : null;
-    const isAssignedTech = req.user.role === 'technician' && 
-                           jobAssignedTo && 
-                           jobAssignedTo === userTechId;
+    const { isAdmin, isOwnedByAdmin, isAssignedTech, jobAssignedTo } = getJobAccessState(req, job);
     
-    // Only assigned technician or admin can add notes
-    if (!isAdmin && !isAssignedTech) {
+    // Only the owning admin or assigned technician can add notes
+    if ((!isAdmin || !isOwnedByAdmin) && !isAssignedTech) {
       return res.status(403).json({ error: 'Not authorized to add notes to this job' });
     }
     
