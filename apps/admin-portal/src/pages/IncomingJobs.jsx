@@ -138,24 +138,30 @@ export default function IncomingJobs() {
   return (
     <>
       <Header />
-      <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white mb-2">Incoming Job Requests</h1>
-        <p className="text-slate-300">Manage job requests from the marketing website</p>
-      </div>
+      <main className="max-w-6xl mx-auto p-4 space-y-4">
+        <section className="surface rounded-2xl p-4 sm:p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-white">Incoming Job Requests</h1>
+                <span className="badge badge-blue">
+                  {jobs.length} {jobs.length === 1 ? 'request' : 'requests'}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-slate-400">Manage job requests from the marketing website.</p>
+            </div>
 
-      {/* Filters */}
-      <div className="mb-6 flex flex-wrap gap-4">
-        <div className="flex-1 min-w-64">
-          <input
-            type="text"
-            placeholder="Search jobs..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="input"
-          />
-        </div>
-      </div>
+            <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
+              <input
+                type="text"
+                placeholder="Search jobs..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="input min-w-0 sm:w-80"
+              />
+            </div>
+          </div>
+        </section>
 
       {/* Jobs List */}
       <div className="panel overflow-hidden">
@@ -484,7 +490,7 @@ export default function IncomingJobs() {
           />
         </div>
       )}
-      </div>
+      </main>
     </>
   );
 }

@@ -328,42 +328,47 @@ export default function Invoices() {
 
         {/* Enhanced Invoices Section */}
         <div className="bg-brand-panel rounded-3xl border border-brand-border overflow-hidden shadow-soft">
-          <div className="bg-brand-bg px-8 py-6 border-b border-brand-border">
-            <div className="flex flex-col lg:flex-row lg:items-center gap-4 w-full">
-              <h2 className="text-3xl font-bold text-white flex items-center gap-4">
-                Invoices
-                <span className="badge badge-lg badge-blue">
-                  {filtered.length} {filtered.length === 1 ? 'invoice' : 'invoices'}
-                </span>
-              </h2>
+          <div className="bg-brand-bg px-4 py-5 sm:px-6 border-b border-brand-border">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
+                    Invoices
+                  </h1>
+                  <span className="badge badge-lg badge-blue">
+                    {filtered.length} {filtered.length === 1 ? 'invoice' : 'invoices'}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-slate-400">
+                  Search, filter, create, and update customer invoices.
+                </p>
+              </div>
 
-              <div className="flex-1 flex flex-col sm:flex-row gap-3 min-w-0">
-              <input
-                  className="flex-1 px-4 py-3 rounded-xl bg-brand-bg border border-brand-border text-text-primary placeholder-text-muted focus:border-brand-border-hover focus:ring-2 focus:ring-brand-border/30 backdrop-blur-sm min-w-0"
+              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
+                <input
+                  className="input min-w-0 sm:w-72"
                   placeholder="Search invoices..."
-                value={q}
-                onChange={e => setQ(e.target.value)}
-              />
+                  value={q}
+                  onChange={e => setQ(e.target.value)}
+                />
 
-              <select
-                  className="px-4 py-3 rounded-xl bg-brand-bg border border-brand-border text-text-primary focus:border-brand-border-hover focus:ring-2 focus:ring-brand-border/30 backdrop-blur-sm min-w-[120px]"
-                value={status}
-                onChange={e => setStatus(e.target.value)}
-              >
-                {['All', 'Unpaid', 'Paid', 'Overdue', 'Void'].map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3 min-w-0">
-                <button 
-                  className="px-6 py-3 bg-brand-teal hover:bg-brand-teal/90 text-text-primary rounded-xl font-medium transition-all duration-200 shadow-soft flex items-center justify-center gap-2 whitespace-nowrap"
-                  onClick={openCreate}
+                <select
+                  className="select min-w-[120px]"
+                  value={status}
+                  onChange={e => setStatus(e.target.value)}
                 >
-                  New Invoice
-                </button>
+                  {['All', 'Unpaid', 'Paid', 'Overdue', 'Void'].map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
               </div>
+
+              <button 
+                className="btn btn-primary whitespace-nowrap"
+                onClick={openCreate}
+              >
+                New Invoice
+              </button>
             </div>
           </div>
 

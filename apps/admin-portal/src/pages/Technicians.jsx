@@ -273,25 +273,32 @@ export default function Technicians() {
       <main className="max-w-6xl mx-auto p-4 space-y-4">
         {/* Enhanced Technicians Section */}
         <div className="bg-brand-panel rounded-2xl border border-brand-border overflow-hidden">
-          <div className="bg-brand-bg px-6 py-4 border-b border-brand-border">
-            <div className="flex flex-wrap items-center gap-4 w-full">
-              <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                Technicians
-                <span className="text-sm font-normal text-text-secondary bg-brand-blue/20 px-3 py-1 rounded-full border border-brand-border">
-                  {filtered.length} {filtered.length === 1 ? 'technician' : 'technicians'}
-                </span>
-              </h2>
+          <div className="bg-brand-bg px-4 py-5 sm:px-6 border-b border-brand-border">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
+                    Technicians
+                  </h1>
+                  <span className="badge badge-blue">
+                    {filtered.length} {filtered.length === 1 ? 'technician' : 'technicians'}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-slate-400">
+                  Manage technician profiles, service areas, status, and login accounts.
+                </p>
+              </div>
 
-              <div className="flex-1 flex gap-3 min-w-[300px]">
+              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
                 <input
-                  className="flex-1 px-4 py-2 rounded-xl bg-brand-bg border border-brand-border text-text-primary placeholder-text-muted focus:border-brand-border-hover focus:ring-2 focus:ring-brand-border/30"
+                  className="input min-w-0 sm:w-72"
                   placeholder="Search technicians..."
                   value={q}
                   onChange={e => setQ(e.target.value)}
                 />
 
                 <select
-                  className="px-4 py-2 rounded-xl bg-brand-bg border border-brand-border text-text-primary focus:border-brand-border-hover focus:ring-2 focus:ring-brand-border/30"
+                  className="select min-w-[120px]"
                   value={active}
                   onChange={e => setActive(e.target.value)}
                 >
@@ -302,7 +309,7 @@ export default function Technicians() {
               </div>
 
               <button 
-                className="px-6 py-3 bg-brand-blue hover:bg-brand-blue/90 text-text-primary rounded-xl font-medium transition-all duration-200 shadow-soft flex items-center gap-2"
+                className="btn btn-primary"
                 onClick={openCreate}
               >
                 New Technician

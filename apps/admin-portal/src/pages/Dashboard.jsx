@@ -1554,20 +1554,29 @@ async function save() {
       <Header />
 
       <main className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
-              Welcome, <span className="text-brand-sky">{who}</span>
-            </h1>
-            <p className="text-sm text-slate-400 mt-1">Operations Dashboard</p>
-          </div>
+        <section className="surface mb-6 rounded-2xl p-4 sm:p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
+                  Operations Dashboard
+                </h1>
+                <span className="badge badge-blue">
+                  {jobs.length} {jobs.length === 1 ? 'job' : 'jobs'}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-slate-400">
+                Welcome, <span className="text-brand-sky">{who}</span>. Track jobs, requests, invoices, and technician workload.
+              </p>
+            </div>
 
-          <div className="flex gap-3">
-            <button onClick={() => openNew()} className="btn btn-primary tap-target">
-              New Job
-            </button>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <button onClick={() => openNew()} className="btn btn-primary tap-target">
+                New Job
+              </button>
+            </div>
           </div>
-        </div>
+        </section>
 
         {/* KPIs */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8">

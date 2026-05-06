@@ -190,18 +190,25 @@ export default function Reports() {
       <Header />
 
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-        <section className="bg-brand-panel rounded-2xl border border-brand-border p-6 shadow-soft">
-          <div className="flex items-center gap-3 mb-4">
+        <section className="surface rounded-2xl p-4 sm:p-5">
+          <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="w-10 h-10 bg-brand-blue/20 rounded-xl flex items-center justify-center text-xl border border-brand-blue/30">
               📊
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white">Reports</h1>
-              <p className="text-sm text-slate-400">Generate date-range summary and technician performance reports.</p>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-white">Reports</h1>
+                {serverRange && (
+                  <span className="badge badge-neutral">
+                    {serverRange.from} to {serverRange.to}
+                  </span>
+                )}
+              </div>
+              <p className="mt-1 text-sm text-slate-400">Generate date-range summary and technician performance reports.</p>
             </div>
           </div>
 
-          <form onSubmit={onSubmit} className="bg-brand-bg rounded-xl border border-brand-border p-4">
+          <form onSubmit={onSubmit} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
             <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto_auto] gap-4 items-end">
               <label className="block">
                 <span className="text-sm font-medium text-slate-300 mb-1.5 block">From Date</span>
@@ -228,7 +235,7 @@ export default function Reports() {
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-2.5 rounded-lg bg-brand-blue hover:bg-brand-blue/90 disabled:opacity-60 disabled:cursor-not-allowed font-medium transition-all shadow-lg shadow-brand-blue/20"
+                className="btn btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {loading ? 'Running...' : 'Run Report'}
               </button>
@@ -238,7 +245,7 @@ export default function Reports() {
                   type="button"
                   onClick={exportSummaryCsv}
                   disabled={!summary || loading}
-                  className="px-4 py-2.5 rounded-lg bg-white/10 hover:bg-white/15 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-white/10"
+                  className="btn btn-ghost text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Export Summary CSV"
                 >
                   📥 Summary
@@ -247,7 +254,7 @@ export default function Reports() {
                   type="button"
                   onClick={exportTechniciansCsv}
                   disabled={!rows.length || loading}
-                  className="px-4 py-2.5 rounded-lg bg-brand-teal/20 hover:bg-brand-teal/30 text-brand-teal text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-brand-teal/30"
+                  className="btn btn-success text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Export Technician CSV"
                 >
                   📥 Tech
