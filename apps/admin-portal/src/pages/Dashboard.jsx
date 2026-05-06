@@ -1537,10 +1537,10 @@ async function save() {
 
     return [
       { label: 'Total Jobs', value: safeNumber(dashboardSummary?.jobs?.total), accent: 'blue' },
-      { label: 'Open Jobs', value: safeNumber(dashboardSummary?.jobs?.open), accent: 'blue' },
-      { label: 'In Workflow', value: safeNumber(dashboardSummary?.jobs?.inWorkflow), accent: 'blue' },
-      { label: 'Completed Jobs', value: safeNumber(dashboardSummary?.jobs?.completed), accent: 'blue' },
-      { label: 'Closed Jobs', value: safeNumber(dashboardSummary?.jobs?.closed), accent: 'blue' },
+      { label: 'Open Jobs', value: safeNumber(dashboardSummary?.jobs?.open), accent: 'sky' },
+      { label: 'In Workflow', value: safeNumber(dashboardSummary?.jobs?.inWorkflow), accent: 'fuchsia' },
+      { label: 'Completed Jobs', value: safeNumber(dashboardSummary?.jobs?.completed), accent: 'emerald' },
+      { label: 'Closed Jobs', value: safeNumber(dashboardSummary?.jobs?.closed), accent: 'slate' },
       { label: 'Incoming Requests (Shared Pool)', value: safeNumber(dashboardSummary?.requests30d?.incoming), accent: 'teal' },
       { label: 'Converted Requests (30d)', value: safeNumber(dashboardSummary?.requests30d?.converted), accent: 'teal' },
       { label: 'Conversion Rate (30d)', value: `${conversionRate.toFixed(1)}%`, accent: 'teal' },
@@ -1581,10 +1581,10 @@ async function save() {
         {/* KPIs */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <Card label="Total Jobs" value={kpi.total} accent="blue" />
-          <Card label="Open" value={kpi.open} accent="blue" />
-          <Card label="In Progress" value={kpi.progress} accent="blue" />
-          <Card label="Completed" value={kpi.completed} accent="blue" />
-          <Card label="Closed" value={kpi.closed} accent="blue" />
+          <Card label="Open" value={kpi.open} accent="sky" />
+          <Card label="In Progress" value={kpi.progress} accent="fuchsia" />
+          <Card label="Completed" value={kpi.completed} accent="emerald" />
+          <Card label="Closed" value={kpi.closed} accent="slate" />
         </div>
 
         <section className="mb-8">
@@ -2643,16 +2643,59 @@ async function save() {
 
 function Card({ label, value, accent = 'default' }) {
   const accents = {
-    default: 'from-white/5 to-white/[0.02] border-white/10 hover:border-white/15',
-    blue: 'from-brand-blue/10 to-brand-blue/[0.02] border-brand-blue/20 hover:border-brand-blue/30',
-    teal: 'from-brand-teal/10 to-brand-teal/[0.02] border-brand-teal/20 hover:border-brand-teal/30',
-    sky: 'from-brand-sky/10 to-brand-sky/[0.02] border-brand-sky/20 hover:border-brand-sky/30',
+    default: {
+      panel: 'from-white/5 to-white/[0.02] border-white/10 hover:border-white/20',
+      marker: 'bg-slate-300',
+      glow: 'bg-white/10',
+    },
+    blue: {
+      panel: 'from-blue-500/15 to-blue-500/[0.03] border-blue-400/20 hover:border-blue-300/35',
+      marker: 'bg-blue-300',
+      glow: 'bg-blue-400/15',
+    },
+    sky: {
+      panel: 'from-sky-500/15 to-sky-500/[0.03] border-sky-400/20 hover:border-sky-300/35',
+      marker: 'bg-sky-300',
+      glow: 'bg-sky-400/15',
+    },
+    teal: {
+      panel: 'from-teal-500/15 to-teal-500/[0.03] border-teal-400/20 hover:border-teal-300/35',
+      marker: 'bg-teal-300',
+      glow: 'bg-teal-400/15',
+    },
+    fuchsia: {
+      panel: 'from-fuchsia-500/15 to-fuchsia-500/[0.03] border-fuchsia-400/20 hover:border-fuchsia-300/35',
+      marker: 'bg-fuchsia-300',
+      glow: 'bg-fuchsia-400/15',
+    },
+    emerald: {
+      panel: 'from-emerald-500/15 to-emerald-500/[0.03] border-emerald-400/20 hover:border-emerald-300/35',
+      marker: 'bg-emerald-300',
+      glow: 'bg-emerald-400/15',
+    },
+    slate: {
+      panel: 'from-slate-500/15 to-slate-500/[0.03] border-slate-400/20 hover:border-slate-300/30',
+      marker: 'bg-slate-300',
+      glow: 'bg-slate-400/10',
+    },
   };
+  const tone = accents[accent] || accents.default;
 
   return (
-    <div className={`rounded-xl sm:rounded-2xl p-3 sm:p-5 bg-gradient-to-br ${accents[accent]} border shadow-soft transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5`}>
-      <div className="text-xs sm:text-sm text-slate-300 font-medium mb-1 truncate">{label}</div>
-      <div className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">{value}</div>
+    <div className={`group relative overflow-hidden rounded-xl sm:rounded-2xl border bg-gradient-to-br p-3.5 sm:p-5 shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${tone.panel}`}>
+      <div className={`absolute inset-x-0 top-0 h-1 ${tone.marker}`} />
+      <div className={`absolute right-3 top-3 h-9 w-9 rounded-full blur-xl transition-opacity duration-200 group-hover:opacity-90 ${tone.glow}`} />
+      <div className="relative flex min-h-[5.5rem] flex-col justify-between gap-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 text-xs font-semibold uppercase text-slate-300">
+            {label}
+          </div>
+          <span className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${tone.marker}`} />
+        </div>
+        <div className="text-3xl font-extrabold leading-none text-white">
+          {value}
+        </div>
+      </div>
     </div>
   );
 }
