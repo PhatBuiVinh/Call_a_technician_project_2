@@ -49,6 +49,17 @@ function getStatusActionClass(status) {
   return styles[status] || styles.Assigned;
 }
 
+function getPriorityBadgeClass(priority) {
+  const styles = {
+    Low: 'badge-slate',
+    Medium: 'badge-amber',
+    High: 'badge-orange',
+    Urgent: 'badge-rose',
+  };
+
+  return styles[priority] || 'badge-slate';
+}
+
 function StatCard({ label, value, accent = 'default' }) {
   const accents = {
     default: 'from-white/5 to-white/[0.02] border-white/10',
@@ -80,63 +91,68 @@ function JobCard({ job, onClick }) {
   return (
     <div 
       onClick={onClick}
-      className="group bg-brand-panel rounded-2xl border border-brand-border p-4 shadow-soft 
-                 hover:border-brand-sky/30 hover:shadow-md transition-all duration-200 cursor-pointer"
+      className="group surface rounded-2xl p-4 sm:p-5 hover:border-brand-sky/35 hover:bg-white/[0.07] hover:shadow-lg transition-all duration-200 cursor-pointer"
     >
       {/* Header: Status + Title */}
-      <div className="flex flex-col gap-2 mb-4">
-        <StatusBadge status={job.status} />
-        <h3 className="font-semibold text-white text-lg leading-tight group-hover:text-brand-sky transition-colors">
-          {job.title}
+      <div className="mb-4">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <StatusBadge status={job.status} />
+          {job.priority && (
+            <span className={`badge ${getPriorityBadgeClass(job.priority)}`}>
+              {job.priority}
+            </span>
+          )}
+        </div>
+        <h3 className="text-lg sm:text-xl font-semibold text-white leading-tight group-hover:text-brand-sky transition-colors">
+          {job.title || 'Untitled job'}
         </h3>
       </div>
 
       {/* Customer Info Block */}
-      <div className="space-y-3 mb-4">
+      <div className="grid gap-3 mb-4 sm:grid-cols-2">
         {/* Customer Name */}
-        <div className="flex items-start gap-3">
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 flex items-start gap-3">
           <span className="text-xl shrink-0">👤</span>
           <div className="min-w-0">
-            <p className="text-sm text-slate-400">Customer</p>
-            <p className="text-white font-medium truncate">{job.customerName || 'Not provided'}</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Customer</p>
+            <p className="mt-1 text-white font-semibold truncate">{job.customerName || 'Not provided'}</p>
+          </div>
+        </div>
+
+        {/* Schedule */}
+        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 flex items-start gap-3">
+          <span className="text-xl shrink-0">🕐</span>
+          <div className="min-w-0">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Scheduled</p>
+            <p className="mt-1 text-slate-200 text-sm font-medium">{formatDate(job.startAt)}</p>
           </div>
         </div>
 
         {/* Address - Prominent for field use */}
         {job.customerAddress && (
-          <div className="flex items-start gap-3">
+          <div className="rounded-xl border border-brand-sky/20 bg-brand-blue/10 p-3 flex items-start gap-3 sm:col-span-2">
             <span className="text-xl shrink-0">📍</span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm text-slate-400">Address</p>
-              <p className="text-slate-200 text-sm leading-relaxed">{job.customerAddress}</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Service Address</p>
+              <p className="mt-1 text-slate-100 text-sm leading-relaxed">{job.customerAddress}</p>
             </div>
           </div>
         )}
 
-        {/* Schedule */}
-        <div className="flex items-start gap-3">
-          <span className="text-xl shrink-0">🕐</span>
-          <div className="min-w-0">
-            <p className="text-sm text-slate-400">Scheduled</p>
-            <p className="text-slate-200 text-sm">{formatDate(job.startAt)}</p>
-          </div>
-        </div>
-
         {/* Phone - Quick action if available */}
         {job.phone && (
-          <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/10">
+          <div className="flex flex-col gap-3 pt-3 border-t border-white/10 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3 min-w-0">
               <span className="text-xl shrink-0">📞</span>
               <div className="min-w-0">
-                <p className="text-sm text-slate-400">Contact</p>
-                <p className="text-white font-medium">{job.phone}</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Contact</p>
+                <p className="text-white font-semibold">{job.phone}</p>
               </div>
             </div>
             <a 
               href={`tel:${job.phone}`}
               onClick={(e) => e.stopPropagation()}
-              className="shrink-0 px-4 py-2 bg-brand-blue/20 hover:bg-brand-blue/30 text-brand-sky 
-                       rounded-xl font-medium text-sm border border-brand-blue/30 transition-colors"
+              className="btn btn-blue shrink-0 px-4 text-sm"
             >
               Call
             </a>
@@ -146,7 +162,8 @@ function JobCard({ job, onClick }) {
 
       {/* Action Button */}
       <button 
-        className={`w-full py-3 rounded-xl font-medium text-sm transition-all duration-200
+        type="button"
+        className={`btn mt-1 w-full py-3 font-medium text-sm transition-all duration-200
                    ${getStatusActionClass(job.status)} hover:brightness-110 active:scale-[0.98]`}
       >
         Open Job Details →
