@@ -2464,7 +2464,7 @@ app.get('/api/technicians/:id/availability', (req,res,next)=> {
 
 /* ---------- Customer CRM Routes ---------- */
 // Get all customers
-app.get('/api/customers', auth, async (req, res) => {
+app.get('/api/customers', auth, requireAdmin, async (req, res) => {
   try {
     const customers = await Customer.find({}).sort({ createdAt: -1 });
     res.json(customers);
@@ -2474,7 +2474,7 @@ app.get('/api/customers', auth, async (req, res) => {
 });
 
 // Create new customer
-app.post('/api/customers', auth, async (req, res) => {
+app.post('/api/customers', auth, requireAdmin, async (req, res) => {
   try {
     const { customerId, name, phone, email, address } = req.body;
     
@@ -2500,7 +2500,7 @@ app.post('/api/customers', auth, async (req, res) => {
 });
 
 // Update customer
-app.put('/api/customers/:id', auth, async (req, res) => {
+app.put('/api/customers/:id', auth, requireAdmin, async (req, res) => {
   try {
     const { name, phone, email, address } = req.body;
     
@@ -2527,7 +2527,7 @@ app.put('/api/customers/:id', auth, async (req, res) => {
 });
 
 // Delete customer
-app.delete('/api/customers/:id', auth, async (req, res) => {
+app.delete('/api/customers/:id', auth, requireAdmin, async (req, res) => {
   try {
     const customer = await Customer.findByIdAndDelete(req.params.id);
     if (!customer) {
@@ -2540,7 +2540,7 @@ app.delete('/api/customers/:id', auth, async (req, res) => {
 });
 
 // Get single customer
-app.get('/api/customers/:id', auth, async (req, res) => {
+app.get('/api/customers/:id', auth, requireAdmin, async (req, res) => {
   try {
     const customer = await Customer.findById(req.params.id);
     if (!customer) {
