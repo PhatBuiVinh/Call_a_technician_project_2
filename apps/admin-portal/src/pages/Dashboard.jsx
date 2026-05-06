@@ -1635,11 +1635,11 @@ async function save() {
         </section>
 
         {/* Enhanced Recent Jobs Section */}
-        <div className="bg-brand-panel rounded-2xl border border-brand-border overflow-hidden">
-          <div className="bg-brand-bg px-6 py-4 border-b border-brand-border">
-            <h2 className="text-xl font-bold text-white flex items-center gap-3">
-              Recent Jobs
-              <span className="text-sm font-normal text-text-secondary bg-brand-blue/20 px-3 py-1 rounded-full">
+        <div className="surface rounded-2xl overflow-hidden">
+          <div className="border-b border-white/10 px-4 py-4 sm:px-6">
+            <h2 className="flex flex-wrap items-center gap-3 text-xl font-bold text-white">
+              <span>Recent Jobs</span>
+              <span className="badge badge-blue">
                 {jobs.length} {jobs.length === 1 ? 'job' : 'jobs'}
               </span>
             </h2>
@@ -1661,76 +1661,83 @@ async function save() {
               )}
             </div>
           ) : (
-            <div className="divide-y divide-white/5">
+            <div className="divide-y divide-white/10">
               {jobs.map((j) => (
-                <div key={j._id} className="p-4 sm:p-6 hover:bg-brand-surface-hover transition-all duration-200 group">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    {/* Left Section - Job Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start sm:items-center gap-3 sm:gap-4 mb-3">
-                        <div className="w-10 h-10 bg-brand-blue/20 rounded-xl flex items-center justify-center text-lg flex-shrink-0">
-                          🔧
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="text-base sm:text-lg font-semibold text-white group-hover:text-brand-sky transition-colors truncate">
+                <div key={j._id} className="group p-4 transition-all duration-200 hover:bg-white/[0.03] sm:p-5">
+                  <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+                    <div className="min-w-0 space-y-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0">
+                          <h3 className="text-lg font-bold leading-snug text-white transition-colors group-hover:text-brand-sky">
                             {j.title}
                           </h3>
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-secondary">
-                            <span className="flex items-center gap-1">
-                              <span>👤</span>
-                              <span className="truncate">{j.technician || 'Unassigned'}</span>
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <span>📅</span>
-                              {j.createdAt ? new Date(j.createdAt).toLocaleDateString() : '—'}
-                            </span>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <StatusBadge status={j.status} type="status" />
+                            <StatusBadge status={j.priority} type="priority" />
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2 mb-3">
-                        {/* Priority Badge */}
-                        <StatusBadge status={j.priority} type="priority" />
-                        
-                        {/* Status Badge */}
-                        <StatusBadge status={j.status} type="status" />
+                      <div className="grid gap-2 text-sm text-slate-300 sm:grid-cols-2 xl:grid-cols-4">
+                        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                          <div className="text-xs uppercase text-slate-500">Technician</div>
+                          <div className="mt-0.5 truncate font-medium text-slate-100">
+                            {j.technician || 'Unassigned'}
+                          </div>
+                        </div>
 
-                        {/* Invoice Link */}
-                        {j.invoice && (
-                          <button
-                            type="button"
-                            className="btn btn-ghost min-h-0 px-3 py-1 rounded-full text-xs"
-                            onClick={() => nav(`/invoices?q=${encodeURIComponent((j.invoice || '').trim())}`)}
-                            title="View Invoice"
-                          >
-                            Invoice: {j.invoice}
-                          </button>
-                        )}
+                        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                          <div className="text-xs uppercase text-slate-500">Created</div>
+                          <div className="mt-0.5 font-medium text-slate-100">
+                            {j.createdAt ? new Date(j.createdAt).toLocaleString() : '—'}
+                          </div>
+                        </div>
+
+                        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                          <div className="text-xs uppercase text-slate-500">Phone</div>
+                          <div className="mt-0.5 truncate font-medium text-slate-100">
+                            {j.phone || '—'}
+                          </div>
+                        </div>
+
+                        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                          <div className="text-xs uppercase text-slate-500">Invoice</div>
+                          {j.invoice ? (
+                            <button
+                              type="button"
+                              className="mt-0.5 text-left font-semibold text-brand-sky underline-offset-4 transition-colors hover:text-sky-200 hover:underline"
+                              onClick={() => nav(`/invoices?q=${encodeURIComponent((j.invoice || '').trim())}`)}
+                              title="View Invoice"
+                            >
+                              {j.invoice}
+                            </button>
+                          ) : (
+                            <div className="mt-0.5 font-medium text-slate-100">—</div>
+                          )}
+                        </div>
                       </div>
 
-                      {/* Job Description Preview */}
                       {j.description && (
-                        <p className="text-slate-400 text-sm line-clamp-2 max-w-2xl">
+                        <p className="max-w-4xl rounded-xl border border-white/10 bg-white/[0.025] px-3 py-2 text-sm leading-6 text-slate-300 line-clamp-2">
                           {j.description}
                         </p>
                       )}
                     </div>
 
-                    {/* Right Section - Actions */}
-                    <div className="flex items-center gap-2 lg:ml-6">
+                    <div className="flex flex-wrap items-center gap-2 lg:justify-end">
                       <button
                         onClick={() => openEdit(j)}
-                        className="btn btn-blue px-3 sm:px-4 tap-target"
+                        className="btn btn-blue flex-1 px-3 sm:flex-none sm:px-4 tap-target"
                       >
                         <span>✏️</span>
-                        <span className="hidden sm:inline">Edit</span>
+                        <span>Edit</span>
                       </button>
                       <button
                         onClick={() => removeJob(j._id)}
-                        className="btn btn-danger px-3 sm:px-4 tap-target"
+                        className="btn btn-danger flex-1 px-3 sm:flex-none sm:px-4 tap-target"
                       >
                         <span className="text-lg">🗑️</span>
-                        <span className="hidden sm:inline">Delete</span>
+                        <span>Delete</span>
                       </button>
                     </div>
                   </div>
