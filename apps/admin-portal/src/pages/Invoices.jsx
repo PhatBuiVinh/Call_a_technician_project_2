@@ -25,6 +25,56 @@ function InvoiceStatusBadge({ status }) {
   );
 }
 
+function FinancialCard({ label, value, tone = 'blue', caption }) {
+  const tones = {
+    blue: {
+      panel: 'bg-blue-500/[0.08] border-blue-400/20',
+      bar: 'bg-blue-300',
+      label: 'text-blue-200',
+      dot: 'bg-blue-300',
+    },
+    amber: {
+      panel: 'bg-amber-500/[0.08] border-amber-400/25',
+      bar: 'bg-amber-300',
+      label: 'text-amber-200',
+      dot: 'bg-amber-300',
+    },
+    emerald: {
+      panel: 'bg-emerald-500/[0.08] border-emerald-400/25',
+      bar: 'bg-emerald-300',
+      label: 'text-emerald-200',
+      dot: 'bg-emerald-300',
+    },
+    rose: {
+      panel: 'bg-rose-500/[0.08] border-rose-400/25',
+      bar: 'bg-rose-300',
+      label: 'text-rose-200',
+      dot: 'bg-rose-300',
+    },
+  };
+  const palette = tones[tone] || tones.blue;
+
+  return (
+    <div className={`card relative overflow-hidden p-4 shadow-soft sm:p-5 ${palette.panel}`}>
+      <div className={`absolute inset-x-0 top-0 h-1 ${palette.bar}`} />
+      <div className="flex items-center justify-between gap-3">
+        <div className={`text-xs font-semibold uppercase ${palette.label}`}>
+          {label}
+        </div>
+        <span className={`h-2.5 w-2.5 rounded-full ${palette.dot}`} />
+      </div>
+      <div className="mt-3 font-mono text-2xl font-extrabold leading-tight text-white tabular-nums sm:text-3xl">
+        {value}
+      </div>
+      {caption && (
+        <div className="mt-2 text-xs font-medium text-slate-400">
+          {caption}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Pricing rules
 const BASE_PRICE = 165; // fixed, covers up to 2 hours
 const EXTRA_PRICE = {
@@ -307,30 +357,38 @@ export default function Invoices() {
 
       <main className="max-w-6xl mx-auto p-4 space-y-4">
         {/* Enhanced KPIs */}
-        <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-brand-panel rounded-3xl p-6 border border-brand-border shadow-soft">
-            <div className="text-brand-sky text-sm font-medium mb-2">Total Invoices</div>
-            <div className="text-3xl font-bold text-white">{kpi.total}</div>
-          </div>
-          <div className="bg-brand-panel rounded-3xl p-6 border border-brand-border shadow-soft">
-            <div className="text-brand-green text-sm font-medium mb-2">Unpaid Total</div>
-            <div className="text-3xl font-bold text-white">{currency.format(kpi.unpaid)}</div>
-          </div>
-          <div className="bg-brand-panel rounded-3xl p-6 border border-brand-border shadow-soft">
-            <div className="text-brand-sky text-sm font-medium mb-2">Paid Total</div>
-            <div className="text-3xl font-bold text-white">{currency.format(kpi.paid)}</div>
-          </div>
-          <div className="bg-brand-panel rounded-3xl p-6 border border-brand-border shadow-soft">
-            <div className="text-red-400 text-sm font-medium mb-2">Overdue Count</div>
-            <div className="text-3xl font-bold text-white">{kpi.overdue}</div>
-          </div>
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <FinancialCard
+            label="Total Invoices"
+            value={kpi.total}
+            tone="blue"
+            caption="Matching current filters"
+          />
+          <FinancialCard
+            label="Unpaid Total"
+            value={currency.format(kpi.unpaid)}
+            tone="amber"
+            caption="Outstanding balance"
+          />
+          <FinancialCard
+            label="Paid Total"
+            value={currency.format(kpi.paid)}
+            tone="emerald"
+            caption="Collected balance"
+          />
+          <FinancialCard
+            label="Overdue Count"
+            value={kpi.overdue}
+            tone="rose"
+            caption="Requires follow-up"
+          />
         </section>
 
         {/* Enhanced Invoices Section */}
-        <div className="bg-brand-panel rounded-3xl border border-brand-border overflow-hidden shadow-soft">
-          <div className="bg-brand-bg px-4 py-5 sm:px-6 border-b border-brand-border">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="min-w-0">
+        <div className="surface rounded-2xl overflow-hidden">
+          <div className="border-b border-white/10 px-4 py-5 sm:px-6">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+              <div className="min-w-0 xl:max-w-md">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
                     Invoices
@@ -344,9 +402,9 @@ export default function Invoices() {
                 </p>
               </div>
 
-              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center xl:ml-auto">
                 <input
-                  className="input min-w-0 sm:w-72"
+                  className="input min-w-0 sm:w-72 xl:w-80"
                   placeholder="Search invoices..."
                   value={q}
                   onChange={e => setQ(e.target.value)}
@@ -363,7 +421,7 @@ export default function Invoices() {
                 </select>
               </div>
 
-              <button 
+              <button
                 className="btn btn-primary whitespace-nowrap"
                 onClick={openCreate}
               >
@@ -386,31 +444,31 @@ export default function Invoices() {
 
           {!loading && !error && (
             <div className="overflow-x-auto">
-              <table className="table text-sm">
+              <table className="table min-w-[860px] text-sm">
                 <thead>
-                  <tr className="text-left">
-                    <th className="py-2">Number</th>
-                    <th className="py-2">Customer</th>
-                    <th className="py-2">Amount</th>
-                    <th className="py-2">Status</th>
-                    <th className="py-2">Date</th>
-                    <th className="py-2">Actions</th>
+                  <tr className="text-left text-xs font-semibold uppercase text-slate-400">
+                    <th className="w-[150px] py-3">Number</th>
+                    <th className="min-w-[240px] py-3">Customer</th>
+                    <th className="w-[150px] py-3 text-right">Amount</th>
+                    <th className="w-[120px] py-3 text-center">Status</th>
+                    <th className="w-[140px] py-3 text-right">Date</th>
+                    <th className="w-[250px] py-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-white/5">
                   {filtered.map(inv => (
-                    <tr key={inv._id}>
-                      <td className="py-2 font-semibold">
+                    <tr key={inv._id} className="align-top transition-colors hover:bg-white/[0.03]">
+                      <td className="py-4 pr-3 font-semibold">
                         {/* Click number → print view (same tab) */}
                         <button
-                          className="underline text-brand-psky"
+                          className="inline-flex max-w-full items-center rounded-lg border border-sky-400/25 bg-sky-500/10 px-3 py-1.5 font-mono text-sm font-semibold text-sky-200 transition-colors hover:border-sky-300/40 hover:bg-sky-500/15"
                           onClick={() => nav(`/invoices/${inv._id}/print`)}
                           title="Open print view"
                         >
-                          {inv.number}
+                          <span className="truncate">{inv.number}</span>
                         </button>
                       </td>
-                      <td className="py-2">
+                      <td className="py-4 pr-4">
                         <div className="space-y-1">
                           <div className="font-medium text-white">
                             {inv.customerName || inv.customer || '—'}
@@ -432,25 +490,35 @@ export default function Invoices() {
                           )}
                         </div>
                       </td>
-                      <td className="py-2">
-                        {currency.format(Number(inv.amount) || 0)}
+                      <td className="py-4 text-right">
+                        <span className="font-mono font-semibold text-white tabular-nums">
+                          {currency.format(Number(inv.amount) || 0)}
+                        </span>
                       </td>
-                      <td className="py-2">
+                      <td className="py-4 text-center">
                         <InvoiceStatusBadge status={inv.status} />
                       </td>
-                      <td className="py-2">
-                        {new Date(inv.date || inv.createdAt).toLocaleDateString()}
+                      <td className="py-4 text-right text-slate-300">
+                        <span className="whitespace-nowrap font-medium">
+                          {new Date(inv.date || inv.createdAt).toLocaleDateString()}
+                        </span>
                       </td>
-                      <td className="py-2">
-                        <div className="flex gap-2">
+                      <td className="py-4">
+                        <div className="flex flex-col justify-end gap-2 sm:flex-row sm:flex-wrap">
                           <button
-                            className="px-4 py-2 rounded-lg bg-brand-sky/20 hover:bg-brand-sky/30 text-brand-sky border border-brand-sky/30 font-medium transition-all duration-200 flex items-center gap-2"
+                            className="btn btn-ghost w-full px-3 py-2 text-sm sm:w-auto"
+                            onClick={() => nav(`/invoices/${inv._id}/print`)}
+                          >
+                            View / Print
+                          </button>
+                          <button
+                            className="btn btn-blue w-full px-3 py-2 text-sm sm:w-auto"
                             onClick={() => openEdit(inv)}
                           >
                             Edit
                           </button>
                           <button
-                            className="px-4 py-2 rounded-lg bg-red-600/30 hover:bg-red-600/40 text-red-200 border border-red-500/50 font-medium transition-colors flex items-center gap-2 shadow-lg"
+                            className="btn btn-danger w-full px-3 py-2 text-sm sm:w-auto"
                             onClick={() => remove(inv._id)}
                           >
                             Delete
@@ -826,16 +894,6 @@ export default function Invoices() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-/* Small UI helpers */
-function KPI({ label, value }) {
-  return (
-    <div className="card p-4">
-      <div className="text-slate-300 text-sm">{label}</div>
-      <div className="text-2xl font-extrabold">{value}</div>
     </div>
   );
 }
