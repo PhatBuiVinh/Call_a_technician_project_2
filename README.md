@@ -74,7 +74,7 @@ For a presentation-ready walkthrough, see [docs/DEMO-SMOKE-CHECKLIST.md](docs/DE
 npm run dev:backend
 ```
 
-To run the read-only backend smoke test, use `npm test --workspace packages/backend-api`. It checks `GET /api/health` and does not create, update, or delete any records.
+After the backend is running, use `npm test --workspace packages/backend-api` to run the read-only smoke test. It checks `GET /api/health` and does not create, update, or delete any records.
 
 ### Marketing Site
 ```bash
@@ -149,7 +149,7 @@ npm run dev:portal
 ## Environment Variables
 
 ### Backend
-- `PORT` - Server port (default: 3000)
+- `PORT` - Server port. Use `5000` for local development so the marketing site and admin portal Vite proxies can reach `/api`.
 - `MONGODB_URI` - MongoDB connection string
 - `JWT_SECRET` - Secret for JWT tokens
 - `CLIENT_ORIGIN` - Admin portal URL

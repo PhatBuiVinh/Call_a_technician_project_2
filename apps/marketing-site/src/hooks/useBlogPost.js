@@ -17,90 +17,48 @@ export function useBlogPost(slug) {
       try {
         setLoading(true)
         const postData = await getBlogPost(slug)
-        
+
         if (!postData) {
           setPost(null)
           return
         }
 
-        // Transform data to match current structure with graceful fallbacks
-        // Handle image - could be 'image' or 'mainImage'
-        const imageField = postData.mainImage || postData.image
         let imageUrl = blogDemoImage
-        if (imageField && urlFor) {
+        if (postData.mainImage && urlFor) {
           try {
-            const urlBuilder = urlFor(imageField)
-            imageUrl = urlBuilder ? urlBuilder.url() : blogDemoImage
-          } catch (error) {
-            console.error('Error building image URL:', error)
+            imageUrl = urlFor(postData.mainImage).width(1200).url()
+          } catch {
+            imageUrl = blogDemoImage
           }
         }
-        
-        // Handle categories - could be 'category' (single) or 'categories' (array)
-        let categoryTitle = 'Uncategorized'
-        if (postData.categories && Array.isArray(postData.categories) && postData.categories.length > 0) {
-          const firstCat = postData.categories[0]
-          if (firstCat && typeof firstCat.title === 'string') {
-            categoryTitle = firstCat.title
-          }
-        } else if (postData.category && typeof postData.category === 'object') {
-          if (typeof postData.category.title === 'string') {
-            categoryTitle = postData.category.title
-          }
+
+        let categoryTitle = 'General'
+        if (postData.categories?.length > 0 && postData.categories[0]?.title) {
+          categoryTitle = postData.categories[0].title
         }
-        
-        // Extract author name and bio - could be string or expanded reference
-        // Bio could be string or Portable Text (array of blocks)
-        let authorName = 'Unknown Author'
+
+        let authorName = 'Mustafa Kadir'
         let authorBio = ''
-        if (postData.author && typeof postData.author === 'object') {
-          if (typeof postData.author.name === 'string') {
-            authorName = postData.author.name
-          }
-          // Bio could be string or Portable Text array
-          if (typeof postData.author.bio === 'string') {
-            authorBio = postData.author.bio
-          } else if (Array.isArray(postData.author.bio) && postData.author.bio.length > 0) {
-            // Extract text from Portable Text blocks
-            authorBio = postData.author.bio
-              .map(block => {
-                if (block.children && Array.isArray(block.children)) {
-                  return block.children.map(child => child.text || '').join('')
-                }
-                return ''
-              })
-              .join(' ')
-          }
+        if (postData.author?.name) {
+          authorName = postData.author.name
+          authorBio = typeof postData.author.bio === 'string' ? postData.author.bio : ''
         } else if (typeof postData.author === 'string' && postData.author) {
           authorName = postData.author
         }
-        
-        // Extract readMins
-        let readTime = 5
-        if (postData.readMins && typeof postData.readMins === 'number') {
-          readTime = postData.readMins
-        }
-        
-        // Handle content - could be 'content' or 'body'
-        const contentField = postData.body || postData.content
-        
-        // Use publishedAt as date if date is missing
-        const dateField = postData.date || postData.publishedAt
-        
-        const transformedPost = {
+
+        setPost({
           id: postData.slug?.current || postData._id || 'unknown',
           title: postData.title || 'Untitled Post',
+          excerpt: postData.excerpt || '',
           category: categoryTitle,
           author: authorName,
           authorBio: authorBio,
-          date: dateField || new Date().toISOString(),
-          readMins: readTime,
+          date: postData.publishedAt || new Date().toISOString(),
+          readMins: postData.readMins || 5,
           image: imageUrl,
           featured: postData.featured || false,
-          content: Array.isArray(contentField) ? contentField : []
-        }
-
-        setPost(transformedPost)
+          content: Array.isArray(postData.body) ? postData.body : []
+        })
       } catch (err) {
         console.error('Error fetching blog post:', err)
         setError(err.message)

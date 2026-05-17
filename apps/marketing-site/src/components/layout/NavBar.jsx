@@ -11,8 +11,9 @@ export default function NavBar() {
   const navLinks = [
     { name: "Home", path: "/" },
     { name: "About Us", path: "/about" },
-    { name: "Our Services", path: "/services" },
-    { name: "Location", path: "/location" },
+    { name: "Services", path: "/services" },
+    { name: "Consulting", path: "/consulting" },
+    { name: "Service Areas", path: "/service-areas" },
     { name: "Blog", path: "/blog" },
   ];
 
@@ -46,8 +47,8 @@ export default function NavBar() {
   return (
     <nav className={`fixed top-0 left-0 w-full z-50 text-brand-green border-b border-white/10 backdrop-blur-md motion-standard ${isScrolled ? "bg-brand-navy/95" : "bg-brand-navy/90"}`}>
       <div className="container-app py-2.5 md:py-3 flex items-center justify-between gap-3">
-        <Link to="/" className="flex items-center gap-2">
-          <img src={logo} alt="Call-a-Technician logo" className="h-12 md:h-14 w-auto" />
+        <Link to="/" className="flex items-center gap-2 shrink-0 leading-none">
+          <img src={logo} alt="Call-a-Technician logo" className="block h-11 md:h-12 w-auto object-contain" />
         </Link>
 
         {/* Desktop links */}

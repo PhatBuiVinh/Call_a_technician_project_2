@@ -18,8 +18,8 @@ export default function Footer() {
 
       <div className="container-app grid grid-cols-1 gap-8 py-12 md:grid-cols-2 lg:grid-cols-5 lg:gap-12">
         <div className="lg:col-span-2">
-          <Link to="/" className="inline-flex items-center gap-2">
-            <img src={logo2} alt="Call-a-Technician logo" className="h-20 w-auto" />
+          <Link to="/" className="inline-flex items-center gap-2 shrink-0 leading-none">
+            <img src={logo2} alt="Call-a-Technician logo" className="block h-16 w-auto object-contain" />
           </Link>
           <p className="mt-4 max-w-sm text-sm text-white/80 leading-relaxed">
             Same-day support for homes and businesses across Adelaide with clear pricing, trusted technicians, and practical fixes.
@@ -40,7 +40,9 @@ export default function Footer() {
           <ul className="space-y-2 text-sm text-white/80">
             <li><Link to="/about" className="link-animated-dark text-white/80 hover:text-brand-green">About</Link></li>
             <li><Link to="/services" className="link-animated-dark text-white/80 hover:text-brand-green">Services</Link></li>
-            <li><Link to="/location" className="link-animated-dark text-white/80 hover:text-brand-green">Service Areas</Link></li>
+            <li><Link to="/consulting" className="link-animated-dark text-white/80 hover:text-brand-green">Consulting</Link></li>
+            <li><Link to="/service-areas" className="link-animated-dark text-white/80 hover:text-brand-green">Service Areas</Link></li>
+            <li><Link to="/location" className="link-animated-dark text-white/80 hover:text-brand-green">Location Map</Link></li>
             <li><Link to="/blog" className="link-animated-dark text-white/80 hover:text-brand-green">Blog</Link></li>
             <li><Link to="/contact" className="link-animated-dark text-white/80 hover:text-brand-green">Contact</Link></li>
           </ul>
@@ -82,7 +84,9 @@ export default function Footer() {
       <div className="border-t border-white/10">
         <div className="container-app flex flex-col gap-4 py-6 text-sm text-white/70 md:flex-row md:items-center md:justify-between">
           <p>© {new Date().getFullYear()} Call-a-Technician. All rights reserved.</p>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <Link to="/privacy-policy" className="link-animated-dark text-white/70 hover:text-brand-green">Privacy Policy</Link>
+            <Link to="/terms" className="link-animated-dark text-white/70 hover:text-brand-green">Terms</Link>
             {socialLinks.length > 0 ? socialLinks.map((item) => {
               const Icon = item.icon;
               return (

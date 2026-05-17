@@ -49,7 +49,13 @@ const Location = lazy(() => import("./pages/Location"));
 const Blog = lazy(() => import("./pages/Blog"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
 const Contact = lazy(() => import("./pages/contact"));
-const TRANSITION_PATHS = new Set(["/", "/about", "/services"]);
+const Consulting = lazy(() => import("./pages/Consulting"));
+const ServiceAreas = lazy(() => import("./pages/ServiceAreas"));
+const SuburbPage = lazy(() => import("./pages/SuburbPage"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsConditions = lazy(() => import("./pages/TermsConditions"));
+const Booking = lazy(() => import("./pages/Booking"));
+const TRANSITION_PATHS = new Set(["/", "/about", "/services", "/consulting", "/service-areas"]);
 
 function PageFallback() {
   return (
@@ -62,6 +68,7 @@ function PageFallback() {
 export default function App() {
   const location = useLocation();
   const { reduceMotion, motionIntensity } = useMotionPreference();
+  const isConsulting = location.pathname === "/consulting";
   const subtle = motionIntensity === "subtle";
   const shouldAnimateRoute = !reduceMotion && TRANSITION_PATHS.has(location.pathname);
   const routeKey = shouldAnimateRoute ? location.pathname : "static-route";
@@ -81,7 +88,13 @@ export default function App() {
       <SeoManager />
       <NavBar />
       <ScrollProgressBar />
-      <UrgentCallout persist="none"/> {/* sticky banner under the nav */}
+      <UrgentCallout
+        persist="none"
+        urgentLabel={isConsulting ? "Is your organisation Gen AI-ready?" : "Need urgent help today?"}
+        message={isConsulting ? "Practical GRC consulting for Adelaide businesses with a written scope upfront." : "Book a same-day technician in Adelaide."}
+        ctaText={isConsulting ? "Book a Consultant" : "Contact Us"}
+        ctaTo="/contact"
+      />
       <div className="pt-24 md:pt-28">
         <Suspense fallback={<PageFallback />}>
           <LayoutGroup id="site-shared-layout">
@@ -97,10 +110,17 @@ export default function App() {
                   <Route path="/" element={<Home />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/services" element={<Services />} />
+                  <Route path="/consulting" element={<Consulting />} />
+                  <Route path="/service-areas" element={<ServiceAreas />} />
+                  <Route path="/computer-repairs/:slug" element={<SuburbPage />} />
                   <Route path="/location" element={<Location />} />
                   <Route path="/blog" element={<Blog />} />
                   <Route path="/blog/:id" element={<BlogPost />} />
                   <Route path="/contact" element={<Contact />} />
+                  <Route path="/booking" element={<Booking />} />
+                  <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/terms" element={<TermsConditions />} />
                   <Route path="*" element={<Home />} />
                 </Routes>
               </motion.div>

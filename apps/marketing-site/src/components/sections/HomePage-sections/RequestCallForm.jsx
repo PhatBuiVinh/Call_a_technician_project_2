@@ -6,9 +6,9 @@ import Textarea from "../../atoms/Textarea";
 import Button from "../../atoms/Button";
 import { portal } from "../../../lib/portal";
 import { getRecaptchaToken } from "../../../lib/recaptcha";
+import { Phone, Mail, Clock, ShieldCheck } from "lucide-react";
 
 const SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL || "support@callatech.com";
-import { Phone, Mail, Clock, ShieldCheck } from "lucide-react";
 
 export default function RequestCallForm() {
   const fileInputRef = useRef(null);
@@ -95,12 +95,12 @@ export default function RequestCallForm() {
 
     try {
       // Validate form data
-      if (!formData.fullName.trim() || !formData.phone.trim() || !formData.description.trim()) {
+      if (!formData.fullName.trim() || !formData.phone.trim() || !formData.email.trim() || !formData.description.trim()) {
         throw new Error('Please fill in all required fields');
       }
 
       if (formData.email.trim() && !/^\S+@\S+\.\S+$/.test(formData.email.trim())) {
-        throw new Error('Please enter a valid email address or leave it blank.');
+        throw new Error('Please enter a valid email address.');
       }
 
       // Prepare submit data with proper image handling
@@ -181,12 +181,13 @@ export default function RequestCallForm() {
                 required
               />
               <Input
-                label="Email (optional)"
+                label="Email"
                 name="email"
                 type="email"
                 placeholder="you@example.com"
                 value={formData.email}
                 onChange={handleInputChange}
+                required
               />
               <Textarea
                 label="How can we help?"

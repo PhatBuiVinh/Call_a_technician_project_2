@@ -9,7 +9,13 @@ import Button from "../atoms/Button";
  * - Centered, rounded-2xl, shadow, subtle animation
  * - Dismiss (no persistence by default)
  */
-export default function UrgentCallout({ persist = "none" }) {
+export default function UrgentCallout({
+  persist = "none",
+  urgentLabel = "Need urgent help today?",
+  message = "Book a same-day technician in Adelaide.",
+  ctaText = "Contact Us",
+  ctaTo = "/contact",
+}) {
   const KEY = "urgent_callout_dismissed_ts";
   const [open, setOpen] = useState(true);
 
@@ -54,8 +60,8 @@ return (
                             </div>
 
                             <p className="text-sm md:text-[15px] leading-6 flex-1 min-w-[210px]">
-                                <span className="font-semibold">Need urgent help today?</span>{" "}
-                                Book a same-day technician in Adelaide.
+                                <span className="font-semibold">{urgentLabel}</span>{" "}
+                                {message}
                             </p>
 
                             <div className="flex items-center gap-2 ml-auto">
@@ -75,9 +81,9 @@ return (
                                 <Button
                                     variant="primary"
                                     className="px-3 py-1.5 text-sm"
-                                    to="/contact"
+                                    to={ctaTo}
                                 >
-                                    Contact Us
+                                    {ctaText}
                                 </Button>
                                 <button
                                     aria-label="Dismiss"

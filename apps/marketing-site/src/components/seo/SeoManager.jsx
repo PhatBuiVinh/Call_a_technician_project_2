@@ -63,6 +63,54 @@ function getRouteMeta(pathname) {
     };
   }
 
+  if (pathname.startsWith("/consulting")) {
+    return {
+      title: "GRC Consulting for Adelaide Businesses",
+      description: "Practical governance, risk and compliance consulting for Adelaide businesses, including Essential 8, cyber policy, and risk assessment support.",
+      type: "website",
+    };
+  }
+
+  if (pathname.startsWith("/computer-repairs/")) {
+    const raw = pathname.replace("/computer-repairs/", "");
+    const postcodeMatch = raw.match(/-(\d{4})$/);
+    const postcode = postcodeMatch ? postcodeMatch[1] : "";
+    const suburbSlug = postcodeMatch ? raw.slice(0, -(postcodeMatch[0].length)) : raw;
+    const suburbName = suburbSlug
+      .split("-")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+    return {
+      title: `Computer Repairs ${suburbName}${postcode ? ` SA ${postcode}` : ""}`,
+      description: `Fast onsite computer repair and IT support in ${suburbName}${postcode ? ` (${postcode})` : ""}, SA. Same-day service and No Fix, No Fee.`,
+      type: "website",
+    };
+  }
+
+  if (pathname.startsWith("/service-areas")) {
+    return {
+      title: "Computer Repair Service Areas",
+      description: "Call-a-Technician covers Adelaide suburbs with same-day onsite computer repairs and IT support. Find your suburb and book a technician.",
+      type: "website",
+    };
+  }
+
+  if (pathname.startsWith("/privacy")) {
+    return {
+      title: "Privacy Policy",
+      description: "Read how Call-a-Technician handles customer enquiry information and service request details.",
+      type: "website",
+    };
+  }
+
+  if (pathname.startsWith("/terms")) {
+    return {
+      title: "Terms and Conditions",
+      description: "Read the service terms for Call-a-Technician onsite computer repair and IT support.",
+      type: "website",
+    };
+  }
+
   return {
     title: DEFAULT_TITLE,
     description: DEFAULT_DESCRIPTION,
