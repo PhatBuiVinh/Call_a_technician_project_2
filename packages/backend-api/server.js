@@ -622,6 +622,9 @@ app.get('/api/reports/date-range-summary', auth, requireAdmin, async (req, res) 
     }
 
     const inRange = { $gte: range.start, $lt: range.endExclusive };
+    const dateBucket = (field) => ({
+      $dateToString: { format: '%Y-%m-%d', date: field, timezone: 'UTC' }
+    });
 
     const [
       jobsCreated,
@@ -632,6 +635,14 @@ app.get('/api/reports/date-range-summary', auth, requireAdmin, async (req, res) 
       closedPrimaryIds,
       closedFallbackIds,
       followUpFlagged,
+      jobsCreatedTrend,
+      incomingRequestsTrend,
+      convertedRequestsTrend,
+      completedPrimaryTrend,
+      completedFallbackTrend,
+      closedPrimaryTrend,
+      closedFallbackTrend,
+      pipelineStatusRows,
     ] = await Promise.all([
       Job.countDocuments({ owner, createdAt: inRange }),
       IncomingJobRequest.countDocuments({ createdAt: inRange }),
@@ -668,7 +679,70 @@ app.get('/api/reports/date-range-summary', auth, requireAdmin, async (req, res) 
         owner,
         'completionForm.submittedAt': inRange,
         'completionForm.followUpRequired': true
-      })
+      }),
+      Job.aggregate([
+        { $match: { owner, createdAt: inRange } },
+        { $group: { _id: dateBucket('$createdAt'), count: { $sum: 1 } } }
+      ]),
+      IncomingJobRequest.aggregate([
+        { $match: { createdAt: inRange } },
+        { $group: { _id: dateBucket('$createdAt'), count: { $sum: 1 } } }
+      ]),
+      IncomingJobRequest.aggregate([
+        {
+          $match: {
+            convertedAt: inRange,
+            convertedToJobId: { $ne: null },
+            convertedBy: owner
+          }
+        },
+        { $group: { _id: dateBucket('$convertedAt'), count: { $sum: 1 } } }
+      ]),
+      Job.aggregate([
+        { $match: { owner, completedAt: inRange } },
+        { $group: { _id: dateBucket('$completedAt'), ids: { $addToSet: '$_id' } } }
+      ]),
+      Job.aggregate([
+        { $match: { owner, events: { $elemMatch: { type: 'status_changed', 'details.toStatus': 'Completed', timestamp: inRange } } } },
+        { $unwind: '$events' },
+        { $match: { 'events.type': 'status_changed', 'events.details.toStatus': 'Completed', 'events.timestamp': inRange } },
+        { $group: { _id: dateBucket('$events.timestamp'), ids: { $addToSet: '$_id' } } }
+      ]),
+      Job.aggregate([
+        { $match: { owner, closedAt: inRange } },
+        { $group: { _id: dateBucket('$closedAt'), ids: { $addToSet: '$_id' } } }
+      ]),
+      Job.aggregate([
+        {
+          $match: {
+            owner,
+            events: {
+              $elemMatch: {
+                timestamp: inRange,
+                $or: [
+                  { type: 'job_closed' },
+                  { type: 'status_changed', 'details.toStatus': 'Closed' }
+                ]
+              }
+            }
+          }
+        },
+        { $unwind: '$events' },
+        {
+          $match: {
+            'events.timestamp': inRange,
+            $or: [
+              { 'events.type': 'job_closed' },
+              { 'events.type': 'status_changed', 'events.details.toStatus': 'Closed' }
+            ]
+          }
+        },
+        { $group: { _id: dateBucket('$events.timestamp'), ids: { $addToSet: '$_id' } } }
+      ]),
+      Job.aggregate([
+        { $match: { owner } },
+        { $group: { _id: '$status', count: { $sum: 1 } } }
+      ])
     ]);
 
     const jobsCompleted = new Set([
@@ -680,6 +754,56 @@ app.get('/api/reports/date-range-summary', auth, requireAdmin, async (req, res) 
       ...closedPrimaryIds.map(String),
       ...closedFallbackIds.map(String)
     ]).size;
+
+    const makeCountMap = (rows) => {
+      const map = new Map();
+      for (const row of rows || []) {
+        if (!row?._id) continue;
+        map.set(String(row._id), Number(row.count || 0));
+      }
+      return map;
+    };
+    const mergeIdTrend = (...groups) => {
+      const map = new Map();
+      for (const group of groups) {
+        for (const row of group || []) {
+          if (!row?._id) continue;
+          const key = String(row._id);
+          const current = map.get(key) || new Set();
+          for (const id of row.ids || []) current.add(String(id));
+          map.set(key, current);
+        }
+      }
+      return map;
+    };
+    const createdMap = makeCountMap(jobsCreatedTrend);
+    const incomingMap = makeCountMap(incomingRequestsTrend);
+    const convertedMap = makeCountMap(convertedRequestsTrend);
+    const completedMap = mergeIdTrend(completedPrimaryTrend, completedFallbackTrend);
+    const closedMap = mergeIdTrend(closedPrimaryTrend, closedFallbackTrend);
+    const trend = [];
+    for (
+      let cursor = new Date(range.start.getTime());
+      cursor < range.endExclusive;
+      cursor = new Date(cursor.getTime() + 24 * 60 * 60 * 1000)
+    ) {
+      const date = cursor.toISOString().slice(0, 10);
+      trend.push({
+        date,
+        jobsCreated: createdMap.get(date) || 0,
+        incomingRequests: incomingMap.get(date) || 0,
+        convertedRequests: convertedMap.get(date) || 0,
+        jobsCompleted: completedMap.get(date)?.size || 0,
+        jobsClosed: closedMap.get(date)?.size || 0,
+      });
+    }
+
+    const pipelineOrder = ['Open', 'Assigned', 'Accepted', 'En Route', 'On Site', 'In Progress', 'Completed', 'Closed'];
+    const pipelineMap = makeCountMap(pipelineStatusRows);
+    const pipelineStatus = pipelineOrder.map(status => ({
+      status,
+      count: pipelineMap.get(status) || 0
+    }));
 
     return res.json({
       range: {
@@ -693,7 +817,9 @@ app.get('/api/reports/date-range-summary', auth, requireAdmin, async (req, res) 
         jobsCompleted,
         jobsClosed,
         followUpFlagged
-      }
+      },
+      trend,
+      pipelineStatus
     });
   } catch (e) {
     return sendErr(res, 500, e.message || 'Failed to generate date-range summary');

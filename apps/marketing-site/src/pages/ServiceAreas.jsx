@@ -128,7 +128,7 @@ export default function ServiceAreas() {
               <MapPin className="h-10 w-10 text-slate-200 mx-auto mb-3" />
               <p className="font-medium">No suburbs found for "{query}"</p>
               <p className="text-sm mt-1">Try a different spelling, or contact us directly.</p>
-              <Button to="/contact" variant="primary" className="mt-4">Contact Us</Button>
+              <Button to="/contact" variant="primary" className="mt-4">Request a Technician</Button>
             </div>
           )}
         </div>

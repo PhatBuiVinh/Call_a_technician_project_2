@@ -1,5 +1,6 @@
 import { NavLink, useNavigate, Link } from 'react-router-dom';
 import { useState } from 'react';
+import Logo from './UI/Logo';
 import { useAuth } from '../context/AuthProvider';
 
 export default function Header() {
@@ -22,13 +23,9 @@ export default function Header() {
     <header className="sticky top-0 z-30 border-b border-white/10 bg-brand-bg/80 backdrop-blur">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {/* Brand logo (served from /public) */}
-          <Link to="/app" className="flex items-center gap-2">
-            <img
-              src="/logo.webp"
-              alt="Call-a-Technician"
-              className="h-8 w-auto rounded-sm"
-            />
+          {/* Brand logo (inline SVG to avoid raster black background and improve scaling) */}
+          <Link to="/app" className="flex items-center gap-2 shrink-0 leading-none">
+            <Logo className="h-9 w-auto" />
             <span className="sr-only">Call-a-Technician</span>
           </Link>
 

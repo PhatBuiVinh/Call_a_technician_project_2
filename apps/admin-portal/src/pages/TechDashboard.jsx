@@ -202,23 +202,28 @@ export default function TechDashboard() {
     <Shell title="My Jobs" subtitle="Assigned work and current progress">
       <div className="space-y-6">
         {loading && (
-          <div className="flex flex-col items-center justify-center py-16 text-slate-400 space-y-3">
+          <div className="surface rounded-2xl border-brand-sky/20 bg-brand-sky/10 p-8 text-center">
             <span className="text-3xl animate-pulse">⏳</span>
-            <p>Loading your jobs...</p>
+            <h2 className="text-lg font-semibold text-white">Loading your jobs</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-300">Loading your jobs...</p>
           </div>
         )}
 
         {error && (
-          <div className="p-4 bg-rose-500/20 border border-rose-400/30 text-rose-200 rounded-xl">
-            <span className="font-medium">Error:</span> {error}
+          <div className="surface rounded-2xl border-rose-400/35 bg-rose-500/10 p-6 text-center">
+            <div className="mx-auto mb-4 h-1 w-16 rounded-full bg-rose-300/70" />
+            <h2 className="text-lg font-semibold text-white">Jobs could not load</h2>
+            <p className="mt-2 text-sm leading-6 text-rose-100">
+              <span className="font-medium">Error:</span> {error}
+            </p>
           </div>
         )}
 
         {!loading && !error && jobs.length === 0 && (
-          <div className="bg-brand-panel rounded-2xl border border-brand-border p-8 text-center">
+          <div className="surface rounded-2xl border-white/10 bg-white/[0.04] p-8 text-center">
             <div className="text-5xl mb-4">📋</div>
-            <p className="text-lg font-medium text-white">No jobs assigned yet</p>
-            <p className="text-sm text-slate-400 mt-2">New assignments will appear here automatically.</p>
+            <p className="text-lg font-semibold text-white">No jobs assigned yet</p>
+            <p className="mt-2 text-sm leading-6 text-slate-300">New assignments will appear here automatically.</p>
           </div>
         )}
 

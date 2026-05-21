@@ -31,13 +31,13 @@ For a presentation-ready walkthrough, see [docs/DEMO-SMOKE-CHECKLIST.md](docs/DE
 
 2. **Set up environment variables:**
    
-   Create `.env` files in each project directory:
+   Copy the `.env.example` files and fill in local-only values. Do not commit real `.env` or `.env.development` files.
    
    **packages/backend-api/.env:**
    ```env
    PORT=5000
-   MONGODB_URI=mongodb://localhost:27017/call-a-technician
-   JWT_SECRET=replace_with_a_random_local_secret
+   MONGODB_URI=replace_me
+   JWT_SECRET=replace_me
    CLIENT_ORIGIN=http://localhost:5173
    MARKETING_ORIGIN=http://localhost:5174
    ```
@@ -155,13 +155,16 @@ npm run dev:portal
 - `CLIENT_ORIGIN` - Admin portal URL
 - `MARKETING_ORIGIN` - Marketing site URL
 - `RATE_LIMIT_ENABLED` - Keep enabled for demos and normal local testing; only set `false` temporarily in your own local `.env` for controlled testing
+- `RECAPTCHA_SECRET_KEY` - Leave blank for local demos without reCAPTCHA. In production, set this together with the matching frontend site key.
 
 ### Marketing Site
 - `VITE_API_BASE` - API base path, use `/api` in local development
 - `VITE_PORTAL_URL` - Admin portal URL
+- `VITE_RECAPTCHA_SITE_KEY` - Leave blank for local demos without reCAPTCHA. In production, set this together with the matching backend secret.
 
 ### Admin Portal
 - `VITE_API_BASE` - API base path, use `/api` in local development
+- `VITE_ENABLE_MOCKS` - Optional local development flag. Keep `false` or unset for demos so API failures are visible.
 
 `VITE_API_URL` is legacy and not used by the current frontend API clients.
 

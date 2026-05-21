@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 export default function NeedHelpBand({
   title = "Need help today?",
   description = "Contact us for same-day help — we’ll get you back on track quickly.",
-  primaryLabel = "Contact Us",
+  primaryLabel = "Request a Technician",
   primaryTo = "/contact",
   primaryHref,
   secondaryLabel = "Call 1300 551 350",

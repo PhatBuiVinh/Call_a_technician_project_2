@@ -92,7 +92,7 @@ export default function App() {
         persist="none"
         urgentLabel={isConsulting ? "Is your organisation Gen AI-ready?" : "Need urgent help today?"}
         message={isConsulting ? "Practical GRC consulting for Adelaide businesses with a written scope upfront." : "Book a same-day technician in Adelaide."}
-        ctaText={isConsulting ? "Book a Consultant" : "Contact Us"}
+        ctaText={isConsulting ? "Book a Consultant" : "Request a Technician"}
         ctaTo="/contact"
       />
       <div className="pt-24 md:pt-28">

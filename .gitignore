@@ -6,10 +6,20 @@ yarn-error.log*
 
 # Environment variables
 .env
+.env.*
+!.env.example
+!.env.*.example
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Local release/workspace artifacts
+*.code-workspace
+migration-*.patch
+migration-*.patch.*.bak
+.release-check-logs/
+my_friend_website/
 
 # Build outputs
 dist/

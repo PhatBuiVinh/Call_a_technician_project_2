@@ -60,7 +60,7 @@ export default function PostBody({ content = [] }) {
   if (!content || content.length === 0) {
     return (
       <div className="py-8 text-slate-400 text-sm italic">
-        Article content coming soon.
+        No article body is available for this post.
       </div>
     );
   }

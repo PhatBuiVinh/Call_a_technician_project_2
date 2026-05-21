@@ -126,10 +126,13 @@ export default function IncomingJobs() {
   if (isLoading) return (
     <>
       <Header />
-      <div className="loading-container">
-        <div className="text-center">
-          <div className="text-xl font-semibold mb-2">Loading incoming jobs...</div>
-          <div className="text-sm text-gray-400">Please wait while we fetch your data</div>
+      <div className="min-h-[60vh] px-4 py-8">
+        <div className="surface mx-auto max-w-2xl rounded-2xl border-brand-sky/20 bg-brand-sky/10 p-8 text-center">
+          <div className="mx-auto mb-4 h-1 w-16 rounded-full bg-brand-sky/70" />
+          <h2 className="text-xl font-semibold text-white">Loading incoming jobs</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-300">
+            Please wait while we fetch your data.
+          </p>
         </div>
       </div>
     </>
@@ -138,10 +141,11 @@ export default function IncomingJobs() {
   if (error) return (
     <>
       <Header />
-      <div className="loading-container">
-        <div className="text-center">
-          <div className="text-xl font-semibold mb-2 text-red-400">Error loading jobs</div>
-          <div className="text-sm text-gray-400">{error.message}</div>
+      <div className="min-h-[60vh] px-4 py-8">
+        <div className="surface mx-auto max-w-2xl rounded-2xl border-rose-400/35 bg-rose-500/10 p-8 text-center">
+          <div className="mx-auto mb-4 h-1 w-16 rounded-full bg-rose-300/70" />
+          <h2 className="text-xl font-semibold text-white">Error loading jobs</h2>
+          <p className="mt-2 text-sm leading-6 text-rose-100">{error.message}</p>
         </div>
       </div>
     </>
@@ -221,6 +225,11 @@ export default function IncomingJobs() {
                         <div className={`text-xs ${secondaryText}`}>
                           Request ID <span className="font-mono">{formatJobId(job._id)}</span>
                         </div>
+                        {isConverted && (
+                          <div className="text-xs text-slate-500">
+                            Converted{job.convertedAt ? ` ${formatDate(job.convertedAt)}` : ' to job'}
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="py-4 align-top">
@@ -268,17 +277,7 @@ export default function IncomingJobs() {
                         >
                           View
                         </button>
-                        {job.convertedToJobId ? (
-                          <button
-                            onClick={() => {
-                              // Navigate to Dashboard - the job will be visible in the jobs list
-                              navigate('/app');
-                            }}
-                            className="btn btn-ghost text-sm"
-                          >
-                            View Job
-                          </button>
-                        ) : (
+                        {!job.convertedToJobId && (
                           <button
                             onClick={() => handleConvertToJob(job)}
                             disabled={convertingId === job._id}
@@ -309,23 +308,36 @@ export default function IncomingJobs() {
       </div>
 
       {jobs.length === 0 && (
-        <div className="panel py-12 text-center">
-          <p className="text-gray-500">No incoming job requests found.</p>
+        <div className="panel p-6 text-center sm:p-8">
+          <div className="mx-auto mb-4 h-1 w-16 rounded-full bg-brand-sky/60" />
+          <h2 className="text-lg font-semibold text-white">No incoming requests</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-300">
+            No incoming job requests found.
+          </p>
         </div>
       )}
 
       {/* Job Detail Modal */}
       {selectedJob && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 sm:p-4"
+          onClick={() => setSelectedJob(null)}
+        >
           <div
-            className="panel w-full max-w-4xl rounded-2xl border border-brand-border max-h-[90vh] flex flex-col shadow-2xl"
+            className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0c1450] shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 flex-shrink-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-xl font-bold text-white">Job Request Details</h3>
-                <RequestStatusBadge job={selectedJob} />
+            <div className="flex flex-shrink-0 flex-col gap-4 border-b border-white/10 bg-white/[0.035] px-4 py-4 sm:px-6 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <RequestStatusBadge job={selectedJob} />
+                  <span className="badge badge-neutral font-mono">{formatJobId(selectedJob._id)}</span>
+                </div>
+                <h3 className="truncate text-2xl font-extrabold text-white">{selectedJob.fullName || 'Job Request Details'}</h3>
+                <p className="mt-1 text-sm leading-6 text-slate-400">
+                  Incoming request submitted {formatDate(selectedJob.createdAt)}
+                </p>
               </div>
               <button
                 onClick={() => setSelectedJob(null)}
@@ -336,30 +348,30 @@ export default function IncomingJobs() {
             </div>
 
             {/* scrollable content */}
-            <div className="px-6 py-6 overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent hover:scrollbar-thumb-white/30">
+            <div className="flex-1 overflow-y-auto px-4 py-5 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent hover:scrollbar-thumb-white/30 sm:px-6">
 
               {/* Customer Details Section */}
-              <div className="surface mb-6 rounded-2xl p-6 border border-white/10">
-                <h4 className="text-lg font-semibold text-brand-sky flex items-center gap-2 mb-4">
+              <div className="surface mb-6 rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-soft sm:p-5">
+                <h4 className="mb-4 flex items-center gap-2 border-b border-white/10 pb-3 text-base font-bold text-white">
                   <span>👤</span> Customer Details
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">Customer Name</label>
-                    <div className="px-3 py-2 rounded-lg border border-white/10 bg-white/[0.02] text-white text-sm">
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">Customer Name</label>
+                    <div className="rounded-xl border border-white/10 bg-[#11195a] px-3 py-2.5 text-sm leading-6 text-slate-100">
                       {selectedJob.fullName}
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">Phone</label>
-                    <div className="px-3 py-2 rounded-lg border border-white/10 bg-white/[0.02] text-white text-sm">
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">Phone</label>
+                    <div className="rounded-xl border border-white/10 bg-[#11195a] px-3 py-2.5 text-sm leading-6 text-slate-100">
                       {selectedJob.phone}
                     </div>
                   </div>
                   {selectedJob.email && (
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-slate-300 mb-1">Email</label>
-                      <div className="px-3 py-2 rounded-lg border border-white/10 bg-white/[0.02] text-white text-sm">
+                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">Email</label>
+                      <div className="rounded-xl border border-white/10 bg-[#11195a] px-3 py-2.5 text-sm leading-6 text-slate-100">
                         {selectedJob.email}
                       </div>
                     </div>
@@ -368,11 +380,11 @@ export default function IncomingJobs() {
               </div>
 
               {/* Job Description Section */}
-              <div className="surface mb-6 rounded-2xl p-6 border border-white/10">
-                <h4 className="text-lg font-semibold text-brand-sky flex items-center gap-2 mb-4">
+              <div className="surface mb-6 rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-soft sm:p-5">
+                <h4 className="mb-4 flex items-center gap-2 border-b border-white/10 pb-3 text-base font-bold text-white">
                   <span>📝</span> Job Description
                 </h4>
-                <div className="px-3 py-2 rounded-lg border border-white/10 bg-white/[0.02] text-white text-sm">
+                <div className="min-h-24 whitespace-pre-wrap rounded-xl border border-white/10 bg-[#11195a] px-3 py-2.5 text-sm leading-6 text-slate-100">
                   {selectedJob.description}
                 </div>
               </div>
@@ -385,18 +397,18 @@ export default function IncomingJobs() {
 
                 if (!displayImages.length) {
                   return (
-                    <div className="surface mb-6 rounded-2xl p-6 border border-white/10">
-                      <h4 className="text-lg font-semibold text-brand-sky flex items-center gap-2 mb-4">
+                    <div className="surface mb-6 rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-soft sm:p-5">
+                      <h4 className="mb-4 flex items-center gap-2 border-b border-white/10 pb-3 text-base font-bold text-white">
                         <span>🖼️</span> Uploaded Images ({selectedJob.images.length})
                       </h4>
-                      <p className="text-sm text-slate-300">Images were attached but could not be displayed.</p>
+                      <p className="rounded-xl border border-white/10 bg-[#11195a] px-4 py-5 text-sm text-slate-300">Images were attached but could not be displayed.</p>
                     </div>
                   );
                 }
 
                 return (
-                  <div className="surface mb-6 rounded-2xl p-6 border border-white/10">
-                    <h4 className="text-lg font-semibold text-brand-sky flex items-center gap-2 mb-4">
+                  <div className="surface mb-6 rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-soft sm:p-5">
+                    <h4 className="mb-4 flex items-center gap-2 border-b border-white/10 pb-3 text-base font-bold text-white">
                       <span>🖼️</span> Uploaded Images ({displayImages.length})
                     </h4>
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -405,13 +417,13 @@ export default function IncomingJobs() {
                           key={index}
                           type="button"
                           onClick={() => setLightboxImage(src)}
-                          className="group block text-left"
+                          className="group block overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] p-1 text-left transition hover:border-brand-sky/50"
                           title="Click to enlarge"
                         >
                           <img
                             src={src}
                             alt={`Job image ${index + 1}`}
-                            className="h-36 w-full rounded-lg object-cover ring-1 ring-white/10 shadow-sm transition-transform duration-200 group-hover:scale-[1.02]"
+                            className="h-36 w-full rounded-lg object-cover shadow-sm transition-transform duration-200 group-hover:scale-[1.02]"
                             loading="lazy"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
@@ -424,22 +436,33 @@ export default function IncomingJobs() {
                 );
               })()}
 
+              {(!selectedJob.images || selectedJob.images.length === 0) && (
+                <div className="surface mb-6 rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-soft sm:p-5">
+                  <h4 className="mb-4 flex items-center gap-2 border-b border-white/10 pb-3 text-base font-bold text-white">
+                    Uploaded Images (0)
+                  </h4>
+                  <p className="rounded-xl border border-white/10 bg-[#11195a] px-4 py-5 text-sm text-slate-300">
+                    No images were attached to this request.
+                  </p>
+                </div>
+              )}
+
 
               {/* Job Information Section */}
-              <div className="surface rounded-2xl p-6 border border-white/10">
-                <h4 className="text-lg font-semibold text-brand-sky flex items-center gap-2 mb-4">
+              <div className="surface rounded-2xl border border-white/10 bg-white/[0.04] p-4 shadow-soft sm:p-5">
+                <h4 className="mb-4 flex items-center gap-2 border-b border-white/10 pb-3 text-base font-bold text-white">
                   <span>📋</span> Job Information
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">Submitted</label>
-                    <div className="px-3 py-2 rounded-lg border border-white/10 bg-white/[0.02] text-white text-sm">
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">Submitted</label>
+                    <div className="rounded-xl border border-white/10 bg-[#11195a] px-3 py-2.5 text-sm leading-6 text-slate-100">
                       {formatDate(selectedJob.createdAt)}
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1">Request ID</label>
-                    <div className="px-3 py-2 rounded-lg border border-white/10 bg-white/[0.02] text-white text-sm font-mono">
+                    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-400">Request ID</label>
+                    <div className="rounded-xl border border-white/10 bg-[#11195a] px-3 py-2.5 font-mono text-sm leading-6 text-slate-100">
                       {formatJobId(selectedJob._id)}
                     </div>
                   </div>
@@ -448,20 +471,20 @@ export default function IncomingJobs() {
 
               {/* Conversion Status Section - Show if converted */}
               {selectedJob.convertedToJobId && (
-                <div className="surface mt-6 rounded-2xl p-6 border border-green-500/30 bg-green-500/10">
-                  <h4 className="text-lg font-semibold text-green-300 flex items-center gap-2 mb-4">
+                <div className="surface mt-6 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-4 shadow-soft sm:p-5">
+                  <h4 className="mb-4 flex items-center gap-2 border-b border-emerald-400/20 pb-3 text-base font-bold text-emerald-100">
                     <span>✓</span> Conversion Status
                   </h4>
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1">Status</label>
-                      <div className="px-3 py-2 rounded-lg border border-green-500/30 text-green-300 text-sm font-medium">
+                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-emerald-100/70">Status</label>
+                      <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2.5 text-sm font-semibold leading-6 text-emerald-100">
                         Successfully Converted to Job
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-1">Converted At</label>
-                      <div className="px-3 py-2 rounded-lg border border-white/10 text-white text-sm">
+                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-emerald-100/70">Converted At</label>
+                      <div className="rounded-xl border border-white/10 bg-[#11195a] px-3 py-2.5 text-sm leading-6 text-slate-100">
                         {selectedJob.convertedAt ? formatDate(selectedJob.convertedAt) : 'N/A'}
                       </div>
                     </div>

@@ -82,7 +82,7 @@ export default function LiveChatButton() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                setNotice("Live chat is coming soon. Please call 1300 551 350 for immediate help.");
+                setNotice("For immediate help, please call 1300 551 350.");
               }}
               className="border-t p-3 flex gap-2"
             >

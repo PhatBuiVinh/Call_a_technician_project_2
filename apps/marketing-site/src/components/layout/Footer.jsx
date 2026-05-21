@@ -87,14 +87,14 @@ export default function Footer() {
           <div className="flex flex-wrap items-center gap-4">
             <Link to="/privacy-policy" className="link-animated-dark text-white/70 hover:text-brand-green">Privacy Policy</Link>
             <Link to="/terms" className="link-animated-dark text-white/70 hover:text-brand-green">Terms</Link>
-            {socialLinks.length > 0 ? socialLinks.map((item) => {
+            {socialLinks.length > 0 && socialLinks.map((item) => {
               const Icon = item.icon;
               return (
                 <a key={item.id} href={item.href} target="_blank" rel="noreferrer" aria-label={item.id} className="link-animated-dark text-white/70 hover:text-brand-green">
                   <Icon className="h-5 w-5" />
                 </a>
               );
-            }) : <span className="text-xs text-white/55">Social links coming soon</span>}
+            })}
           </div>
         </div>
       </div>

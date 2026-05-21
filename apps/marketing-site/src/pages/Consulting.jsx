@@ -296,7 +296,7 @@ export default function Consulting() {
           <div className="rounded-2xl overflow-hidden bg-brand-navy text-white p-8 md:p-10 relative">
             <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-blue to-brand-lightblue" />
             <div className="max-w-xl">
-              <h3 className="text-2xl font-bold">Is your organisation ready for what's coming?</h3>
+              <h3 className="text-2xl font-bold text-white">Is your organisation ready for what's coming?</h3>
               <p className="mt-2 text-white/80 leading-relaxed">
                 Gen AI threats, tightening compliance requirements, and a growing attack surface mean there has never been a more important time to get your GRC foundations right. Let's talk.
               </p>

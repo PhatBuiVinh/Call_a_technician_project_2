@@ -688,7 +688,7 @@ export default function TechJobDetail() {
                   <textarea
                     value={completionForm.workPerformed}
                     onChange={(e) => setCompletionForm(prev => ({ ...prev, workPerformed: e.target.value }))}
-                    placeholder="e.g., Replaced faulty thermostat, tested heating system, verified temperature control..."
+                    placeholder="e.g., Cleaned internal dust, updated drivers, ran diagnostics, and confirmed the laptop booted normally..."
                     className="input w-full text-base leading-relaxed"
                     rows={5}
                     required
@@ -713,7 +713,7 @@ export default function TechJobDetail() {
                     type="text"
                     value={completionForm.partsUsed}
                     onChange={(e) => setCompletionForm(prev => ({ ...prev, partsUsed: e.target.value }))}
-                    placeholder="e.g., Honeywell T6 Pro Thermostat, 2x Wire connectors"
+                    placeholder="e.g., Thermal paste, replacement laptop fan, SSD upgrade"
                     className="input w-full text-base py-3"
                     maxLength={500}
                   />

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthProvider';
-import logo from '../assets/logo-high.webp';
+import Logo from '../components/UI/Logo';
 
 export default function Login() {
   const { login } = useAuth();
@@ -127,8 +127,8 @@ export default function Login() {
         <div className="grid lg:min-h-[660px] lg:grid-cols-[0.92fr_1.08fr]">
           <aside className="hidden border-r border-white/10 bg-white/[0.035] p-8 lg:flex lg:flex-col lg:justify-between xl:p-10">
             <div>
-              <div className="inline-flex rounded-[1.35rem] border border-white/20 bg-white p-3 shadow-soft">
-                <img src={logo} alt="Call-a-Technician" className="h-14 w-auto rounded-2xl" />
+              <div className="inline-flex items-center justify-center">
+                <Logo className="h-14 w-auto" />
               </div>
               <div className="mt-10 max-w-sm">
                 <span className="badge badge-sky">Secure staff access</span>
@@ -175,8 +175,8 @@ export default function Login() {
           <main className="flex items-center justify-center bg-brand-bg p-5 sm:p-8 lg:p-10">
             <div className="w-full max-w-md">
               <div className="mb-7 text-center lg:text-left">
-                <div className="mx-auto mb-5 inline-flex rounded-[1.35rem] border border-white/20 bg-white p-3 shadow-soft lg:hidden">
-                  <img src={logo} alt="Call-a-Technician" className="h-12 w-auto rounded-2xl sm:h-14" />
+                <div className="mx-auto mb-5 inline-flex items-center justify-center lg:hidden">
+                  <Logo className="h-12 w-auto sm:h-14" />
                 </div>
                 <div>
                   <span className="badge badge-blue mb-4">Admin and technician login</span>

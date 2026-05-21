@@ -17,7 +17,7 @@ export default function MobileStickyCTA() {
         <div className="grid gap-2">
           <Button to="/contact" variant="primary" className="w-full justify-center py-3 text-base font-semibold">
             <CalendarCheck className="h-4 w-4" />
-            Contact Us
+            Request a Technician
           </Button>
           <Button href="tel:1300551350" variant="ghost" className="w-full justify-center border border-white/35 text-white hover:bg-white/12 hover:text-white">
             <Phone className="h-4 w-4" />

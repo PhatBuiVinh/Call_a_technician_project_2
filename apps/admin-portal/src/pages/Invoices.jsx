@@ -431,14 +431,22 @@ export default function Invoices() {
           </div>
 
           {loading && (
-            <div className="p-8 text-center">
-              <p className="text-slate-300">Loading invoices...</p>
+            <div className="p-4 sm:p-6">
+              <div className="rounded-2xl border border-brand-sky/20 bg-brand-sky/10 p-6 text-center">
+                <div className="mx-auto mb-4 h-1 w-16 rounded-full bg-brand-sky/70" />
+                <h2 className="text-lg font-semibold text-white">Loading invoices</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-300">Loading invoices...</p>
+              </div>
             </div>
           )}
           
           {error && (
-            <div className="p-8 text-center">
-              <p className="text-rose-300">{error}</p>
+            <div className="p-4 sm:p-6">
+              <div className="rounded-2xl border border-rose-400/35 bg-rose-500/10 p-6 text-center">
+                <div className="mx-auto mb-4 h-1 w-16 rounded-full bg-rose-300/70" />
+                <h2 className="text-lg font-semibold text-white">Invoices could not load</h2>
+                <p className="mt-2 text-sm leading-6 text-rose-100">{error}</p>
+              </div>
             </div>
           )}
 
@@ -529,8 +537,14 @@ export default function Invoices() {
                   ))}
                   {filtered.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="py-6 text-center text-slate-300">
-                        No invoices found.
+                      <td colSpan={6} className="py-6">
+                        <div className="mx-auto max-w-xl rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-center">
+                          <div className="mx-auto mb-4 h-1 w-16 rounded-full bg-brand-sky/60" />
+                          <h2 className="text-lg font-semibold text-white">No invoices found</h2>
+                          <p className="mt-2 text-sm leading-6 text-slate-300">
+                            No invoices found.
+                          </p>
+                        </div>
                       </td>
                     </tr>
                   )}

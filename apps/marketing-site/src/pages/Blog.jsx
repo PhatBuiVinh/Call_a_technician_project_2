@@ -69,7 +69,7 @@ export default function Blog() {
         <div className="container-app">
           <div className="rounded-2xl bg-brand-navy text-white p-8 md:p-10 relative overflow-hidden">
             <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-blue to-brand-green rounded-t-2xl" />
-            <h3 className="text-2xl font-bold">Need help today? Book a technician in minutes.</h3>
+            <h3 className="text-2xl font-bold text-white">Need help today? Book a technician in minutes.</h3>
             <p className="mt-2 text-white/80">On-site support across Adelaide — same day, 7 days a week.</p>
             <div className="mt-6 flex flex-col sm:flex-row gap-3">
               <a href="/contact" className="rounded-lg bg-brand-green text-brand-navy px-5 py-2.5 font-bold hover:brightness-110 transition w-fit">

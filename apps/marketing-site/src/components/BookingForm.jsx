@@ -9,7 +9,7 @@ export default function BookingForm() {
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <Button type="button" variant="primary" className="w-full justify-center py-3" to="/contact">
-          Contact Us
+          Request a Technician
         </Button>
         <Button type="button" variant="secondary" className="w-full justify-center py-3" href="tel:1300551350">
           Call Now

@@ -13,7 +13,7 @@ export default function UrgentCallout({
   persist = "none",
   urgentLabel = "Need urgent help today?",
   message = "Book a same-day technician in Adelaide.",
-  ctaText = "Contact Us",
+  ctaText = "Request a Technician",
   ctaTo = "/contact",
 }) {
   const KEY = "urgent_callout_dismissed_ts";

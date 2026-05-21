@@ -20,16 +20,29 @@ export const urlFor = (source) => builder ? builder.image(source) : null
 // Fallback shown when Sanity is not connected
 const mockPosts = [
   {
-    id: 'demo-post',
-    title: 'Blog Coming Soon',
-    excerpt: 'Blog posts will appear here once content is added.',
+    id: 'onsite-repair-visit-checklist',
+    title: 'How to Prepare for an Onsite Computer Repair Visit',
+    excerpt: 'A simple checklist to help customers save time before a technician arrives.',
     category: 'Tips',
     author: 'Mustafa Kadir',
     date: new Date().toISOString(),
-    readMins: 1,
+    readMins: 3,
     image: blogDemoImage,
     featured: true,
-    content: []
+    content: [
+      {
+        type: 'p',
+        text: 'Before your technician arrives, write down the main problem, when it started, and any error messages you have seen. This helps the technician diagnose the issue faster.'
+      },
+      {
+        type: 'p',
+        text: 'If the issue appears on screen, take a quick photo and attach it to your request. Photos of error messages, damaged ports, cables, or router lights can be very useful.'
+      },
+      {
+        type: 'p',
+        text: 'Please keep your device charger, Wi-Fi password, and any important login details nearby. You do not need to share private passwords unless the technician specifically needs access with your permission.'
+      }
+    ]
   }
 ]
 

@@ -69,7 +69,7 @@ export default function NavBar() {
 
         {/* Desktop CTA buttons */}
         <div className="hidden md:flex items-center gap-3">
-          <Button to="/contact" variant="primary" className="text-sm">Contact Us</Button>
+          <Button to="/contact" variant="primary" className="text-sm">Request a Technician</Button>
         </div>
 
         {/* Mobile hamburger */}
@@ -111,7 +111,7 @@ export default function NavBar() {
                 className="mt-1 text-center justify-center"
                 onClick={() => setIsOpen(false)}
               >
-                Contact Us
+                Request a Technician
               </Button>
             </div>
           </div>

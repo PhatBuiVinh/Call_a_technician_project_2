@@ -200,32 +200,34 @@ export default function Customers() {
           </div>
 
           {loading && (
-            <div className="p-8 text-center">
+            <div className="m-4 rounded-2xl border border-brand-sky/20 bg-brand-sky/10 p-6 text-center sm:m-6">
               <div className="text-4xl mb-4">⏳</div>
-              <p className="text-slate-300">Loading customers...</p>
+              <h3 className="text-lg font-semibold text-white">Loading customers</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-300">Loading customers...</p>
             </div>
           )}
           
           {err && (
-            <div className="p-8 text-center">
+            <div className="m-4 rounded-2xl border border-rose-400/35 bg-rose-500/10 p-6 text-center sm:m-6">
               <div className="text-4xl mb-4">❌</div>
-              <p className="text-rose-300">{err}</p>
+              <h3 className="text-lg font-semibold text-white">Customers could not load</h3>
+              <p className="mt-2 text-sm leading-6 text-rose-200">{err}</p>
             </div>
           )}
 
           {!loading && !err && (
             <>
               {filtered.length === 0 ? (
-                <div className="p-8 text-center">
+                <div className="m-4 rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-center sm:m-6">
                   <div className="text-6xl mb-4">👥</div>
                   <h3 className="text-lg font-semibold text-white mb-2">No Customers Found</h3>
-                  <p className="text-slate-400 mb-4">
+                  <p className="text-sm leading-6 text-slate-400 mb-4">
                     {q.trim() ? 'No customers match your search criteria.' : 'Add your first customer to get started!'}
                   </p>
                   {!q.trim() && (
                     <button
                       onClick={openCreate}
-                      className="px-6 py-3 bg-brand-blue hover:bg-brand-blue/90 text-text-primary rounded-xl font-medium transition-all duration-200 shadow-soft"
+                      className="btn btn-primary"
                     >
                       Add First Customer
                     </button>

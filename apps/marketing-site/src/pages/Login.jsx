@@ -14,7 +14,7 @@ export default function Login() {
           Open Admin Portal
         </Button>
         <Button to="/contact" variant="secondary" className="w-full">
-          Contact Us
+          Request Help
         </Button>
       </div>
     </div>

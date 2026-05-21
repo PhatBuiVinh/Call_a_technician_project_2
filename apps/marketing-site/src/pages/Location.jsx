@@ -230,7 +230,7 @@ export default function Location() {
                 <NeedHelpBand
                   title="Need help today?"
                   description="Same-day bookings available across Adelaide."
-                  primaryLabel="Contact Us"
+                  primaryLabel="Request a Technician"
                   primaryTo="/contact"
                   secondaryLabel="Call 1300 551 350"
                   secondaryHref="tel:1300551350"
