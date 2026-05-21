@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import Section from "../../layout/Section";
-import { H2 } from "../../ui/Heading";
+import { H2 } from "../../UI/Heading";
+import Button from "../../atoms/Button";
 
 export default function ServicesGrid({ items = [] }) {
   // Guard against bad input
@@ -26,6 +27,7 @@ export default function ServicesGrid({ items = [] }) {
             return (
               <motion.div
                 key={s.title ?? i}
+                className="h-full"
                 initial={{ opacity: 0, y: 14 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.25 }}
@@ -34,7 +36,7 @@ export default function ServicesGrid({ items = [] }) {
                 <CardTag
                   {...cardProps}
                   className="
-                    group block rounded-xl border bg-white p-5
+                    group flex flex-col h-full rounded-xl border bg-white p-5
                     hover:shadow-lg hover:-translate-y-[2px] transition
                     focus:outline-none focus:ring-2 focus:ring-brand-lightblue/60
                   "
@@ -42,15 +44,15 @@ export default function ServicesGrid({ items = [] }) {
                   {/* top accent */}
                   <div className="h-1 w-12 bg-gradient-to-r from-brand-blue to-brand-lightblue rounded-full" />
 
-                  <div className="mt-4 flex items-start gap-3">
-                    {/* icon chip (replace s.icon with lucide icon if you have it) */}
+                  <div className="mt-4 flex items-start gap-3 flex-1">
+                    {/* icon chip */}
                     <div className="w-10 h-10 rounded-md bg-brand-lightblue/30 text-brand-blue grid place-items-center text-2xl shrink-0">
                       {s.icon ?? "🛠️"}
                     </div>
 
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex flex-col flex-1">
                       <div className="font-semibold text-brand-navy">{s.title}</div>
-                      <p className="mt-1 text-sm text-slate-600 line-clamp-3">{s.blurb}</p>
+                      <p className="mt-1 text-sm text-slate-600">{s.blurb}</p>
 
                       {/* optional bullets */}
                       {Array.isArray(s.bullets) && s.bullets.length > 0 && (
@@ -61,11 +63,8 @@ export default function ServicesGrid({ items = [] }) {
                         </ul>
                       )}
 
-                      {/* footer row */}
-                      <div className="mt-4 flex items-center justify-between">
-                        <span className="text-xs rounded-full bg-brand-lightblue/35 text-brand-blue px-2 py-0.5">
-                          {s.price ?? "from $99"}
-                        </span>
+                      {/* footer row — pushed to bottom */}
+                      <div className="mt-auto pt-4">
                         <span className="text-sm font-medium text-brand-blue group-hover:text-brand-lightblue">
                           {s?.href ? "Learn more →" : "Get help →"}
                         </span>
@@ -89,12 +88,7 @@ export default function ServicesGrid({ items = [] }) {
 
         {/* view all CTA (optional) */}
         <div className="mt-6 flex justify-center">
-          <a
-            href="/services"
-            className="inline-flex items-center gap-2 rounded-md border bg-white px-4 py-2 text-sm font-medium text-brand-navy hover:bg-slate-50"
-          >
-            View all services →
-          </a>
+          <Button to="/services" variant="secondary">View all services</Button>
         </div>
       </div>
     </Section>

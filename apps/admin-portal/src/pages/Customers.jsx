@@ -165,19 +165,24 @@ export default function Customers() {
       <main className="max-w-6xl mx-auto p-4 space-y-4">
         {/* Enhanced Customers Section */}
         <div className="bg-brand-panel rounded-3xl border border-brand-border overflow-hidden shadow-soft">
-          <div className="bg-brand-bg px-8 py-6 border-b border-brand-border">
-            <div className="flex flex-wrap items-center gap-4 w-full">
-              <h2 className="text-3xl font-bold text-white flex items-center gap-4">
-                <span className="text-4xl">👥</span>
-                Customers
-                <span className="text-sm font-normal text-brand-sky bg-brand-blue/20 px-4 py-2 rounded-full border border-brand-border">
-                  {filtered.length} {filtered.length === 1 ? 'customer' : 'customers'}
-                </span>
-              </h2>
+          <div className="bg-brand-bg px-4 py-5 sm:px-6 border-b border-brand-border">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-white flex flex-wrap items-center gap-2">
+                  <span className="text-4xl">👥</span>
+                  Customers
+                  <span className="badge badge-blue">
+                    {filtered.length} {filtered.length === 1 ? 'customer' : 'customers'}
+                  </span>
+                </h1>
+                <p className="mt-1 text-sm text-slate-400">
+                  Search, maintain, and create jobs from customer records.
+                </p>
+              </div>
 
-              <div className="flex-1 flex gap-4 min-w-[300px]">
+              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
                 <input
-                  className="flex-1 px-5 py-3 rounded-2xl bg-brand-bg border border-brand-border text-text-primary placeholder-text-muted focus:border-brand-border-hover focus:ring-2 focus:ring-brand-border/30 backdrop-blur-sm"
+                  className="input min-w-0 sm:w-72"
                   placeholder="Search customers..."
                   value={q}
                   onChange={e => setQ(e.target.value)}
@@ -185,7 +190,7 @@ export default function Customers() {
               </div>
 
               <button 
-                className="px-8 py-4 bg-brand-blue hover:bg-brand-blue/90 text-text-primary rounded-2xl font-bold transition-all duration-200 shadow-soft flex items-center gap-3"
+                className="btn btn-primary"
                 onClick={openCreate}
               >
                 <span className="text-xl">➕</span>
@@ -195,32 +200,34 @@ export default function Customers() {
           </div>
 
           {loading && (
-            <div className="p-8 text-center">
+            <div className="m-4 rounded-2xl border border-brand-sky/20 bg-brand-sky/10 p-6 text-center sm:m-6">
               <div className="text-4xl mb-4">⏳</div>
-              <p className="text-slate-300">Loading customers...</p>
+              <h3 className="text-lg font-semibold text-white">Loading customers</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-300">Loading customers...</p>
             </div>
           )}
           
           {err && (
-            <div className="p-8 text-center">
+            <div className="m-4 rounded-2xl border border-rose-400/35 bg-rose-500/10 p-6 text-center sm:m-6">
               <div className="text-4xl mb-4">❌</div>
-              <p className="text-rose-300">{err}</p>
+              <h3 className="text-lg font-semibold text-white">Customers could not load</h3>
+              <p className="mt-2 text-sm leading-6 text-rose-200">{err}</p>
             </div>
           )}
 
           {!loading && !err && (
             <>
               {filtered.length === 0 ? (
-                <div className="p-8 text-center">
+                <div className="m-4 rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-center sm:m-6">
                   <div className="text-6xl mb-4">👥</div>
                   <h3 className="text-lg font-semibold text-white mb-2">No Customers Found</h3>
-                  <p className="text-slate-400 mb-4">
+                  <p className="text-sm leading-6 text-slate-400 mb-4">
                     {q.trim() ? 'No customers match your search criteria.' : 'Add your first customer to get started!'}
                   </p>
                   {!q.trim() && (
                     <button
                       onClick={openCreate}
-                      className="px-6 py-3 bg-brand-blue hover:bg-brand-blue/90 text-text-primary rounded-xl font-medium transition-all duration-200 shadow-soft"
+                      className="btn btn-primary"
                     >
                       Add First Customer
                     </button>

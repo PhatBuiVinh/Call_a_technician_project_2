@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 
+const SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL || 'support@callatech.com';
+
 const currency = new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' });
 
 export default function InvoicePrint() {
@@ -40,7 +42,7 @@ export default function InvoicePrint() {
   useEffect(() => {
     if (!loading && inv) {
       const t = setTimeout(() => {
-        try { window.print(); } catch {}
+        try { window.print(); } catch { void 0; }
       }, 300); // small delay lets the browser layout first
       return () => clearTimeout(t);
     }
@@ -76,7 +78,7 @@ export default function InvoicePrint() {
           <div>
             <h1 className="text-2xl font-extrabold">Invoice {inv.number}</h1>
             <p>Call a Technician</p>
-            <p>support@callatechnician.example</p>
+            <p>{SUPPORT_EMAIL}</p>
             <p>+61 400 123 456</p>
           </div>
           <div className="text-right">

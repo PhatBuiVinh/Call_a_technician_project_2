@@ -3,12 +3,77 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '../components/Header';
 import { api } from '../lib/api';
-import { exportCSV } from '../lib/csv';
 
 const currency = new Intl.NumberFormat(undefined, {
   style: 'currency',
   currency: 'USD',
 });
+
+function InvoiceStatusBadge({ status }) {
+  const styles = {
+    Unpaid: 'badge-amber',
+    Pending: 'badge-sky',
+    Paid: 'badge-emerald',
+    Overdue: 'badge-rose',
+    Void: 'badge-slate',
+  };
+
+  return (
+    <span className={`badge ${styles[status] || 'badge-slate'}`}>
+      {status || 'Unpaid'}
+    </span>
+  );
+}
+
+function FinancialCard({ label, value, tone = 'blue', caption }) {
+  const tones = {
+    blue: {
+      panel: 'bg-blue-500/[0.08] border-blue-400/20',
+      bar: 'bg-blue-300',
+      label: 'text-blue-200',
+      dot: 'bg-blue-300',
+    },
+    amber: {
+      panel: 'bg-amber-500/[0.08] border-amber-400/25',
+      bar: 'bg-amber-300',
+      label: 'text-amber-200',
+      dot: 'bg-amber-300',
+    },
+    emerald: {
+      panel: 'bg-emerald-500/[0.08] border-emerald-400/25',
+      bar: 'bg-emerald-300',
+      label: 'text-emerald-200',
+      dot: 'bg-emerald-300',
+    },
+    rose: {
+      panel: 'bg-rose-500/[0.08] border-rose-400/25',
+      bar: 'bg-rose-300',
+      label: 'text-rose-200',
+      dot: 'bg-rose-300',
+    },
+  };
+  const palette = tones[tone] || tones.blue;
+
+  return (
+    <div className={`card relative overflow-hidden p-4 shadow-soft sm:p-5 ${palette.panel}`}>
+      <div className={`absolute inset-x-0 top-0 h-1 ${palette.bar}`} />
+      <div className="flex items-center justify-between gap-3">
+        <div className={`text-xs font-semibold uppercase ${palette.label}`}>
+          {label}
+        </div>
+        <span className={`h-2.5 w-2.5 rounded-full ${palette.dot}`} />
+      </div>
+      <div className="mt-3 font-mono text-2xl font-extrabold leading-tight text-white tabular-nums sm:text-3xl">
+        {value}
+      </div>
+      {caption && (
+        <div className="mt-2 text-xs font-medium text-slate-400">
+          {caption}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Pricing rules
 const BASE_PRICE = 165; // fixed, covers up to 2 hours
@@ -286,180 +351,184 @@ export default function Invoices() {
     }
   }
 
-  function exportFilteredCSV() {
-    const cols = [
-      { key: 'number', label: 'Number' },
-      { key: 'customer', label: 'Customer' },
-      { key: 'amount', label: 'Amount' },
-      { key: 'status', label: 'Status' },
-      { key: 'date', label: 'Date' },
-      { key: 'description', label: 'Description' },
-    ];
-    const rows = filtered.map(i => ({
-      ...i,
-      description: i.description || i.notes || '',
-      date: new Date(i.date || i.createdAt).toLocaleDateString(),
-    }));
-    exportCSV('invoices', cols, rows);
-  }
-
   return (
     <div className="page">
       <Header />
 
       <main className="max-w-6xl mx-auto p-4 space-y-4">
         {/* Enhanced KPIs */}
-        <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-brand-panel rounded-3xl p-6 border border-brand-border shadow-soft">
-            <div className="text-brand-sky text-sm font-medium mb-2">📄 Total Invoices</div>
-            <div className="text-3xl font-bold text-white">{kpi.total}</div>
-          </div>
-          <div className="bg-brand-panel rounded-3xl p-6 border border-brand-border shadow-soft">
-            <div className="text-brand-green text-sm font-medium mb-2">💰 Unpaid Total</div>
-            <div className="text-3xl font-bold text-white">{currency.format(kpi.unpaid)}</div>
-          </div>
-          <div className="bg-brand-panel rounded-3xl p-6 border border-brand-border shadow-soft">
-            <div className="text-brand-sky text-sm font-medium mb-2">✅ Paid Total</div>
-            <div className="text-3xl font-bold text-white">{currency.format(kpi.paid)}</div>
-          </div>
-          <div className="bg-brand-panel rounded-3xl p-6 border border-brand-border shadow-soft">
-            <div className="text-red-400 text-sm font-medium mb-2">⚠️ Overdue Count</div>
-            <div className="text-3xl font-bold text-white">{kpi.overdue}</div>
-          </div>
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <FinancialCard
+            label="Total Invoices"
+            value={kpi.total}
+            tone="blue"
+            caption="Matching current filters"
+          />
+          <FinancialCard
+            label="Unpaid Total"
+            value={currency.format(kpi.unpaid)}
+            tone="amber"
+            caption="Outstanding balance"
+          />
+          <FinancialCard
+            label="Paid Total"
+            value={currency.format(kpi.paid)}
+            tone="emerald"
+            caption="Collected balance"
+          />
+          <FinancialCard
+            label="Overdue Count"
+            value={kpi.overdue}
+            tone="rose"
+            caption="Requires follow-up"
+          />
         </section>
 
         {/* Enhanced Invoices Section */}
-        <div className="bg-brand-panel rounded-3xl border border-brand-border overflow-hidden shadow-soft">
-          <div className="bg-brand-bg px-8 py-6 border-b border-brand-border">
-            <div className="flex flex-col lg:flex-row lg:items-center gap-4 w-full">
-              <h2 className="text-3xl font-bold text-white flex items-center gap-4">
-                <span className="text-4xl">📄</span>
-                Invoices
-                <span className="text-sm font-normal text-brand-sky bg-brand-blue/20 px-4 py-2 rounded-full border border-brand-border">
-                  {filtered.length} {filtered.length === 1 ? 'invoice' : 'invoices'}
-                </span>
-              </h2>
+        <div className="surface rounded-2xl overflow-hidden">
+          <div className="border-b border-white/10 px-4 py-5 sm:px-6">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+              <div className="min-w-0 xl:max-w-md">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
+                    Invoices
+                  </h1>
+                  <span className="badge badge-lg badge-blue">
+                    {filtered.length} {filtered.length === 1 ? 'invoice' : 'invoices'}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-slate-400">
+                  Search, filter, create, and update customer invoices.
+                </p>
+              </div>
 
-              <div className="flex-1 flex flex-col sm:flex-row gap-3 min-w-0">
-              <input
-                  className="flex-1 px-4 py-3 rounded-xl bg-brand-bg border border-brand-border text-text-primary placeholder-text-muted focus:border-brand-border-hover focus:ring-2 focus:ring-brand-border/30 backdrop-blur-sm min-w-0"
+              <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center xl:ml-auto">
+                <input
+                  className="input min-w-0 sm:w-72 xl:w-80"
                   placeholder="Search invoices..."
-                value={q}
-                onChange={e => setQ(e.target.value)}
-              />
+                  value={q}
+                  onChange={e => setQ(e.target.value)}
+                />
 
-              <select
-                  className="px-4 py-3 rounded-xl bg-brand-bg border border-brand-border text-text-primary focus:border-brand-border-hover focus:ring-2 focus:ring-brand-border/30 backdrop-blur-sm min-w-[120px]"
-                value={status}
-                onChange={e => setStatus(e.target.value)}
+                <select
+                  className="select min-w-[120px]"
+                  value={status}
+                  onChange={e => setStatus(e.target.value)}
+                >
+                  {['All', 'Unpaid', 'Paid', 'Overdue', 'Void'].map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                className="btn btn-primary whitespace-nowrap"
+                onClick={openCreate}
               >
-                {['All', 'Unpaid', 'Paid', 'Overdue', 'Void'].map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3 min-w-0">
-                <button 
-                  className="px-6 py-3 bg-brand-bg hover:bg-brand-panel-hover text-text-primary border border-brand-border rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 whitespace-nowrap"
-                  onClick={exportFilteredCSV}
-                >
-                  📊 Export CSV
-                </button>
-                <button 
-                  className="px-6 py-3 bg-brand-teal hover:bg-brand-teal/90 text-text-primary rounded-xl font-medium transition-all duration-200 shadow-soft flex items-center justify-center gap-2 whitespace-nowrap"
-                  onClick={openCreate}
-                >
-                  <span className="text-lg">➕</span>
-                  New Invoice
-                </button>
-              </div>
+                New Invoice
+              </button>
             </div>
           </div>
 
           {loading && (
-            <div className="p-8 text-center">
-              <div className="text-4xl mb-4">⏳</div>
-              <p className="text-slate-300">Loading invoices...</p>
+            <div className="p-4 sm:p-6">
+              <div className="rounded-2xl border border-brand-sky/20 bg-brand-sky/10 p-6 text-center">
+                <div className="mx-auto mb-4 h-1 w-16 rounded-full bg-brand-sky/70" />
+                <h2 className="text-lg font-semibold text-white">Loading invoices</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-300">Loading invoices...</p>
+              </div>
             </div>
           )}
           
           {error && (
-            <div className="p-8 text-center">
-              <div className="text-4xl mb-4">❌</div>
-              <p className="text-rose-300">{error}</p>
+            <div className="p-4 sm:p-6">
+              <div className="rounded-2xl border border-rose-400/35 bg-rose-500/10 p-6 text-center">
+                <div className="mx-auto mb-4 h-1 w-16 rounded-full bg-rose-300/70" />
+                <h2 className="text-lg font-semibold text-white">Invoices could not load</h2>
+                <p className="mt-2 text-sm leading-6 text-rose-100">{error}</p>
+              </div>
             </div>
           )}
 
           {!loading && !error && (
             <div className="overflow-x-auto">
-              <table className="table text-sm">
+              <table className="table min-w-[860px] text-sm">
                 <thead>
-                  <tr className="text-left">
-                    <th className="py-2">Number</th>
-                    <th className="py-2">Customer</th>
-                    <th className="py-2">Amount</th>
-                    <th className="py-2">Status</th>
-                    <th className="py-2">Date</th>
-                    <th className="py-2">Actions</th>
+                  <tr className="text-left text-xs font-semibold uppercase text-slate-400">
+                    <th className="w-[150px] py-3">Number</th>
+                    <th className="min-w-[240px] py-3">Customer</th>
+                    <th className="w-[150px] py-3 text-right">Amount</th>
+                    <th className="w-[120px] py-3 text-center">Status</th>
+                    <th className="w-[140px] py-3 text-right">Date</th>
+                    <th className="w-[250px] py-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-white/5">
                   {filtered.map(inv => (
-                    <tr key={inv._id}>
-                      <td className="py-2 font-semibold">
+                    <tr key={inv._id} className="align-top transition-colors hover:bg-white/[0.03]">
+                      <td className="py-4 pr-3 font-semibold">
                         {/* Click number → print view (same tab) */}
                         <button
-                          className="underline text-brand-psky"
+                          className="inline-flex max-w-full items-center rounded-lg border border-sky-400/25 bg-sky-500/10 px-3 py-1.5 font-mono text-sm font-semibold text-sky-200 transition-colors hover:border-sky-300/40 hover:bg-sky-500/15"
                           onClick={() => nav(`/invoices/${inv._id}/print`)}
                           title="Open print view"
                         >
-                          {inv.number}
+                          <span className="truncate">{inv.number}</span>
                         </button>
                       </td>
-                      <td className="py-2">
+                      <td className="py-4 pr-4">
                         <div className="space-y-1">
                           <div className="font-medium text-white">
                             {inv.customerName || inv.customer || '—'}
                           </div>
                           {inv.customerPhone && (
                             <div className="text-xs text-slate-300">
-                              📞 {inv.customerPhone}
+                              Phone: {inv.customerPhone}
                             </div>
                           )}
                           {inv.customerEmail && (
                             <div className="text-xs text-slate-300">
-                              ✉️ {inv.customerEmail}
+                              Email: {inv.customerEmail}
                             </div>
                           )}
                           {inv.customerAddress && (
                             <div className="text-xs text-slate-300 max-w-xs truncate">
-                              📍 {inv.customerAddress}
+                              Address: {inv.customerAddress}
                             </div>
                           )}
                         </div>
                       </td>
-                      <td className="py-2">
-                        {currency.format(Number(inv.amount) || 0)}
+                      <td className="py-4 text-right">
+                        <span className="font-mono font-semibold text-white tabular-nums">
+                          {currency.format(Number(inv.amount) || 0)}
+                        </span>
                       </td>
-                      <td className="py-2">{inv.status}</td>
-                      <td className="py-2">
-                        {new Date(inv.date || inv.createdAt).toLocaleDateString()}
+                      <td className="py-4 text-center">
+                        <InvoiceStatusBadge status={inv.status} />
                       </td>
-                      <td className="py-2">
-                        <div className="flex gap-2">
+                      <td className="py-4 text-right text-slate-300">
+                        <span className="whitespace-nowrap font-medium">
+                          {new Date(inv.date || inv.createdAt).toLocaleDateString()}
+                        </span>
+                      </td>
+                      <td className="py-4">
+                        <div className="flex flex-col justify-end gap-2 sm:flex-row sm:flex-wrap">
                           <button
-                            className="px-4 py-2 rounded-lg bg-brand-sky/20 hover:bg-brand-sky/30 text-brand-sky border border-brand-sky/30 font-medium transition-all duration-200 flex items-center gap-2"
+                            className="btn btn-ghost w-full px-3 py-2 text-sm sm:w-auto"
+                            onClick={() => nav(`/invoices/${inv._id}/print`)}
+                          >
+                            View / Print
+                          </button>
+                          <button
+                            className="btn btn-blue w-full px-3 py-2 text-sm sm:w-auto"
                             onClick={() => openEdit(inv)}
                           >
-                            <span>✏️</span>
                             Edit
                           </button>
                           <button
-                            className="px-4 py-2 rounded-lg bg-red-600/30 hover:bg-red-600/40 text-red-200 border border-red-500/50 font-medium transition-colors flex items-center gap-2 shadow-lg"
+                            className="btn btn-danger w-full px-3 py-2 text-sm sm:w-auto"
                             onClick={() => remove(inv._id)}
                           >
-                            <span>🗑️</span>
                             Delete
                           </button>
                         </div>
@@ -468,8 +537,14 @@ export default function Invoices() {
                   ))}
                   {filtered.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="py-6 text-center text-slate-300">
-                        No invoices found.
+                      <td colSpan={6} className="py-6">
+                        <div className="mx-auto max-w-xl rounded-2xl border border-white/10 bg-white/[0.04] p-6 text-center">
+                          <div className="mx-auto mb-4 h-1 w-16 rounded-full bg-brand-sky/60" />
+                          <h2 className="text-lg font-semibold text-white">No invoices found</h2>
+                          <p className="mt-2 text-sm leading-6 text-slate-300">
+                            No invoices found.
+                          </p>
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -486,16 +561,7 @@ export default function Invoices() {
           className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50"
           onClick={e => {
             if (e.target === e.currentTarget) {
-              console.log('Modal closed by backdrop click');
-              // Comment out auto-close for now to prevent accidental closing
-              // setOpen(false);
-            }
-          }}
-          onKeyDown={(e) => {
-            // Prevent accidental closing with Escape key - comment out for now
-            if (e.key === 'Escape') {
-              console.log('Escape key pressed - modal closing disabled');
-              // setOpen(false);
+              setOpen(false);
             }
           }}
         >
@@ -507,10 +573,7 @@ export default function Invoices() {
             {/* header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-brand-border flex-shrink-0 rounded-t-2xl" style={{ backgroundColor: '#0c1450' }}>
               <h3 className="text-xl font-bold text-white">{editingId ? 'Edit Invoice' : 'New Invoice'}</h3>
-              <button onClick={() => {
-                console.log('Modal closed by close button');
-                setOpen(false);
-              }} className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors">
+              <button onClick={() => setOpen(false)} className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors">
                 Close
               </button>
             </div>
@@ -521,9 +584,7 @@ export default function Invoices() {
               {/* Invoice Details Section */}
               <div className="mb-6 rounded-2xl p-6 border border-brand-sky/20" style={{ backgroundColor: '#0c1450' }}>
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-brand-sky flex items-center gap-2">
-                    <span>📄</span> Invoice Details
-                  </h4>
+                  <h4 className="text-lg font-semibold text-brand-sky">Invoice Details</h4>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field
@@ -558,9 +619,7 @@ export default function Invoices() {
               {/* Customer Details Section */}
               <div className="mb-6 rounded-2xl p-6 border border-brand-sky/20" style={{ backgroundColor: '#0c1450' }}>
                 <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-brand-sky flex items-center gap-2">
-                    <span>👤</span> Customer Details
-                  </h4>
+                  <h4 className="text-lg font-semibold text-brand-sky">Customer Details</h4>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Field
@@ -600,9 +659,7 @@ export default function Invoices() {
 
               {/* Job Details Section */}
               <div className="bg-white/5 rounded-xl p-4">
-                <h4 className="text-lg font-semibold mb-4 text-brand-blue flex items-center gap-2">
-                  <span>🔧</span> Job Details
-                </h4>
+                <h4 className="text-lg font-semibold mb-4 text-brand-blue">Job Details</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Field
                     label="Job Title *"
@@ -625,9 +682,7 @@ export default function Invoices() {
 
               {/* Pricing Section */}
               <div className="bg-white/5 rounded-xl p-4">
-                <h4 className="text-lg font-semibold mb-4 text-brand-blue flex items-center gap-2">
-                  <span>💰</span> Pricing Details
-                </h4>
+                <h4 className="text-lg font-semibold mb-4 text-brand-blue">Pricing Details</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Field label="Base Time">
                 <input className="input mt-1" value="2 hours" readOnly />
@@ -676,7 +731,7 @@ export default function Invoices() {
                 
                 {/* Detailed Pricing Breakdown */}
                 <div className="mt-4 p-4 bg-white/5 rounded-lg">
-                  <h5 className="text-sm font-semibold text-brand-blue mb-3">💰 Pricing Breakdown</h5>
+                  <h5 className="text-sm font-semibold text-brand-blue mb-3">Pricing Breakdown</h5>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-slate-300">Base Price (2 hours):</span>
@@ -720,9 +775,7 @@ export default function Invoices() {
 
               {/* Software Section */}
               <div className="bg-white/5 rounded-xl p-4">
-                <h4 className="text-lg font-semibold mb-4 text-brand-blue flex items-center gap-2">
-                  <span>💻</span> Software & Licenses
-                </h4>
+                <h4 className="text-lg font-semibold mb-4 text-brand-blue">Software and Licenses</h4>
                 
                 {/* Add New Software */}
                 <div className="mb-4 p-3 bg-white/5 rounded-lg">
@@ -855,16 +908,6 @@ export default function Invoices() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-/* Small UI helpers */
-function KPI({ label, value }) {
-  return (
-    <div className="card p-4">
-      <div className="text-slate-300 text-sm">{label}</div>
-      <div className="text-2xl font-extrabold">{value}</div>
     </div>
   );
 }

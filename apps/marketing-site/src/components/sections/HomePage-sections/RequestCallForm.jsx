@@ -1,13 +1,17 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Section from "../../layout/Section";
-import { H2 } from "../../ui/Heading";
+import { H2 } from "../../UI/Heading";
 import Input from "../../atoms/Input";
 import Textarea from "../../atoms/Textarea";
 import Button from "../../atoms/Button";
+import { portal } from "../../../lib/portal";
+import { getRecaptchaToken } from "../../../lib/recaptcha";
+import { Phone, Mail, Clock, ShieldCheck } from "lucide-react";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL || "support@callatech.com";
 
 export default function RequestCallForm() {
+  const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -19,6 +23,7 @@ export default function RequestCallForm() {
   const [isProcessingImages, setIsProcessingImages] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null); // 'success', 'error', null
+  const [submitError, setSubmitError] = useState('');
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -86,11 +91,16 @@ export default function RequestCallForm() {
     e.preventDefault();
     setIsSubmitting(true);
     setSubmitStatus(null);
+    setSubmitError('');
 
     try {
       // Validate form data
-      if (!formData.fullName.trim() || !formData.phone.trim() || !formData.description.trim()) {
+      if (!formData.fullName.trim() || !formData.phone.trim() || !formData.email.trim() || !formData.description.trim()) {
         throw new Error('Please fill in all required fields');
+      }
+
+      if (formData.email.trim() && !/^\S+@\S+\.\S+$/.test(formData.email.trim())) {
+        throw new Error('Please enter a valid email address.');
       }
 
       // Prepare submit data with proper image handling
@@ -102,24 +112,14 @@ export default function RequestCallForm() {
         images: images || [] // Ensure images is always an array
       };
 
-      console.log('Submitting form with data:', {
+      const recaptchaToken = await getRecaptchaToken('submit_job_request');
+      await portal.submitJobRequest({
         ...submitData,
-        images: submitData.images.length + ' images'
+        recaptchaToken,
       });
 
-      const response = await fetch(`${API_BASE_URL}/api/marketing/job-request`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(submitData),
-      });
-
-      let responseData = null;
-      try { responseData = await response.json(); } catch { responseData = null; }
-
-      if (response.ok) {
         setSubmitStatus('success');
+        setSubmitError('');
         setFormData({
           fullName: '',
           phone: '',
@@ -130,16 +130,11 @@ export default function RequestCallForm() {
         setImagePreviews([]);
         
         // Reset the file input
-        const fileInput = document.querySelector('input[type="file"]');
-        if (fileInput) fileInput.value = '';
-        
-        console.log('Form submitted successfully:', responseData);
-      } else {
-        throw new Error((responseData && responseData.error) || `Server error: ${response.status}`);
-      }
+        if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (error) {
       console.error('Error submitting form:', error);
       setSubmitStatus('error');
+      setSubmitError(error?.message || 'Sorry, there was an error submitting your request. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -162,7 +157,7 @@ export default function RequestCallForm() {
       <Section className="relative z-10">
         <div className="container-app grid md:grid-cols-2 gap-10 items-center">
           {/* Left: form card */}
-          <div className="rounded-2xl border bg-white p-6 md:p-8 shadow-sm hover:shadow-md transition">
+          <div className="rounded-[32px] border border-slate-200/60 bg-white p-6 md:p-8 transition">
             <H2 className="text-center md:text-left">Request a Call</H2>
             <p className="text-center md:text-left muted mt-1">
               We’ll get back to you within business hours — usually faster.
@@ -186,12 +181,13 @@ export default function RequestCallForm() {
                 required
               />
               <Input
-                label="Email (optional)"
+                label="Email"
                 name="email"
                 type="email"
                 placeholder="you@example.com"
                 value={formData.email}
                 onChange={handleInputChange}
+                required
               />
               <Textarea
                 label="How can we help?"
@@ -209,6 +205,7 @@ export default function RequestCallForm() {
                   Upload Images (Optional - up to 5 images, max 5MB each)
                 </label>
                 <input
+                  ref={fileInputRef}
                   type="file"
                   accept="image/*"
                   multiple
@@ -216,15 +213,15 @@ export default function RequestCallForm() {
                   disabled={isProcessingImages}
                   className="block w-full text-sm text-gray-500
                     file:mr-4 file:py-2 file:px-4
-                    file:rounded-full file:border-0
+                    file:rounded-xl file:border-0
                     file:text-sm file:font-semibold
                     file:bg-brand-navy file:text-white
-                    hover:file:bg-brand-royal
+                    hover:file:bg-brand-blue
                     cursor-pointer disabled:opacity-50"
                 />
                 
                 {isProcessingImages && (
-                  <p className="text-sm text-blue-600 mt-1">
+                  <p className="mt-1 text-sm text-brand-blue">
                     Processing images... Please wait.
                   </p>
                 )}
@@ -237,12 +234,12 @@ export default function RequestCallForm() {
                         <img
                           src={preview}
                           alt={`Preview ${index + 1}`}
-                          className="w-full h-24 object-cover rounded-lg border-2 border-gray-200"
+                          className="h-24 w-full rounded-2xl border-2 border-gray-200 object-cover"
                         />
                         <button
                           type="button"
                           onClick={() => removeImage(index)}
-                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-xl bg-red-500 text-white opacity-0 transition-opacity group-hover:opacity-100"
                         >
                           ×
                         </button>
@@ -253,21 +250,21 @@ export default function RequestCallForm() {
               </div>
 
               {submitStatus === 'success' && (
-                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+                <div className="rounded-2xl border border-brand-green/45 bg-brand-green/15 px-4 py-3 text-brand-navy" role="status" aria-live="polite">
                   Thank you! We'll get back to you within business hours.
                 </div>
               )}
 
               {submitStatus === 'error' && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                  Sorry, there was an error submitting your request. Please try again.
+                <div className="rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-red-700" role="alert">
+                  {submitError || 'Sorry, there was an error submitting your request. Please try again.'}
                 </div>
               )}
 
                       <div className="flex justify-center md:justify-start">
                         <Button 
                           type="submit" 
-                          className="min-w-40"
+                          className="min-h-11 min-w-40"
                           disabled={isSubmitting || isProcessingImages}
                         >
                           {isSubmitting ? 'Submitting...' : 
@@ -282,15 +279,40 @@ export default function RequestCallForm() {
             </form>
           </div>
 
-          {/* Right: visual */}
-          <div className="aspect-video flex items-center justify-center p-6 bg-transparent">
-  <img
-    src={"/src/assets/Smiling Businesswoman with Tablet _ Premium…-Photoroom.png"}
-    alt="Support team"
-    className="max-h-max w-auto object-contain drop-shadow-xl"
-    style={{ maxWidth: "100%" }}
-  />
-</div>
+          {/* Right: contact info cards */}
+          <div className="flex flex-col gap-4">
+            <div className="rounded-2xl border border-slate-200/60 bg-white p-6 shadow-sm">
+              <h3 className="text-xl font-semibold text-brand-navy mb-4">Prefer to call?</h3>
+              <p className="text-sm text-slate-600 mb-4">Speak with a technician now. Same-day availability across Adelaide.</p>
+              <Button href="tel:1300551350" variant="accent" className="w-full justify-center">
+                <Phone className="w-4 h-4 mr-2" />
+                Call 1300 551 350
+              </Button>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200/60 bg-white p-6 shadow-sm">
+              <h3 className="text-xl font-semibold text-brand-navy mb-4">Contact options</h3>
+              <div className="space-y-3">
+                <a href={`mailto:${SUPPORT_EMAIL}`} className="flex items-center gap-3 text-sm text-slate-700 hover:text-brand-blue transition">
+                  <Mail className="w-5 h-5 text-brand-blue" />
+                  Email us
+                </a>
+                <div className="flex items-center gap-3 text-sm text-slate-700">
+                  <Clock className="w-5 h-5 text-brand-blue" />
+                  <span>Mon–Sun, 8am–6pm</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-slate-700">
+                  <ShieldCheck className="w-5 h-5 text-brand-blue" />
+                  <span>No Fix, No Fee</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-brand-lightblue/10 p-4 text-sm text-slate-700">
+              <p className="font-medium text-brand-navy mb-1">Service coverage</p>
+              <p>Adelaide & nearby suburbs. Same-day bookings available.</p>
+            </div>
+          </div>
 
         </div>
       </Section>

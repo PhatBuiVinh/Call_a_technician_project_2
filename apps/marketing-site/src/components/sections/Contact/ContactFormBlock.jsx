@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CheckCircle2, ShieldCheck, Clock3, Phone, Mail, MapPin } from "lucide-react";
 import Section from "../../layout/Section";
 import Input from "../../atoms/Input";
 import Textarea from "../../atoms/Textarea";
 import Button from "../../atoms/Button";
 import { portal } from "../../../lib/portal"; // NEW: API helper import
+import { getRecaptchaToken } from "../../../lib/recaptcha";
+
+const SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL || "support@callatech.com";
 
 // Minimal SA suburbs list (add more anytime)
 const SA_SUBURBS = [
@@ -18,8 +22,15 @@ const MAX_MSG = 800;
 const MAX_FILES = 3;
 const MAX_MB = 5;
 const DRAFT_KEY = "contact_form_draft_v1";
+const DRAFT_FILES_KEY = "contact_form_draft_files_v1";
 
 export default function ContactFormBlock() {
+  const STEPS = [
+    { id: 1, title: "Contact" },
+    { id: 2, title: "Issue" },
+    { id: 3, title: "Review" },
+  ];
+
   // form state
   const [values, setValues] = useState({
     name: "",
@@ -41,6 +52,10 @@ export default function ContactFormBlock() {
   const [success, setSuccess] = useState(false); // you can toggle a modal using this
   const [serverError, setServerError] = useState("");
   const [jobRef, setJobRef] = useState(""); // NEW: show job reference if backend returns it
+  const [activeStep, setActiveStep] = useState(1);
+
+  // Anti-spam: track form load time (3 second minimum)
+  const formLoadTime = useRef(Date.now());
 
   // validators
   const emailOk = (s) => /^\S+@\S+\.\S+$/.test(s);
@@ -50,7 +65,7 @@ export default function ContactFormBlock() {
     const e = {};
     if (!values.name || values.name.trim().length < 2) e.name = "Please enter your full name.";
     if (!values.phone || !phoneOk(values.phone)) e.phone = "Please enter a valid AU phone number.";
-    if (values.email && !emailOk(values.email)) e.email = "Email looks invalid.";
+    if (!values.email || !emailOk(values.email)) e.email = "A valid email is required.";
     if (!values.message || values.message.trim().length < 10) e.message = "Tell us a bit more (10+ chars).";
     if (values.preferredAt) {
       const dt = new Date(values.preferredAt);
@@ -72,23 +87,105 @@ export default function ContactFormBlock() {
     message: useRef(null),
     preferredAt: useRef(null),
   };
+  const fileZoneRef = useRef(null);
 
   // -------- Enhancements --------
-  // A) Draft autosave/restore
+  // A) Draft autosave/restore (includes text values and files)
   useEffect(() => {
     try {
+      // Restore text values
       const raw = localStorage.getItem(DRAFT_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
         setValues((v) => ({ ...v, ...parsed, website: "" })); // never restore honeypot
       }
-    } catch {}
+
+      // Restore files from base64
+      const filesRaw = localStorage.getItem(DRAFT_FILES_KEY);
+      if (filesRaw) {
+        const savedFiles = JSON.parse(filesRaw);
+        if (Array.isArray(savedFiles) && savedFiles.length > 0) {
+          // Convert base64 back to file-like objects with blob URLs
+          const restoredFiles = savedFiles.map((savedFile) => ({
+            file: null, // File object can't be restored, but we have base64 for submission
+            url: savedFile.base64, // Use base64 data URL directly
+            base64: savedFile.base64, // Keep base64 for submission
+            name: savedFile.name,
+            type: savedFile.type,
+            size: savedFile.size,
+            error: "",
+            isRestored: true, // Flag to indicate this was restored from draft
+          }));
+          setFiles(restoredFiles);
+        }
+      }
+    } catch (err) {
+      console.error("Error restoring draft:", err);
+    }
   }, []);
+
   useEffect(() => {
-    // do not save honeypot or files
-    const { website, ...safe } = values;
+    // Save text values (do not save honeypot)
+    const safe = { ...values };
+    delete safe.website;
     localStorage.setItem(DRAFT_KEY, JSON.stringify(safe));
   }, [values]);
+
+  // Save files as base64 when they change
+  useEffect(() => {
+    const saveFiles = async () => {
+      if (files.length === 0) {
+        localStorage.removeItem(DRAFT_FILES_KEY);
+        return;
+      }
+
+      try {
+        const filesToSave = [];
+        for (const fileObj of files) {
+          // Skip files with errors
+          if (fileObj.error) continue;
+
+          // If already restored from draft (has base64), keep it
+          if (fileObj.base64) {
+            filesToSave.push({
+              base64: fileObj.base64,
+              name: fileObj.name || "image.jpg",
+              type: fileObj.type || "image/jpeg",
+              size: fileObj.size || 0,
+            });
+          } else if (fileObj.file) {
+            // Convert File to base64
+            try {
+              const base64 = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(reader.error);
+                reader.readAsDataURL(fileObj.file);
+              });
+              filesToSave.push({
+                base64,
+                name: fileObj.file.name,
+                type: fileObj.file.type,
+                size: fileObj.file.size,
+              });
+            } catch (err) {
+              console.error("Error converting file to base64:", err);
+            }
+          }
+        }
+
+        if (filesToSave.length > 0) {
+          localStorage.setItem(DRAFT_FILES_KEY, JSON.stringify(filesToSave));
+        } else {
+          localStorage.removeItem(DRAFT_FILES_KEY);
+        }
+      } catch (err) {
+        console.error("Error saving draft files:", err);
+      }
+    };
+
+    saveFiles();
+  }, [files]);
 
   // B) Phone auto-format (+61 or 04xx xxx xxx)
   function formatPhoneAU(raw) {
@@ -151,24 +248,32 @@ export default function ContactFormBlock() {
   // Convert files to base64 for submission
   const convertFilesToBase64 = async (fileList) => {
     const base64Images = [];
-    
+
     for (const fileObj of fileList) {
       if (fileObj.error) continue; // Skip files with errors
-      
-      try {
-        const base64 = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = () => reject(reader.error);
-          reader.readAsDataURL(fileObj.file);
-        });
-        
-        base64Images.push(base64);
-      } catch (error) {
-        console.error('Error converting image to base64:', error);
+
+      // If file was restored from draft, it already has base64
+      if (fileObj.base64) {
+        base64Images.push(fileObj.base64);
+        continue;
+      }
+
+      // Otherwise convert File to base64
+      if (fileObj.file) {
+        try {
+          const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(fileObj.file);
+          });
+          base64Images.push(base64);
+        } catch (error) {
+          console.error('Error converting image to base64:', error);
+        }
       }
     }
-    
+
     return base64Images;
   }
   function removeFile(idx) {
@@ -180,16 +285,86 @@ export default function ContactFormBlock() {
     });
   }
 
+  const STEP_FIELDS = {
+    1: ["name", "phone", "email"],
+    2: ["preferredAt", "message"],
+    3: ["files"],
+  };
+
+  function markStepTouched(step) {
+    const fields = STEP_FIELDS[step] || [];
+    const patch = {};
+    for (const field of fields) {
+      patch[field] = true;
+    }
+    if (Object.keys(patch).length) {
+      setTouched((t) => ({ ...t, ...patch }));
+    }
+  }
+
+  function stepHasErrors(step) {
+    const fields = STEP_FIELDS[step] || [];
+    return fields.some((field) => {
+      if (field === "files") return Boolean(errors.files);
+      return Boolean(errors[field]);
+    });
+  }
+
+  function onNextStep() {
+    markStepTouched(activeStep);
+    if (stepHasErrors(activeStep)) {
+      focusFirstError(STEP_FIELDS[activeStep]);
+      return;
+    }
+    setActiveStep((s) => Math.min(3, s + 1));
+  }
+
+  function onPrevStep() {
+    setActiveStep((s) => Math.max(1, s - 1));
+  }
+
   // SUBMIT: replaced to call Portal API (no more fake demo delay)
   async function onSubmit(e) {
     e.preventDefault();
+
+    if (activeStep < 3) {
+      onNextStep();
+      return;
+    }
+
+    // Reveal validation errors and move focus to the first problem field.
+    setTouched((t) => ({
+      ...t,
+      name: true,
+      phone: true,
+      email: true,
+      message: true,
+      preferredAt: true,
+    }));
+
+    if (hasErrors) {
+      focusFirstError();
+      return;
+    }
+
     setSubmitting(true);
     setServerError("");
 
+    // Anti-spam: 3 second minimum form fill time
+    const timeSinceLoad = Date.now() - formLoadTime.current;
+    if (timeSinceLoad < 3000) {
+      setSubmitting(false);
+      setServerError("Please take a moment to fill out the form properly.");
+      return;
+    }
+
+    // Anti-spam: reCAPTCHA v3 verification
+    const recaptchaToken = await getRecaptchaToken('submit_job_request');
+
     try {
       // Basic validation
-      if (!values.name?.trim() || !values.phone?.trim()) {
-        throw new Error("Name and phone are required.");
+      if (!values.name?.trim() || !values.phone?.trim() || !values.email?.trim()) {
+        throw new Error("Name, phone, and email are required.");
       }
 
       // Convert uploaded images to base64
@@ -211,6 +386,7 @@ export default function ContactFormBlock() {
         email: (values.email || '').trim(),
         description: descriptionParts.join('\n'),
         images: base64Images, // Now includes converted base64 images
+        recaptchaToken, // Anti-spam: reCAPTCHA v3 token
       };
 
       const res = await portal.submitJobRequest(payload);
@@ -220,11 +396,18 @@ export default function ContactFormBlock() {
       if (res?.id) setJobRef(`Reference: ${res.id}`);
 
       // Clear form, previews, and draft (same behavior as before)
-      files.forEach((f) => f?.url && URL.revokeObjectURL(f.url));
+      files.forEach((f) => {
+        // Only revoke blob URLs, not base64 data URLs
+        if (f?.url && f.url.startsWith('blob:')) {
+          URL.revokeObjectURL(f.url);
+        }
+      });
       setFiles([]);
       setValues({ name: "", phone: "", email: "", suburb: "", time: "", preferredAt: "", message: "", website: "" });
       setTouched({});
+      setActiveStep(1);
       localStorage.removeItem(DRAFT_KEY);
+      localStorage.removeItem(DRAFT_FILES_KEY);
 
     } catch (err) {
       setSubmitting(false);
@@ -232,30 +415,73 @@ export default function ContactFormBlock() {
     }
   }
 
+  function focusFirstError(preferredFields = null) {
+    const order = [
+      ["name", refs.name],
+      ["phone", refs.phone],
+      ["email", refs.email],
+      ["preferredAt", refs.preferredAt],
+      ["message", refs.message],
+    ];
+
+    const filteredOrder = Array.isArray(preferredFields)
+      ? order.filter(([key]) => preferredFields.includes(key))
+      : order;
+
+    for (const [key, ref] of filteredOrder) {
+      if (!errors[key]) continue;
+      ref.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const target = ref.current?.querySelector("input, textarea");
+      target?.focus();
+      return;
+    }
+
+    if (errors.files && (!Array.isArray(preferredFields) || preferredFields.includes("files"))) {
+      fileZoneRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const fileInput = fileZoneRef.current?.querySelector("input[type='file']");
+      fileInput?.focus();
+    }
+  }
+
   return (
     <Section>
       <div className="container-app grid lg:grid-cols-2 gap-8 items-start">
         {/* Form card */}
-        <div className="rounded-2xl border bg-white p-6 md:p-8">
-          <h2 className="text-xl font-semibold text-brand-navy">Tell us a bit about the issue</h2>
-          <p className="text-sm text-slate-600 mt-1">
+        <div className="card-spotlight p-6 md:p-8">
+          <h2 className="h2">Tell us a bit about the issue</h2>
+          <p className="text-sm text-slate-600 mt-2">
             We’ll get back to you within business hours (usually sooner).
           </p>
 
+          <div className="mt-4 grid sm:grid-cols-3 gap-2">
+            <div className="inline-flex items-center gap-2 rounded-2xl border border-brand-blue/20 bg-white/80 px-3 py-2 text-xs text-slate-700">
+              <Clock3 className="h-4 w-4 text-brand-blue" />
+              Quick response
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-2xl border border-brand-blue/20 bg-white/80 px-3 py-2 text-xs text-slate-700">
+              <ShieldCheck className="h-4 w-4 text-brand-blue" />
+              Private and secure
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-2xl border border-brand-blue/20 bg-white/80 px-3 py-2 text-xs text-slate-700">
+              <CheckCircle2 className="h-4 w-4 text-brand-blue" />
+              No Fix, No Fee
+            </div>
+          </div>
+
           {/* Success banner (now real, not demo) */}
           {success && (
-            <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            <div className="mt-4 rounded-2xl border border-brand-green/45 bg-brand-green/15 px-4 py-3 text-sm text-brand-navy" role="status" aria-live="polite">
               Thanks! Your request was submitted. We’ll contact you shortly.
-              {jobRef ? <div className="mt-1 text-emerald-700">{jobRef}</div> : null}
+              {jobRef ? <div className="mt-1 text-brand-navy">{jobRef}</div> : null}
             </div>
           )}
           {serverError && (
-            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
               {serverError}
             </div>
           )}
 
-          <form onSubmit={onSubmit} className="mt-6 grid gap-4" noValidate>
+          <form onSubmit={onSubmit} className="mt-6 grid gap-5" noValidate>
             {/* Honeypot */}
             <div className="hidden">
               <label>
@@ -264,203 +490,288 @@ export default function ContactFormBlock() {
               </label>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div ref={refs.name}>
-                <Input
-                  label="Full name"
-                  placeholder="Your name"
-                  required
-                  value={values.name}
-                  onChange={onChange("name")}
-                  aria-invalid={!!(touched.name && errors.name)}
-                  aria-describedby={touched.name && errors.name ? "err-name" : undefined}
-                  title="Your full name helps us address you correctly"
-                />
-                {touched.name && errors.name && <p id="err-name" className="mt-1 text-xs text-red-600">{errors.name}</p>}
+            <div className="rounded-2xl border border-brand-blue/20 bg-white/75 p-3">
+              <div className="mb-2 flex items-center justify-between text-xs text-slate-600">
+                <span>Step {activeStep} of 3</span>
+                <span>{STEPS.find((s) => s.id === activeStep)?.title}</span>
               </div>
-
-              <div ref={refs.phone}>
-                <Input
-                  label="Phone"
-                  placeholder="e.g., 04xx xxx xxx"
-                  required
-                  value={values.phone}
-                  onChange={onChange("phone")}
-                  aria-invalid={!!(touched.phone && errors.phone)}
-                  aria-describedby={touched.phone && errors.phone ? "err-phone" : undefined}
-                  title="Mobile preferred for same-day scheduling"
-                />
-                {touched.phone && errors.phone && <p id="err-phone" className="mt-1 text-xs text-red-600">{errors.phone}</p>}
-              </div>
-            </div>
-
-            <div ref={refs.email}>
-              <Input
-                label="Email (optional)"
-                type="email"
-                placeholder="you@example.com"
-                value={values.email}
-                onChange={onChange("email")}
-                aria-invalid={!!(touched.email && errors.email)}
-                aria-describedby={touched.email && errors.email ? "err-email" : undefined}
-              />
-              {touched.email && errors.email && <p id="err-email" className="mt-1 text-xs text-red-600">{errors.email}</p>}
-            </div>
-
-            <div className="grid sm:grid-cols-2 gap-4">
-              {/* Suburb with datalist */}
-              <div>
-                <label className="block text-sm text-slate-700">
-                  Suburb
-                  <input
-                    list="sa-suburbs"
-                    className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-lightblue/60"
-                    placeholder="e.g., Glenelg"
-                    value={values.suburb}
-                    onChange={onChange("suburb")}
-                  />
-                  <datalist id="sa-suburbs">
-                    {SA_SUBURBS.map((s) => <option key={s} value={s} />)}
-                  </datalist>
-                </label>
-              </div>
-
-              <Input
-                label="Preferred time (notes)"
-                placeholder="e.g., today after 3pm"
-                value={values.time}
-                onChange={onChange("time")}
-              />
-            </div>
-
-            {/* Native date/time — optional */}
-            <div ref={refs.preferredAt}>
-              <label className="block text-sm text-slate-700">
-                Preferred date & time (optional)
-                <input
-                  type="datetime-local"
-                  className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-lightblue/60"
-                  value={values.preferredAt}
-                  onChange={onChange("preferredAt")}
-                  min={getLocalNowForInput()}
-                />
-              </label>
-              {touched.preferredAt && errors.preferredAt && (
-                <p className="mt-1 text-xs text-red-600">{errors.preferredAt}</p>
-              )}
-              <p className="mt-1 text-xs text-slate-500">We’ll try our best to book this time (subject to availability).</p>
-            </div>
-
-            {/* Message + counter */}
-            <div ref={refs.message}>
-              <Textarea
-                label="How can we help?"
-                rows={5}
-                placeholder="Describe the problem…"
-                value={values.message}
-                onChange={onChange("message")}
-                aria-invalid={!!(touched.message && errors.message)}
-                aria-describedby={touched.message && errors.message ? "err-message" : undefined}
-              />
-              <div className="mt-1 flex items-center justify-between">
-                {touched.message && errors.message
-                  ? <p id="err-message" className="text-xs text-red-600">{errors.message}</p>
-                  : <span className="text-xs text-slate-500">{values.message.length}/{MAX_MSG}</span>}
-              </div>
-            </div>
-
-            {/* Drop zone + file input */}
-            <div
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={onDrop}
-              className={`rounded-lg border p-4 ${dragOver ? "border-brand-blue bg-brand-lightblue/10" : "border-slate-200 bg-white"}`}
-              title="Drag and drop screenshots here"
-            >
-              <label className="block text-sm text-slate-700">
-                Add screenshots/photos (optional)
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={onSelectFiles}
-                  className="mt-1 block w-full text-sm file:mr-3 file:rounded-md file:border file:bg-white file:px-3 file:py-1.5 file:text-sm hover:file:bg-slate-50"
-                />
-              </label>
-              <p className="mt-1 text-xs text-slate-500">Up to {MAX_FILES} images, max {MAX_MB}MB each. You can drag and drop files.</p>
-
-              {files.length > 0 && (
-                <div className="mt-3 grid grid-cols-3 gap-3">
-                  {files.map((f, i) => (
-                    <div key={i} className="relative rounded-lg border overflow-hidden bg-slate-50">
-                      {f.url
-                        ? <img src={f.url} alt={`upload ${i + 1}`} className="h-28 w-full object-cover" />
-                        : <div className="h-28 w-full grid place-items-center text-xs text-slate-500">Preview</div>}
-                      <button
-                        type="button"
-                        onClick={() => removeFile(i)}
-                        className="absolute top-1 right-1 rounded bg-white/90 px-2 py-0.5 text-[11px] border hover:bg-white"
-                      >
-                        Remove
-                      </button>
-                      {f.error && <div className="p-2 text-[11px] text-red-600">{f.error}</div>}
+              <div className="grid grid-cols-3 gap-2">
+                {STEPS.map((step) => {
+                  const isActive = activeStep === step.id;
+                  const isDone = activeStep > step.id;
+                  return (
+                    <div
+                      key={step.id}
+                      className={`rounded-md px-2 py-1.5 text-center text-xs font-medium motion-standard ${
+                        isActive
+                          ? "bg-brand-blue text-white"
+                          : isDone
+                            ? "bg-brand-lightblue/25 text-brand-blue"
+                            : "bg-slate-100 text-slate-500"
+                      }`}
+                    >
+                      {step.title}
                     </div>
-                  ))}
-                </div>
-              )}
-              {errors.files && <p className="mt-2 text-xs text-red-600">{errors.files}</p>}
+                  );
+                })}
+              </div>
             </div>
 
-            <div className="flex items-center justify-between gap-3">
-              <label className="text-xs text-slate-500">
-                We’ll never share your details. By submitting, you agree to be contacted about your request.
-              </label>
+            {activeStep === 1 && (
+              <>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div ref={refs.name}>
+                    <Input
+                      label="Full name"
+                      placeholder="Your name"
+                      autoComplete="name"
+                      required
+                      value={values.name}
+                      onChange={onChange("name")}
+                      aria-invalid={!!(touched.name && errors.name)}
+                      aria-describedby={touched.name && errors.name ? "err-name" : undefined}
+                      title="Your full name helps us address you correctly"
+                    />
+                    {touched.name && errors.name && <p id="err-name" className="mt-1 text-xs text-red-600">{errors.name}</p>}
+                  </div>
 
-              <Button
-                type="submit"
-                className="min-w-40 inline-flex items-center justify-center gap-2"
-                disabled={submitting}
-              >
-                {submitting && (
-                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" aria-hidden="true">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                  </svg>
+                  <div ref={refs.phone}>
+                    <Input
+                      label="Phone"
+                      placeholder="e.g., 04xx xxx xxx"
+                      autoComplete="tel"
+                      inputMode="tel"
+                      required
+                      value={values.phone}
+                      onChange={onChange("phone")}
+                      aria-invalid={!!(touched.phone && errors.phone)}
+                      aria-describedby={touched.phone && errors.phone ? "err-phone" : undefined}
+                      title="Mobile preferred for same-day scheduling"
+                    />
+                    {touched.phone && errors.phone && <p id="err-phone" className="mt-1 text-xs text-red-600">{errors.phone}</p>}
+                  </div>
+                </div>
+
+                <div ref={refs.email}>
+                  <Input
+                    label="Email (required)"
+                    type="email"
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                    value={values.email}
+                    onChange={onChange("email")}
+                    aria-invalid={!!(touched.email && errors.email)}
+                    aria-describedby={touched.email && errors.email ? "err-email" : undefined}
+                  />
+                  {touched.email && errors.email && <p id="err-email" className="mt-1 text-xs text-red-600">{errors.email}</p>}
+                </div>
+              </>
+            )}
+
+            {activeStep === 2 && (
+              <>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm text-slate-700">
+                      Suburb
+                      <input
+                        list="sa-suburbs"
+                        className="mt-1 w-full rounded-2xl border border-slate-200/60 bg-white px-4 py-3 text-sm motion-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:border-brand-blue hover:border-brand-blue/55"
+                        placeholder="e.g., Glenelg"
+                        value={values.suburb}
+                        onChange={onChange("suburb")}
+                      />
+                      <datalist id="sa-suburbs">
+                        {SA_SUBURBS.map((s) => <option key={s} value={s} />)}
+                      </datalist>
+                    </label>
+                  </div>
+
+                  <Input
+                    label="Preferred time (notes)"
+                    placeholder="e.g., today after 3pm"
+                    value={values.time}
+                    onChange={onChange("time")}
+                  />
+                </div>
+
+                <div ref={refs.preferredAt}>
+                  <label className="block text-sm text-slate-700">
+                    Preferred date & time (optional)
+                    <input
+                      type="datetime-local"
+                      className="mt-1 w-full rounded-2xl border border-slate-200/60 bg-white px-4 py-3 text-sm motion-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:border-brand-blue hover:border-brand-blue/55"
+                      value={values.preferredAt}
+                      onChange={onChange("preferredAt")}
+                      min={getLocalNowForInput()}
+                    />
+                  </label>
+                  {touched.preferredAt && errors.preferredAt && (
+                    <p className="mt-1 text-xs text-red-600">{errors.preferredAt}</p>
+                  )}
+                  <p className="mt-1 text-xs text-slate-500">We’ll try our best to book this time (subject to availability).</p>
+                </div>
+
+                <div ref={refs.message}>
+                  <Textarea
+                    label="How can we help?"
+                    rows={5}
+                    placeholder="Describe the problem…"
+                    value={values.message}
+                    onChange={onChange("message")}
+                    aria-invalid={!!(touched.message && errors.message)}
+                    aria-describedby={touched.message && errors.message ? "err-message" : undefined}
+                  />
+                  <div className="mt-1 flex items-center justify-between">
+                    {touched.message && errors.message
+                      ? <p id="err-message" className="text-xs text-red-600">{errors.message}</p>
+                      : <span className="text-xs text-slate-500">{values.message.length}/{MAX_MSG}</span>}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {activeStep === 3 && (
+              <>
+                <div className="rounded-2xl border border-brand-blue/25 bg-brand-lightblue/10 p-3 text-sm text-slate-700">
+                  Quick review: we will contact <span className="font-medium">{values.name || "you"}</span> on <span className="font-medium">{values.phone || "your phone"}</span>.
+                </div>
+
+                <div
+                  ref={fileZoneRef}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={onDrop}
+                  className={`rounded-2xl border p-4 motion-standard ${dragOver ? "border-brand-blue bg-brand-lightblue/10" : "border-slate-200 bg-white"}`}
+                  title="Drag and drop screenshots here"
+                >
+                  <label className="block text-sm text-slate-700">
+                    Add screenshots/photos (optional)
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={onSelectFiles}
+                      className="mt-1 block w-full text-sm file:mr-3 file:rounded-md file:border file:bg-white file:px-3 file:py-1.5 file:text-sm hover:file:bg-slate-50"
+                    />
+                  </label>
+                  <p className="mt-1 text-xs text-slate-500">Up to {MAX_FILES} images, max {MAX_MB}MB each. You can drag and drop files.</p>
+
+                  {files.length > 0 && (
+                    <div className="mt-3 grid grid-cols-3 gap-3">
+                      {files.map((f, i) => (
+                        <div key={i} className="relative overflow-hidden rounded-2xl border bg-slate-50">
+                          {f.url
+                            ? <img src={f.url} alt={`upload ${i + 1}`} className="h-28 w-full object-cover" />
+                            : <div className="h-28 w-full grid place-items-center text-xs text-slate-500">Preview</div>}
+                          <button
+                            type="button"
+                            onClick={() => removeFile(i)}
+                            className="absolute top-1 right-1 rounded-xl border bg-white/90 px-2 py-1 text-[11px] hover:bg-white"
+                          >
+                            Remove
+                          </button>
+                          {f.error && <div className="p-2 text-[11px] text-red-600">{f.error}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {errors.files && <p className="mt-2 text-xs text-red-600">{errors.files}</p>}
+                </div>
+              </>
+            )}
+
+            <div className="flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
+              <div className="max-w-[70%] text-xs text-slate-500">
+                {activeStep < 3
+                  ? "Takes under 60 seconds. You can review before final submit."
+                  : "We’ll never share your details. By submitting, you agree to be contacted about your request."}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {activeStep > 1 && (
+                  <Button type="button" variant="secondary" onClick={onPrevStep}>Back</Button>
                 )}
-                {submitting ? "Sending…" : "Request a call"}
-              </Button>
+
+                {activeStep < 3 ? (
+                  <Button type="button" onClick={onNextStep}>Continue</Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    className="min-w-40 inline-flex items-center justify-center gap-2"
+                    disabled={submitting}
+                  >
+                    {submitting && (
+                      <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                      </svg>
+                    )}
+                    {submitting ? "Sending…" : "Request a call"}
+                  </Button>
+                )}
+              </div>
             </div>
           </form>
         </div>
 
-        {/* Right column remains the same */}
-        <div className="rounded-2xl overflow-hidden border bg-white">
-          <div className="aspect-[4/3] md:aspect-[5/4] relative">
-            <img
-              src="/src/assets/tech-visit.jpg"
-              alt="Call-a-Technician on-site visit"
-              className="absolute inset-0 w-full h-full object-cover"
-              loading="lazy"
-            />
+        {/* Right column: contact info cards */}
+        <div className="flex flex-col gap-4">
+          <div className="card p-6">
+            <h3 className="text-xl md:text-2xl font-semibold text-brand-navy">Prefer to call?</h3>
+            <p className="text-sm text-slate-600 mt-2">Speak with a technician now. Same-day availability across Adelaide.</p>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Button href="tel:1300551350" variant="accent" className="flex items-center gap-2">
+                <Phone className="w-4 h-4" />
+                Call 1300 551 350
+              </Button>
+              <Button href={`mailto:${SUPPORT_EMAIL}`} variant="secondary" className="flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                Email us
+              </Button>
+            </div>
           </div>
 
-          <div className="p-6 md:p-8">
-            <h3 className="font-semibold text-brand-navy">Prefer to call?</h3>
-            <p className="text-sm text-slate-600 mt-1">Speak with a technician now. Same-day availability across Adelaide.</p>
-            <div className="mt-3 flex flex-wrap gap-3">
-              <a href="tel:1300551350" className="rounded-md bg-brand-blue text-white px-4 py-2 text-sm font-semibold hover:bg-brand-navy">Call 1300 551 350</a>
-              <a href="mailto:hello@call-a-technician.example" className="rounded-md border px-4 py-2 text-sm font-semibold hover:bg-slate-50">Email us</a>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-              <div className="rounded-lg bg-brand-lightblue/10 p-3">
-                <div className="text-xs text-slate-500">Hours</div>
-                <div className="font-medium text-brand-navy">Mon–Sun, 8am–6pm</div>
+          <div className="card p-6">
+            <h3 className="text-lg font-semibold text-brand-navy mb-4">Contact information</h3>
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <Phone className="w-5 h-5 text-brand-blue mt-0.5" />
+                <div>
+                  <div className="text-sm font-medium text-brand-navy">Phone</div>
+                  <div className="text-sm text-slate-600">1300 551 350</div>
+                </div>
               </div>
-              <div className="rounded-lg bg-brand-lightblue/10 p-3">
-                <div className="text-xs text-slate-500">Coverage</div>
-                <div className="font-medium text-brand-navy">Adelaide & nearby suburbs</div>
+              <div className="flex items-start gap-3">
+                <Mail className="w-5 h-5 text-brand-blue mt-0.5" />
+                <div>
+                  <div className="text-sm font-medium text-brand-navy">Email</div>
+                  <div className="text-sm text-slate-600">{SUPPORT_EMAIL}</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <MapPin className="w-5 h-5 text-brand-blue mt-0.5" />
+                <div>
+                  <div className="text-sm font-medium text-brand-navy">Service area</div>
+                  <div className="text-sm text-slate-600">Adelaide & nearby suburbs</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Clock3 className="w-5 h-5 text-brand-blue mt-0.5" />
+                <div>
+                  <div className="text-sm font-medium text-brand-navy">Hours</div>
+                  <div className="text-sm text-slate-600">Mon–Sun, 8am–6pm</div>
+                </div>
               </div>
             </div>
+          </div>
+
+          <div className="rounded-2xl bg-brand-lightblue/10 p-4 text-sm text-slate-700">
+            <div className="flex items-center gap-2 mb-1">
+              <ShieldCheck className="w-4 h-4 text-brand-blue" />
+              <span className="font-medium text-brand-navy">No Fix, No Fee</span>
+            </div>
+            <p>If we can't resolve your issue, you don't pay. Clear pricing before work begins.</p>
           </div>
         </div>
       </div>

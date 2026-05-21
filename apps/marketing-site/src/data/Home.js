@@ -1,12 +1,46 @@
 export const SERVICES = [
-  { icon: "💻", title: "Virus & Malware Removal", blurb: "Clean infections and secure your PC." },
-  { icon: "🔐", title: "Secure Hacked Devices", blurb: "Lock down compromised accounts & devices." },
-  { icon: "⚡", title: "Speed Up Slow Computers", blurb: "Tune‑up & performance fixes." },
-  { icon: "📶", title: "Network & Wi‑Fi", blurb: "Setup, optimise and troubleshoot Wi‑Fi." },
-  { icon: "🪫", title: "Won’t Boot / Startup", blurb: "Recover boot issues without losing data." },
-  { icon: "🛠️", title: "Hardware Repairs", blurb: "Diagnose & replace faulty parts." },
-  { icon: "🆕", title: "New PC Setup", blurb: "Transfer data & set up apps/printers." },
-  { icon: "☁️", title: "Backup & Data Recovery", blurb: "Protect files and recover when possible." },
+  {
+    icon: "🛡️",
+    title: "Virus & Malware Removal",
+    blurb: "Full scan, clean and secure — your PC protected and running safely again.",
+    price: "$165",
+    href: "/services",
+  },
+  {
+    icon: "⚡",
+    title: "Speed Up Slow Computers",
+    blurb: "Startup tune-up, app cleanup and thermal checks for Windows & macOS.",
+    price: "$165",
+    href: "/services",
+  },
+  {
+    icon: "📶",
+    title: "Wi-Fi & Network Setup",
+    blurb: "Fix dropouts, extend coverage, install mesh systems and secure your network.",
+    price: "$165",
+    href: "/services",
+  },
+  {
+    icon: "💾",
+    title: "Data Backup & Recovery",
+    blurb: "Protect your files with a backup plan, and recover lost data when possible.",
+    price: "$165",
+    href: "/services",
+  },
+  {
+    icon: "🖥️",
+    title: "New PC & Device Setup",
+    blurb: "Unbox, migrate data, configure apps, printers and email — done right.",
+    price: "$165",
+    href: "/services",
+  },
+  {
+    icon: "🔧",
+    title: "Hardware Repairs",
+    blurb: "Diagnose faulty components and replace parts — screens, drives, RAM and more.",
+    price: "$165",
+    href: "/services",
+  },
 ];
 
 export const WHY = [
@@ -27,29 +61,6 @@ export const WHY = [
   },
 ];
 
-
-export const SUBURBS_SA = [
-  "Adelaide CBD",
-  "North Adelaide",
-  "Glenelg",
-  "Norwood",
-  "Prospect",
-  "Unley",
-  "Henley Beach",
-  "Mawson Lakes",
-  "Golden Grove",
-  "Semaphore",
-  "Port Adelaide",
-  "Tea Tree Gully",
-  "Burnside",
-  "West Lakes",
-  "Modbury",
-  "Brighton",
-  "Marion",
-  "Elizabeth",
-  "Salisbury",
-  "Woodville",
-];
 
 export const SA_MARKERS = [
   { name: "Adelaide CBD", lat: -34.9285, lng: 138.6007 },

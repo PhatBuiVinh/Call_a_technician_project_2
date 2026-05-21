@@ -7,7 +7,6 @@
 // import Location from "./pages/Location";
 // import Blog from "./pages/Blog";
 // import Contact from "./pages/contact";
-// import Login from "./pages/Login";
 
 // export default function App() {
 //   return (
@@ -21,7 +20,6 @@
 //           <Route path="/location" element={<Location />} />
 //           <Route path="/blog" element={<Blog />} />
 //           <Route path="/contact" element={<Contact />} />
-//           <Route path="/login" element={<Login />} />
 //           <Route path="*" element={<Home />} />
 //         </Routes>
 //       </div>
@@ -30,43 +28,109 @@
 //   );
 // }
 
-import { Routes, Route } from "react-router-dom";
+import { Suspense, lazy } from "react";
+import { Routes, Route, useLocation } from "react-router-dom";
+import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import NavBar from "./components/layout/NavBar";
 import UrgentCallout from "./components/layout/UrgentCallout";
 import Footer from "./components/layout/Footer";
-import LiveChatButton from "./components/UI/LiveChatButton";
 import BackToTop from "./components/UI/BackToTop";
 import ScrollToTop from "./components/UI/ScrollToTop";
-import Home from "./pages/Home";
-import About from "./pages/About";
-import Services from "./pages/Services";
-import Location from "./pages/Location";
-import Blog from "./pages/Blog";
-import BlogPost from "./pages/BlogPost";
-import Contact from "./pages/contact";   // ← use consistent casing
-import Login from "./pages/Login";
+import ScrollProgressBar from "./components/UI/ScrollProgressBar";
+import MobileStickyCTA from "./components/UI/MobileStickyCTA";
+import AccessibilitySettings from "./components/UI/AccessibilitySettings";
+import SeoManager from "./components/seo/SeoManager";
+import { useMotionPreference } from "./contexts/MotionPreferenceContext";
+
+const Home = lazy(() => import("./pages/Home"));
+const About = lazy(() => import("./pages/About"));
+const Services = lazy(() => import("./pages/Services"));
+const Location = lazy(() => import("./pages/Location"));
+const Blog = lazy(() => import("./pages/Blog"));
+const BlogPost = lazy(() => import("./pages/BlogPost"));
+const Contact = lazy(() => import("./pages/contact"));
+const Consulting = lazy(() => import("./pages/Consulting"));
+const ServiceAreas = lazy(() => import("./pages/ServiceAreas"));
+const SuburbPage = lazy(() => import("./pages/SuburbPage"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsConditions = lazy(() => import("./pages/TermsConditions"));
+const Booking = lazy(() => import("./pages/Booking"));
+const TRANSITION_PATHS = new Set(["/", "/about", "/services", "/consulting", "/service-areas"]);
+
+function PageFallback() {
+  return (
+    <div className="container-app py-12 text-slate-600 text-sm">
+      Loading page...
+    </div>
+  );
+}
 
 export default function App() {
+  const location = useLocation();
+  const { reduceMotion, motionIntensity } = useMotionPreference();
+  const isConsulting = location.pathname === "/consulting";
+  const subtle = motionIntensity === "subtle";
+  const shouldAnimateRoute = !reduceMotion && TRANSITION_PATHS.has(location.pathname);
+  const routeKey = shouldAnimateRoute ? location.pathname : "static-route";
+  const routeInitial = subtle
+    ? { opacity: 0, y: 7, filter: "blur(2px)" }
+    : { opacity: 0, y: 14, filter: "blur(6px)" };
+  const routeExit = subtle
+    ? { opacity: 0, y: -6, filter: "blur(1px)" }
+    : { opacity: 0, y: -10, filter: "blur(4px)" };
+  const routeTransition = subtle
+    ? { duration: 0.22, ease: [0.22, 1, 0.36, 1] }
+    : { duration: 0.38, ease: [0.22, 1, 0.36, 1] };
+
   return (
     <>
       <ScrollToTop />
+      <SeoManager />
       <NavBar />
-      <UrgentCallout persist="none"/> {/* sticky banner under the nav */}
+      <ScrollProgressBar />
+      <UrgentCallout
+        persist="none"
+        urgentLabel={isConsulting ? "Is your organisation Gen AI-ready?" : "Need urgent help today?"}
+        message={isConsulting ? "Practical GRC consulting for Adelaide businesses with a written scope upfront." : "Book a same-day technician in Adelaide."}
+        ctaText={isConsulting ? "Book a Consultant" : "Request a Technician"}
+        ctaTo="/contact"
+      />
       <div className="pt-24 md:pt-28">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/services" element={<Services />} />
-          <Route path="/location" element={<Location />} />
-          <Route path="/blog" element={<Blog />} />
-          <Route path="/blog/:id" element={<BlogPost />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="*" element={<Home />} />
-        </Routes>
+        <Suspense fallback={<PageFallback />}>
+          <LayoutGroup id="site-shared-layout">
+            <AnimatePresence mode="sync" initial={false}>
+              <motion.div
+                key={routeKey}
+                initial={shouldAnimateRoute ? routeInitial : false}
+                animate={shouldAnimateRoute ? { opacity: 1, y: 0, filter: "blur(0px)" } : { opacity: 1 }}
+                exit={shouldAnimateRoute ? routeExit : { opacity: 1 }}
+                transition={shouldAnimateRoute ? routeTransition : { duration: 0 }}
+              >
+                <Routes location={location}>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/about" element={<About />} />
+                  <Route path="/services" element={<Services />} />
+                  <Route path="/consulting" element={<Consulting />} />
+                  <Route path="/service-areas" element={<ServiceAreas />} />
+                  <Route path="/computer-repairs/:slug" element={<SuburbPage />} />
+                  <Route path="/location" element={<Location />} />
+                  <Route path="/blog" element={<Blog />} />
+                  <Route path="/blog/:id" element={<BlogPost />} />
+                  <Route path="/contact" element={<Contact />} />
+                  <Route path="/booking" element={<Booking />} />
+                  <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/terms" element={<TermsConditions />} />
+                  <Route path="*" element={<Home />} />
+                </Routes>
+              </motion.div>
+            </AnimatePresence>
+          </LayoutGroup>
+        </Suspense>
       </div>
       <Footer />
-      <LiveChatButton />
+      <MobileStickyCTA />
+      <AccessibilitySettings />
       <BackToTop />
     </>
   );

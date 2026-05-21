@@ -17,9 +17,9 @@ export default function Textarea({
       <textarea
         id={id}
         rows={rows}
-        className={`block w-full rounded-md border px-3 py-2 text-sm placeholder-slate-400
-          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-          ${error ? "border-red-500" : "border-slate-300"} ${className}`}
+        className={`block w-full rounded-2xl border border-slate-200/60 px-4 py-3 text-sm placeholder-slate-400 bg-white motion-standard
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:border-brand-blue
+          ${error ? "border-red-500" : "hover:border-brand-blue/55"} ${className}`}
         {...props}
       />
       {helpText && !error && (

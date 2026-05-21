@@ -1,45 +1,39 @@
-import Section from "../../layout/Section";
-import { H2 } from "../../ui/Heading";
+import { H2 } from "../../UI/Heading";
 import { Send, PhoneCall, CalendarCheck } from "lucide-react";
 
 const STEPS = [
   {
     n: "01",
     icon: Send,
-    title: "Send your request",
-    blurb: "Fill the form or call us with a quick description of the issue.",
+    title: "Send your enquiry",
+    blurb: " Tell us what is happening, or call us directly if you need urgent help.",
   },
   {
     n: "02",
     icon: PhoneCall,
-    title: "We confirm fast",
-    blurb: "We usually call back within 30–60 minutes during opening hours.",
-    note: "Mon–Sun, 8am–6pm Adelaide time",
+    title: "We contact you",
+    blurb: "We review your request and get back to you as soon as possible.",
   },
   {
     n: "03",
     icon: CalendarCheck,
-    title: "Same-day visit",
-    blurb: "A technician comes to your home or office and gets you back on track.",
+    title: "We confirm the next step",
+    blurb: "We explain the best support option for your issue and confirm availability.",
     note: "No Fix, No Fee — clear pricing before work begins",
   },
 ];
 
 export default function ContactNextSteps() {
   return (
-    <Section className="relative overflow-hidden">
-      {/* subtle brand backdrop */}
-      <div className="absolute inset-0 bg-brand-blue/5" />
-      <div className="absolute inset-0 bg-dot-grid text-brand-navy/10 pointer-events-none" />
-
-      <div className="container-app relative z-10">
+    <section className="bg-slate-50 border-t border-slate-200">
+      <div className="section container-app">
         <H2 className="text-center">What happens next?</H2>
         <p className="mt-2 text-center text-slate-600">
-          Simple three-step process — designed to get you help today.
+          A simple three-step process to help you get support quickly.
         </p>
 
         <div className="mt-8 grid md:grid-cols-3 gap-6">
-          {STEPS.map((s, i) => (
+          {STEPS.map((s) => (
             <div
               key={s.title}
               className="rounded-2xl border bg-white p-6 shadow-sm hover:shadow-md transition"
@@ -61,9 +55,7 @@ export default function ContactNextSteps() {
             </div>
           ))}
         </div>
-
-        
       </div>
-    </Section>
+    </section>
   );
 }

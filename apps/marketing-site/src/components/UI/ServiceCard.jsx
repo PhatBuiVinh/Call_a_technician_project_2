@@ -1,4 +1,4 @@
-export default function ServiceCard({ icon: Icon, title, blurb, bullets = [], price, href }) {
+export default function ServiceCard({ icon: Icon, title, blurb, bullets = [], href }) {
   return (
     <a href={href || "/contact"} className="group block rounded-xl border bg-white p-5 hover:shadow-lg hover:-translate-y-[2px] transition focus:outline-none focus:ring-2 focus:ring-brand-lightblue/60">
       <div className="h-1 w-12 bg-gradient-to-r from-brand-blue to-brand-lightblue rounded-full" />
@@ -14,10 +14,7 @@ export default function ServiceCard({ icon: Icon, title, blurb, bullets = [], pr
               {bullets.slice(0,3).map((b) => <li key={b}>{b}</li>)}
             </ul>
           )}
-          <div className="mt-4 flex items-center justify-between">
-            <span className="text-xs rounded-full bg-brand-lightblue/35 text-brand-blue px-2 py-0.5">
-              {price || "from $99"}
-            </span>
+          <div className="mt-4">
             <span className="text-sm font-medium text-brand-blue group-hover:text-brand-lightblue">Get help →</span>
           </div>
         </div>

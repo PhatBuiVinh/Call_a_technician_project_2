@@ -1,5 +1,5 @@
 // src/pages/Calendar.jsx
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Header from '../components/Header';
 import { api } from '../lib/api';
 import FullCalendar from '@fullcalendar/react';
@@ -8,13 +8,23 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 
 const SLOT = '00:30:00'; // 30-min cells
+const JOB_STATUS_FILTERS = ['All', 'Open', 'In Progress', 'Completed', 'Closed'];
+const LEGEND_STATUSES = ['Open', 'In Progress', 'Completed', 'Closed'];
+const TIME_OFF_COLOR = {
+  bg: 'rgba(244, 63, 94, .22)',
+  border: 'rgba(251, 113, 133, .4)',
+};
 
 export default function CalendarPage() {
-  const mainRef = useRef(null);
+  const calendarRef = useRef(null);
 
   // technicians
   const [techs, setTechs] = useState([]);
   const [techFilter, setTechFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('All');
+  
+  // refresh key to trigger FullCalendar refetch
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // mode: normal time-grid OR columns-per-tech
   const [mode, setMode] = useState('time'); // 'time' | 'tech'
@@ -86,11 +96,11 @@ export default function CalendarPage() {
       });
       if (techFilter !== 'All') p.set('technician', techFilter);
       const list = await api('/jobs?' + p.toString());
-      success((list || []).map(jobToEvent));
+      success(filterJobsByStatus(list || [], statusFilter).map(jobToEvent));
     } catch (e) {
       failure(e);
     }
-  }, [jobToEvent, techFilter]);
+  }, [jobToEvent, techFilter, statusFilter, refreshKey]);
 
   // background events for time-off (drawn per calendar)
   const timeoffBgEvents = useCallback((info, success) => {
@@ -106,8 +116,8 @@ export default function CalendarPage() {
       end: t.endAt,
       display: 'background',
       overlap: false,
-      backgroundColor: 'rgba(255, 99, 132, .22)',
-      borderColor: 'rgba(255, 99, 132, .35)',
+      backgroundColor: TIME_OFF_COLOR.bg,
+      borderColor: TIME_OFF_COLOR.border,
       extendedProps: { timeoff: t }
     })));
   }, [timeoff, techFilter]);
@@ -160,15 +170,15 @@ export default function CalendarPage() {
         method: 'PUT',
         body: { startAt: arg.event.startStr, endAt: arg.event.endStr },
       });
-      // hard refresh as requested to keep UI snappy/clean
-      window.location.reload();
+      // refetch events to show updated data
+      setRefreshKey(k => k + 1);
     } catch (e) {
       alert(e.message || 'Update failed');
       arg.revert();
     }
   }, []);
 
-  // save (create/update) — refresh page afterwards per your request
+  // save (create/update) — close modal and refresh events
   const save = useCallback(async () => {
     try {
       const body = { ...form };
@@ -177,7 +187,11 @@ export default function CalendarPage() {
       } else {
         await api('/jobs', { method: 'POST', body });
       }
-      window.location.reload();
+      // close modal and refetch events
+      setOpen(false);
+      setEditingId(null);
+      setForm(empty);
+      setRefreshKey(k => k + 1);
     } catch (e) {
       alert(e.message || 'Save failed');
     }
@@ -189,7 +203,11 @@ export default function CalendarPage() {
     if (!confirm('Delete this job?')) return;
     try {
       await api(`/jobs/${editingId}`, { method: 'DELETE' });
-      window.location.reload();
+      // close modal and refetch events
+      setOpen(false);
+      setEditingId(null);
+      setForm(empty);
+      setRefreshKey(k => k + 1);
     } catch (e) {
       alert(e.message || 'Delete failed');
     }
@@ -214,6 +232,11 @@ export default function CalendarPage() {
     eventClick: onEventClick,
     eventDrop: onEventChange,
     eventResize: onEventChange,
+    eventContent: renderJobEventContent,
+    eventDidMount: (arg) => {
+      const job = arg.event.extendedProps?.job;
+      if (job) arg.el.setAttribute('title', buildEventTooltip(job));
+    },
     eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
     datesSet: onDatesSet,
   };
@@ -223,47 +246,99 @@ export default function CalendarPage() {
     <div className="min-h-screen">
       <Header />
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-4">
-        <div className="toolbar">
-        <div className="flex flex-wrap items-center gap-2 w-full">
-          <h1 className="text-xl font-bold mr-2">Schedule</h1>
+        <section className="surface rounded-2xl p-4 sm:p-5">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-2xl font-extrabold text-white sm:text-3xl">Schedule</h1>
+              <p className="mt-1 text-sm leading-6 text-slate-400">
+                Plan jobs by technician, time, and availability.
+              </p>
+            </div>
 
-          <label className="text-sm text-slate-300">Technician</label>
-          <select
-            className="select w-[180px]"
-            value={techFilter}
-            onChange={e => setTechFilter(e.target.value)}
-          >
-            <option>All</option>
-            {techs.map(t => <option key={t}>{t}</option>)}
-          </select>
+            <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,12rem)_minmax(0,12rem)_auto] xl:w-auto">
+              <label>
+                <span className="mb-1.5 block text-sm font-medium text-slate-300">Technician</span>
+                <select
+                  className="select bg-brand-panel"
+                  value={techFilter}
+                  onChange={e => setTechFilter(e.target.value)}
+                >
+                  <option value="All">All technicians</option>
+                  {techs.map(t => <option key={t}>{t}</option>)}
+                </select>
+              </label>
 
-          <div className="toolbar-spacer" />
+              <label>
+                <span className="mb-1.5 block text-sm font-medium text-slate-300">Status</span>
+                <select
+                  className="select bg-brand-panel"
+                  value={statusFilter}
+                  onChange={e => setStatusFilter(e.target.value)}
+                >
+                  {JOB_STATUS_FILTERS.map(status => (
+                    <option key={status} value={status}>
+                      {status === 'All' ? 'All statuses' : status}
+                    </option>
+                  ))}
+                </select>
+              </label>
 
-          <div className="flex gap-2">
-            <button
-              className={`btn btn-ghost ${mode==='time' ? 'bg-white/12' : ''}`}
-              onClick={()=>setMode('time')}
-              title="Week/Day view"
-            >
-              Week/Day
-            </button>
-            <button
-              className={`btn btn-ghost ${mode==='tech' ? 'bg-white/12' : ''}`}
-              onClick={()=>setMode('tech')}
-              title="Columns per technician"
-            >
-              Tech columns
-            </button>
+              <div>
+                <span className="mb-1.5 block text-sm font-medium text-slate-300">View</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    className={`btn btn-ghost px-3 text-sm ${mode==='time' ? 'bg-white/12 border-brand-sky/40 text-brand-sky' : ''}`}
+                    onClick={()=>setMode('time')}
+                    title="Week/Day view"
+                  >
+                    Week/Day
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn btn-ghost px-3 text-sm ${mode==='tech' ? 'bg-white/12 border-brand-sky/40 text-brand-sky' : ''}`}
+                    onClick={()=>setMode('tech')}
+                    title="Columns per technician"
+                  >
+                    Tech columns
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </section>
+
+        <section className="surface rounded-2xl p-3 sm:p-4">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <span className="text-sm font-semibold text-white">Legend</span>
+            {LEGEND_STATUSES.map(status => {
+              const color = colorByStatus(status);
+              return (
+                <span key={status} className="inline-flex items-center gap-2 text-sm text-slate-300">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full border"
+                    style={{ backgroundColor: color.bg, borderColor: color.border }}
+                  />
+                  {status}
+                </span>
+              );
+            })}
+            <span className="inline-flex items-center gap-2 text-sm text-slate-300">
+              <span
+                className="h-2.5 w-2.5 rounded-full border"
+                style={{ backgroundColor: TIME_OFF_COLOR.bg, borderColor: TIME_OFF_COLOR.border }}
+              />
+              Time Off
+            </span>
+          </div>
+        </section>
 
 
         {/* calendar */}
         {mode === 'time' ? (
           <div className="rounded-2xl overflow-hidden border border-white/10 bg-white/5">
             <FullCalendar
-              ref={mainRef}
+              ref={calendarRef}
               {...fcCommon}
               plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
               initialView="timeGridWeek"
@@ -279,7 +354,6 @@ export default function CalendarPage() {
                 center: 'title',
                 right: 'timeGridWeek,dayGridMonth,timeGridDay'
               }}
-              events={eventsFetcher}
               eventSources={[
                 eventsFetcher,
                 timeoffBgEvents,
@@ -290,8 +364,8 @@ export default function CalendarPage() {
           <TechColumns
             techs={techFilter==='All' ? techs : [techFilter]}
             fcCommon={fcCommon}
-            eventsFetcher={eventsFetcher}
             timeoffBgEvents={timeoffBgEvents}
+            statusFilter={statusFilter}
           />
         )}
       </main>
@@ -378,7 +452,7 @@ export default function CalendarPage() {
 }
 
 /* ---------- Technician columns (no premium) ---------- */
-function TechColumns({ techs, fcCommon, eventsFetcher, timeoffBgEvents }) {
+function TechColumns({ techs, fcCommon, timeoffBgEvents, statusFilter }) {
   // each technician gets its own calendar; share the same toolbar above each
   // You can style the header to appear once if desired (kept simple here).
   return (
@@ -391,12 +465,11 @@ function TechColumns({ techs, fcCommon, eventsFetcher, timeoffBgEvents }) {
             {...fcCommon}
             headerToolbar={{ left: 'prev,next today', center: 'title', right: 'timeGridWeek,timeGridDay' }}
             events={(info, success, failure) => {
-              // same fetcher but force technician
               const wrapped = async () => {
                 try {
                   const p = new URLSearchParams({ scheduled:'true', from:info.startStr, to:info.endStr, technician:t });
                   const list = await api('/jobs?' + p.toString());
-                  success((list||[]).map(j => {
+                  success(filterJobsByStatus(list || [], statusFilter).map(j => {
                     const color = colorByStatus(j.status);
                     const label = [j.title || j.invoice || 'Job', j.technician ? `• ${j.technician}` : ''].filter(Boolean).join(' ');
                     return {
@@ -414,7 +487,6 @@ function TechColumns({ techs, fcCommon, eventsFetcher, timeoffBgEvents }) {
             }}
             eventSources={[
               (info, success) => {
-                const within = (Array.isArray(fcCommon.datesSet) ? [] : []); // dummy to satisfy shape
                 timeoffBgEvents(info, success);
               }
             ]}
@@ -442,11 +514,52 @@ function toLocal(iso) {
 }
 function fromLocal(local) { return new Date(local).toISOString(); }
 
+function filterJobsByStatus(jobs, statusFilter) {
+  if (statusFilter === 'All') return jobs;
+  return jobs.filter(job => (job.status || 'Open') === statusFilter);
+}
+
+function renderJobEventContent(arg) {
+  const job = arg.event.extendedProps?.job || {};
+  const title = job.title || job.invoice || arg.event.title || 'Job';
+  const details = [
+    job.technician || 'Unassigned',
+    job.invoice,
+    job.phone,
+  ].filter(Boolean);
+
+  return (
+    <div className="min-w-0 px-1 py-0.5 leading-tight">
+      <div className="truncate text-[11px] font-semibold text-white">{title}</div>
+      {details.length > 0 && (
+        <div className="mt-0.5 flex min-w-0 flex-wrap gap-x-1.5 gap-y-0.5 text-[10px] text-white/80">
+          {details.map((detail, index) => (
+            <span key={`${detail}-${index}`} className="max-w-full truncate">
+              {detail}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function buildEventTooltip(job) {
+  return [
+    job.title || job.invoice || 'Job',
+    job.status ? `Status: ${job.status}` : '',
+    job.technician ? `Technician: ${job.technician}` : '',
+    job.invoice ? `Invoice: ${job.invoice}` : '',
+    job.phone ? `Phone: ${job.phone}` : '',
+  ].filter(Boolean).join('\n');
+}
+
 function colorByStatus(s) {
   switch ((s || '').toLowerCase()) {
-    case 'closed':      return { bg: '#31EE88', border: '#28d97a' }; // green
-    case 'in progress': return { bg: '#1A58D3', border: '#1548ae' }; // blue
-    default:            return { bg: '#52D5FF', border: '#42bfe6' }; // sky
+    case 'closed':      return { bg: '#64748B', border: '#475569' };
+    case 'completed':   return { bg: '#34D399', border: '#10B981' };
+    case 'in progress': return { bg: '#A855F7', border: '#7C3AED' };
+    default:            return { bg: '#38BDF8', border: '#0EA5E9' };
   }
 }
 // put near your other helpers in Calendar.jsx

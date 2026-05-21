@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthProvider';
+
+const ENABLE_MOCKS = import.meta.env.VITE_ENABLE_MOCKS === 'true';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -20,12 +22,15 @@ export default function Dashboard() {
   // Add this after EXTRA_PRICE
   const currency = new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' });
 
+  const JOB_STATUS_FILTERS = ['All', 'Open', 'In Progress', 'Completed', 'Closed'];
+
 
   // ----- data state -----
   const [jobs, setJobs] = useState([]);
-  const [techNames, setTechNames] = useState([]); // raw list from API
+  const [techs, setTechs] = useState([]); // raw list from API (now has hasLoginAccount)
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
+  const [jobStatusFilter, setJobStatusFilter] = useState('All');
 
   // ----- modal state (New/Edit job) -----
   const [open, setOpen] = useState(false);
@@ -55,7 +60,12 @@ export default function Dashboard() {
     pensionYearDiscount: false, // 10% discount
     socialMediaDiscount: false, // 5% discount
     // Troubleshooting (admin/technician only)
-    troubleshooting: ''
+    troubleshooting: '',
+    // Completion evidence (read-only, populated when viewing completed jobs)
+    completionForm: null,
+    completionPhotos: [],
+    // Job events timeline (read-only in admin modal)
+    events: []
   };
   const [form, setForm] = useState(empty);
 
@@ -68,26 +78,14 @@ export default function Dashboard() {
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
   const [savedSoftware, setSavedSoftware] = useState([]);
 
-  // Calculate job counts by status
-  const jobCounts = useMemo(() => {
-    const counts = {
-      'Open': 0,
-      'In Progress': 0,
-      'Resolved': 0,
-      'Closed': 0
-    };
-    
-    jobs.forEach(job => {
-      const status = job.status || 'Open';
-      if (counts.hasOwnProperty(status)) {
-        counts[status]++;
-      } else {
-        counts['Open']++; // Default to Open if status is unknown
-      }
+  const timelineEvents = useMemo(() => {
+    if (!Array.isArray(form.events)) return [];
+    return [...form.events].sort((a, b) => {
+      const tsA = new Date(a?.timestamp || a?.createdAt || 0).getTime();
+      const tsB = new Date(b?.timestamp || b?.createdAt || 0).getTime();
+      return tsB - tsA;
     });
-    
-    return counts;
-  }, [jobs]);
+  }, [form.events]);
 
   // Real-time price calculation effect
   useEffect(() => {
@@ -107,11 +105,14 @@ export default function Dashboard() {
   }, [form.additionalMins, form.software, form.pensionYearDiscount, form.socialMediaDiscount]);
 
   // ----- file input for Import -----
-  const fileRef = useRef(null);
-
   const [customers, setCustomers] = useState([]);
   useEffect(() => { (async () => {
-    try { setCustomers(await api('/customers')); } catch { 
+    try { setCustomers(await api('/customers')); } catch (e) {
+      if (!ENABLE_MOCKS) {
+        setCustomers([]);
+        console.warn('Customer API failed; mock customers disabled.', e);
+        return;
+      }
       // Add mock customers for testing when API fails
       const mockCustomers = [
         {
@@ -167,19 +168,43 @@ useEffect(() => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [location.state]);
 
+  // If we were sent here from IncomingJobs with { state: { convertRequestId, prefillData } }, open New Job prefilled
+  useEffect(() => {
+    const convertRequestId = location.state?.convertRequestId;
+    const prefillData = location.state?.prefillData;
+    
+    if (convertRequestId && prefillData) {
+      // Open new job modal with all prefill data from the request
+      openNew({
+        ...prefillData,
+        customerId: prefillData.customerId || generateCustomerCode(),
+        durationMins: 120,
+        additionalMins: 0,
+      });
+
+      // Clear the state so refresh/back won’t reopen the modal
+      nav('/app', { replace: true, state: {} });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   async function load() {
     setLoading(true);
     setErr('');
     try {
-      const [data, names] = await Promise.all([
+      const [data, techData] = await Promise.all([
         api('/jobs'),
-        api('/techs/names').catch(() => []),
+        api('/techs').catch(() => []),
       ]);
       setJobs(Array.isArray(data) ? data : []);
-      setTechNames(Array.isArray(names) ? names : []);
+      setTechs(Array.isArray(techData) ? techData : []);
     } catch (e) {
       setErr(e.message);
+      if (!ENABLE_MOCKS) {
+        setJobs([]);
+        setTechs([]);
+        return;
+      }
       // Add mock data for testing when API fails
       const mockJob1 = {
         _id: 'test-job-1',
@@ -244,8 +269,8 @@ useEffect(() => {
   const techOptions = useMemo(() => {
     const seen = new Set();
     const out = [];
-    for (const t of techNames) {
-      const name = (t?.name || t || '').trim();
+    for (const t of techs) {
+      const name = (t?.name || '').trim();
       if (!name) continue;
       const key = name.toLowerCase();
       if (!seen.has(key)) {
@@ -254,19 +279,28 @@ useEffect(() => {
       }
     }
     return out;
-  }, [techNames]);
+  }, [techs]);
+
+  // Lookup: does selected technician have a login account?
+  const selectedTechHasAccount = useMemo(() => {
+    if (!form.technician) return true; // No tech selected = no issue
+    const tech = techs.find(t => t.name?.trim().toLowerCase() === form.technician.trim().toLowerCase());
+    return tech ? tech.hasLoginAccount : false; // Unknown tech = unsafe (must be in system to verify account status)
+  }, [form.technician, techs]);
+
+  // Is the selected technician known in the system?
+  const isKnownTechnician = useMemo(() => {
+    if (!form.technician) return true; // No tech selected = no issue
+    return techs.some(t => t.name?.trim().toLowerCase() === form.technician.trim().toLowerCase());
+  }, [form.technician, techs]);
+
+  // Track if user has confirmed assignment to tech without account
+  const [confirmedAssignmentWithoutAccount, setConfirmedAssignmentWithoutAccount] = useState(false);
 
   // ----- UI actions -----
-  function toggleTheme() {
-    const root = document.documentElement;
-    const next = root.dataset.theme === 'light' ? 'dark' : 'light';
-    root.dataset.theme = next;
-    localStorage.setItem('cat_theme', next);
-  }
-
-  function openNew(prefill = {}) {
+  async function openNew(prefill = {}) {
     // Refresh jobs data to ensure accurate counts
-    load();
+    await load();
     
     const startIso = new Date(
       new Date().getFullYear(),
@@ -275,19 +309,25 @@ useEffect(() => {
       new Date().getHours(), 0, 0
     ).toISOString();
 
-    const existingIds = new Set((customers || []).map(c => String(c.customerId)));
     const duration = Number(prefill.durationMins ?? 120);
     const extra = Number(prefill.additionalMins ?? 0);
     const endIso = addMinutesISO(startIso, duration + extra);
 
-    // Generate unique invoice number
-    const existingInvoices = jobs.map(j => j.invoice).filter(Boolean);
+    // Get sequential invoice number from API (format: INV-2026-0001)
     let newInvoice;
-    do {
-      newInvoice = String(Math.floor(10000 + Math.random() * 90000));
-    } while (existingInvoices.includes(newInvoice));
+    try {
+      const response = await api('/invoices/next-number');
+      newInvoice = response.number;
+    } catch {
+      // Fallback to random if API fails
+      const existingInvoices = jobs.map(j => j.invoice).filter(Boolean);
+      do {
+        newInvoice = String(Math.floor(10000 + Math.random() * 90000));
+      } while (existingInvoices.includes(newInvoice));
+    }
 
     setEditingId(null);
+    setConfirmedAssignmentWithoutAccount(false); // Reset confirmation for new job
     setForm({
       ...empty,
       startAt: startIso,
@@ -300,40 +340,15 @@ useEffect(() => {
       phone: prefill.phone || '',
       customerAddress: prefill.customerAddress || '',
       customerEmail: prefill.customerEmail || '',
-      invoice: newInvoice, // Auto-generate unique invoice
+      invoice: newInvoice, // Sequential invoice from API
       ...prefill,
     });
     setOpen(true);
   }
 
-  function openEdit(j) {
-  // Refresh jobs data to ensure accurate counts
-  load();
-  
-  // Create a safe copy without circular references
-  const safeJobData = {
-    _id: j._id,
-    title: j.title,
-    invoice: j.invoice,
-    priority: j.priority,
-    status: j.status,
-    technician: j.technician,
-    phone: j.phone,
-    description: j.description,
-    startAt: j.startAt,
-    endAt: j.endAt,
-    durationMins: j.durationMins,
-    additionalMins: j.additionalMins,
-    amount: j.amount,
-    customerName: j.customerName,
-    customerId: j.customerId,
-    customerAddress: j.customerAddress,
-    customerEmail: j.customerEmail,
-    software: j.software,
-    pensionYearDiscount: j.pensionYearDiscount,
-    socialMediaDiscount: j.socialMediaDiscount,
-    troubleshooting: j.troubleshooting
-  };
+  async function openEdit(j) {
+  // Refresh jobs data to ensure accurate counts (MUST await to prevent race condition)
+  await load();
   
   const add = Number(j.additionalMins || 0);
   const amt = BASE_PRICE + getExtraPrice(add);
@@ -360,7 +375,8 @@ useEffect(() => {
   }
 
   setEditingId(j._id);
-  
+  setConfirmedAssignmentWithoutAccount(false); // Reset confirmation for edit job
+
   // Create completely safe formData without any potential circular references
   const formData = {
     title: String(j.title || ''),
@@ -399,9 +415,16 @@ useEffect(() => {
     socialMediaDiscount: Boolean(j.socialMediaDiscount),
 
     // troubleshooting
-    troubleshooting: String(j.troubleshooting || '')
+    troubleshooting: String(j.troubleshooting || ''),
+
+    // completion evidence (read-only in admin view)
+    completionForm: j.completionForm || null,
+    completionPhotos: j.completionPhotos || [],
+
+    // timeline events (read-only in admin view)
+    events: Array.isArray(j.events) ? j.events : []
   };
-  
+
   // Form data created safely without circular references
   
   setForm(formData);
@@ -420,6 +443,39 @@ async function save() {
     }
     if (!form.phone.trim()) {
       alert('Phone number is required');
+      return;
+    }
+    // Assignment safety: block if tech list failed to load
+    if (form.technician && techs.length === 0) {
+      alert(
+        `Cannot verify technician safety.\n\n` +
+        `Technician list failed to load. Please refresh the page and try again.`
+      );
+      return;
+    }
+
+    // Assignment safety: block if unknown technician (not in system)
+    if (form.technician && techs.length > 0 && !isKnownTechnician && !confirmedAssignmentWithoutAccount) {
+      alert(
+        `Cannot assign job to "${form.technician}".\n\n` +
+        `This technician is not in the system.\n\n` +
+        `Please either:\n` +
+        `1. Create this technician in the Technicians page first, or\n` +
+        `2. Select an existing technician from the dropdown, or\n` +
+        `3. Click "I understand, assign anyway" to confirm.`
+      );
+      return;
+    }
+
+    // Assignment safety: block if tech has no login account and not confirmed
+    if (form.technician && isKnownTechnician && !selectedTechHasAccount && !confirmedAssignmentWithoutAccount) {
+      alert(
+        `Cannot assign job to "${form.technician}".\n\n` +
+        `This technician does not have a login account and cannot access /tech-view.\n\n` +
+        `Please either:\n` +
+        `1. Create a login account for this technician first (go to Technicians page → Create Login), or\n` +
+        `2. Click "I understand, assign anyway" to confirm.`
+      );
       return;
     }
     if (!form.customerAddress.trim()) {
@@ -478,7 +534,8 @@ async function save() {
       })) : [],
       pensionYearDiscount: Boolean(form.pensionYearDiscount),
       socialMediaDiscount: Boolean(form.socialMediaDiscount),
-      troubleshooting: String(form.troubleshooting || '')
+      troubleshooting: String(form.troubleshooting || ''),
+      ...(form._sourceRequestId && { sourceRequestId: form._sourceRequestId })
     };
 
     // 3) Create/Update customer in CRM (always ensure customer exists)
@@ -581,7 +638,7 @@ async function save() {
             updatedAt: new Date().toISOString()
           };
           
-          const updatedInvoice = await api(`/invoices/${existingInvoice._id}`, {
+          await api(`/invoices/${existingInvoice._id}`, {
             method: 'PUT',
             body: invoiceUpdateData
           });
@@ -614,7 +671,7 @@ async function save() {
             updatedAt: new Date().toISOString()
           };
           
-          const newInvoice = await api('/invoices', {
+          await api('/invoices', {
             method: 'POST',
             body: invoiceData
           });
@@ -629,6 +686,9 @@ async function save() {
     // 6) Close modal and reset form only on successful save
     // Job saved successfully
     
+    // Refresh jobs list to show updated data
+    await load();
+    
     // Add a small delay to prevent accidental closing
     setTimeout(() => {
       setOpen(false);
@@ -638,8 +698,18 @@ async function save() {
     }, 100);
   } catch (e) {
     console.error('Save failed:', e);
-    alert(e.message || 'Save failed');
-    // Don't close modal on error - let user fix the issue
+    // Check for duplicate conversion error
+    const errorMsg = e.message || '';
+    if (errorMsg.toLowerCase().includes('already converted') || errorMsg.toLowerCase().includes('already converted to a job')) {
+      alert('This request has already been converted to a job. The status will refresh.');
+      // Refresh data without full page reload
+      await load();
+      setOpen(false);
+      setForm(empty);
+    } else {
+      alert(e.message || 'Save failed');
+    }
+    // Don't close modal on error - let user fix the issue or navigate away
   }
 }
 
@@ -655,60 +725,150 @@ async function save() {
     }
   }
 
-  function exportCSV() {
-    const header = ['Title', 'Invoice', 'Priority', 'Status', 'Technician', 'Phone', 'Created'];
-    const rows = jobs.map((j) => [
-      j.title,
-      j.invoice,
-      j.priority,
-      j.status,
-      j.technician,
-      j.phone,
-      j.createdAt ? new Date(j.createdAt).toLocaleString() : '',
-    ]);
-    const csv = [header, ...rows]
-      .map((r) => r.map((x) => `"${(x ?? '').toString().replace(/"/g, '""')}"`).join(','))
-      .join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'jobs.csv';
-    a.click();
-    URL.revokeObjectURL(a.href);
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
-  function importClick() {
-    fileRef.current?.click();
-  }
-  async function onImport(e) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const text = await file.text();
-    const lines = text.split(/\r?\n/).filter(Boolean);
-    const [, ...rest] = lines;
-    const items = rest
-      .map((line) => {
-        const parts = line.split(',').map((s) => s.replace(/^"|"$/g, '').replace(/""/g, '"'));
-        return {
-          title: parts[0],
-          invoice: parts[1],
-          priority: parts[2],
-          status: parts[3],
-          technician: parts[4],
-          phone: parts[5],
-        };
-      })
-      .filter((r) => r.title && r.invoice);
-
-    for (const row of items) {
-      try {
-        const created = await api('/jobs', { method: 'POST', body: row });
-        setJobs((prev) => [created, ...prev]);
-      } catch (e) {
-        console.warn('Import row failed', row, e);
-      }
+  function downloadCompletionReport() {
+    if (!editingId) return;
+    if (!form.completionForm?.submittedAt) {
+      alert('No completion submission found for this job yet.');
+      return;
     }
-    e.target.value = '';
+
+    const submittedAt = new Date(form.completionForm.submittedAt).toLocaleString();
+    const technicianName = form.technician || 'Unknown technician';
+    const photos = Array.isArray(form.completionPhotos) ? form.completionPhotos : [];
+
+    const photoHtml = photos.length > 0
+      ? photos.map((photo, idx) => {
+          const safeUrl = escapeHtml(photo?.url || '');
+          return `
+            <div class="photo-item">
+              <a href="${safeUrl}" target="_blank" rel="noopener noreferrer">
+                <img src="${safeUrl}" alt="Evidence Photo ${idx + 1}" />
+              </a>
+              <div class="photo-caption">Photo ${idx + 1} - <a href="${safeUrl}" target="_blank" rel="noopener noreferrer">Open original</a></div>
+            </div>
+          `;
+        }).join('')
+      : '<p class="muted">No evidence photos submitted.</p>';
+
+    const html = `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Job Completion Report - ${escapeHtml(form.invoice || '')}</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, sans-serif;
+        color: #0f172a;
+        margin: 24px;
+        line-height: 1.45;
+      }
+      h1 { margin: 0 0 8px 0; font-size: 26px; }
+      h2 { margin: 24px 0 8px 0; font-size: 18px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; }
+      .muted { color: #64748b; }
+      .meta-grid {
+        display: grid;
+        grid-template-columns: 180px 1fr;
+        gap: 6px 14px;
+        margin-top: 12px;
+      }
+      .meta-key { color: #334155; font-weight: 600; }
+      .box {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px;
+        white-space: pre-wrap;
+        background: #f8fafc;
+      }
+      .photo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+        gap: 12px;
+      }
+      .photo-item {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 8px;
+      }
+      .photo-item img {
+        width: 100%;
+        height: 130px;
+        object-fit: cover;
+        border-radius: 6px;
+        border: 1px solid #cbd5e1;
+      }
+      .photo-caption { margin-top: 6px; font-size: 12px; color: #475569; }
+      @media print {
+        body { margin: 14mm; }
+        a { color: #0f172a; text-decoration: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Job Completion Report</h1>
+    <div class="muted">Generated ${escapeHtml(new Date().toLocaleString())}</div>
+
+    <h2>Job Details</h2>
+    <div class="meta-grid">
+      <div class="meta-key">Job Title</div><div>${escapeHtml(form.title || '')}</div>
+      <div class="meta-key">Customer</div><div>${escapeHtml(form.customerName || '')}</div>
+      <div class="meta-key">Invoice</div><div>${escapeHtml(form.invoice || '')}</div>
+      <div class="meta-key">Technician</div><div>${escapeHtml(technicianName)}</div>
+      <div class="meta-key">Submitted At</div><div>${escapeHtml(submittedAt)}</div>
+    </div>
+
+    <h2>Completion Form</h2>
+    <div class="meta-grid" style="margin-bottom:8px;">
+      <div class="meta-key">Follow-up Required</div><div>${form.completionForm?.followUpRequired ? 'Yes' : 'No'}</div>
+    </div>
+    <div class="meta-key" style="margin-bottom:4px;">Work Performed</div>
+    <div class="box">${escapeHtml(form.completionForm?.workPerformed || 'N/A')}</div>
+
+    <div class="meta-key" style="margin-top:12px; margin-bottom:4px;">Parts Used</div>
+    <div class="box">${escapeHtml(form.completionForm?.partsUsed || 'N/A')}</div>
+
+    <div class="meta-key" style="margin-top:12px; margin-bottom:4px;">Follow-up Notes</div>
+    <div class="box">${escapeHtml(form.completionForm?.followUpNotes || 'N/A')}</div>
+
+    <h2>Attachments</h2>
+    <div class="photo-grid">${photoHtml}</div>
+
+    <script>
+      window.onload = function () {
+        window.print();
+      };
+    </script>
+  </body>
+</html>`;
+
+    // Create a Blob and trigger file download instead of using popups
+    try {
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const filename = `Job-Completion-Report-${form.invoice || 'unknown'}.html`;
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      // Clean up the object URL after a short delay
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      console.error('Failed to download report:', e);
+      alert('Failed to download report. Please try again.');
+    }
   }
 
   // helpers
@@ -731,12 +891,94 @@ async function save() {
   function genCustomerId5() {
     return String(Math.floor(10000 + Math.random() * 90000));
   }
-  function genUniqueCustomerId(existingIds) {
-  let id;
-  do { id = String(Math.floor(10000 + Math.random() * 90000)); }
-  while (existingIds.has(id));
-  return id;
-}
+  function formatRelativeTime(isoLike) {
+    if (!isoLike) return 'Unknown time';
+    const ts = new Date(isoLike).getTime();
+    if (Number.isNaN(ts)) return 'Unknown time';
+
+    const diffMs = Date.now() - ts;
+    const minutes = Math.floor(diffMs / 60000);
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days} day${days === 1 ? '' : 's'} ago`;
+
+    const weeks = Math.floor(days / 7);
+    if (weeks < 5) return `${weeks} week${weeks === 1 ? '' : 's'} ago`;
+
+    const months = Math.floor(days / 30);
+    if (months < 12) return `${months} month${months === 1 ? '' : 's'} ago`;
+
+    const years = Math.floor(days / 365);
+    return `${years} year${years === 1 ? '' : 's'} ago`;
+  }
+
+  function getEventMeta(type) {
+    const map = {
+      job_created: {
+        label: 'Job Created',
+        badgeClass: 'badge-emerald',
+        dotClass: 'bg-green-400/30 border-green-400'
+      },
+      status_changed: {
+        label: 'Status Changed',
+        badgeClass: 'badge-sky',
+        dotClass: 'bg-sky-400/30 border-sky-400'
+      },
+      technician_assigned: {
+        label: 'Technician Assigned',
+        badgeClass: 'badge-blue',
+        dotClass: 'bg-cyan-400/30 border-cyan-400'
+      },
+      note_added: {
+        label: 'Note Added',
+        badgeClass: 'badge-amber',
+        dotClass: 'bg-amber-400/30 border-amber-400'
+      },
+      completion_submitted: {
+        label: 'Completion Submitted',
+        badgeClass: 'badge-emerald',
+        dotClass: 'bg-emerald-400/30 border-emerald-400'
+      },
+      job_closed: {
+        label: 'Job Closed',
+        badgeClass: 'badge-slate',
+        dotClass: 'bg-rose-400/30 border-rose-400'
+      }
+    };
+    return map[type] || {
+      label: 'Event',
+      badgeClass: 'badge-slate',
+      dotClass: 'bg-slate-400/30 border-slate-400'
+    };
+  }
+
+  function renderEventDetails(event) {
+    const details = event?.details || {};
+    switch (event?.type) {
+      case 'status_changed':
+        return `Status changed: ${details.fromStatus || 'Unknown'} -> ${details.toStatus || 'Unknown'}`;
+      case 'technician_assigned':
+        return `Assigned technician: ${details.techName || 'Unknown technician'}`;
+      case 'note_added': {
+        const author = details.author || event?.actorName || 'Unknown';
+        const preview = details.notePreview ? ` "${details.notePreview}"` : '';
+        return `Note added by ${author}.${preview}`;
+      }
+      case 'completion_submitted':
+        return `Completion evidence submitted by ${details.techName || event?.actorName || 'Technician'}`;
+      case 'job_closed':
+        return 'Job was moved to Closed status';
+      case 'job_created':
+        return 'Job record was created';
+      default:
+        return 'Job activity recorded';
+    }
+  }
 
   // Generate customer ID starting from 10000
   function generateCustomerCode() {
@@ -1276,227 +1518,239 @@ async function save() {
       total: jobs.length,
       open: jobs.filter((j) => j.status === 'Open').length,
       progress: jobs.filter((j) => j.status === 'In Progress').length,
-      done: jobs.filter((j) => j.status === 'Closed').length,
+      completed: jobs.filter((j) => j.status === 'Completed').length,
+      closed: jobs.filter((j) => j.status === 'Closed').length,
     }),
     [jobs]
   );
+
+  const filteredJobs = useMemo(() => (
+    jobStatusFilter === 'All'
+      ? jobs
+      : jobs.filter((job) => job.status === jobStatusFilter)
+  ), [jobStatusFilter, jobs]);
 
   return (
     <div className="min-h-screen bg-brand-bg text-white">
       <Header />
 
-      <main className="max-w-6xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-extrabold text-white">
-            Welcome, <span className="text-brand-sky">{who}</span> 👋
-          </h1>
+      <main className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
+        <section className="surface mb-6 rounded-2xl p-4 sm:p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
+                  Operations Dashboard
+                </h1>
+                <span className="badge badge-blue">
+                  {jobs.length} {jobs.length === 1 ? 'job' : 'jobs'}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-slate-400">
+                Welcome, <span className="text-brand-sky">{who}</span>. Track jobs, requests, invoices, and technician workload.
+              </p>
+            </div>
 
-          <div className="flex gap-3">
-            <button onClick={toggleTheme} className="px-4 py-2 rounded-xl bg-brand-sky/20 hover:bg-brand-sky/30 text-brand-sky border border-brand-sky/30">
-              Theme
-            </button>
-            <button onClick={() => openNew()} className="px-4 py-2 rounded-xl bg-brand-blue hover:bg-brand-blue/90 text-white font-medium shadow-lg">
-              New Job
-            </button>
-            <button onClick={exportCSV} className="px-4 py-2 rounded-xl bg-brand-blue hover:bg-brand-blue/90 text-white font-medium shadow-lg">
-              Export
-            </button>
-            <button onClick={importClick} className="px-4 py-2 rounded-xl bg-brand-blue hover:bg-brand-blue/90 text-white font-medium shadow-lg">
-              Import
-            </button>
-            <input ref={fileRef} type="file" accept=".csv" hidden onChange={onImport} />
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <button onClick={() => openNew()} className="btn btn-primary tap-target">
+                New Job
+              </button>
+            </div>
           </div>
-        </div>
+        </section>
 
         {/* KPIs */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card label="Total Jobs" value={kpi.total} />
-          <Card label="Open" value={kpi.open} />
-          <Card label="In Progress" value={kpi.progress} />
-          <Card label="Resolved" value={kpi.done} />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          <Card label="Total Jobs" value={kpi.total} accent="blue" />
+          <Card label="Open" value={kpi.open} accent="sky" />
+          <Card label="In Progress" value={kpi.progress} accent="fuchsia" />
+          <Card label="Completed" value={kpi.completed} accent="emerald" />
+          <Card label="Closed" value={kpi.closed} accent="slate" />
         </div>
 
         {/* Enhanced Recent Jobs Section */}
-        <div className="bg-brand-panel rounded-2xl border border-brand-border overflow-hidden">
-          <div className="bg-brand-bg px-6 py-4 border-b border-brand-border">
-            <h2 className="text-xl font-bold text-white flex items-center gap-3">
-              <span className="text-2xl">📋</span>
-              Recent Jobs
-              <span className="text-sm font-normal text-text-secondary bg-brand-blue/20 px-3 py-1 rounded-full">
-                {jobs.length} {jobs.length === 1 ? 'job' : 'jobs'}
-              </span>
-            </h2>
+        <div className="surface rounded-2xl overflow-hidden">
+          <div className="flex flex-col gap-4 border-b border-white/10 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="flex flex-wrap items-center gap-3 text-xl font-bold text-white">
+                <span>Recent Jobs</span>
+                <span className="badge badge-blue">
+                  {filteredJobs.length} {filteredJobs.length === 1 ? 'job' : 'jobs'}
+                </span>
+              </h2>
+              <p className="mt-1 text-sm text-slate-400">
+                {jobStatusFilter === 'All' ? 'Showing all job statuses.' : `Filtered to ${jobStatusFilter} jobs.`}
+              </p>
+            </div>
+
+            <label className="w-full sm:max-w-xs">
+              <span className="mb-1.5 block text-sm font-medium text-slate-300">Filter by status</span>
+              <select
+                className="select bg-brand-panel"
+                value={jobStatusFilter}
+                onChange={(e) => setJobStatusFilter(e.target.value)}
+              >
+                {JOB_STATUS_FILTERS.map((status) => (
+                  <option key={status} value={status}>
+                    {status === 'All' ? 'All statuses' : status}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
 
           {jobs.length === 0 ? (
-            <div className="p-8 text-center">
-              <div className="text-6xl mb-4">📝</div>
-              <h3 className="text-lg font-semibold text-white mb-2">No Jobs Yet</h3>
-              <p className="text-slate-400 mb-4">
-                {loading ? 'Loading jobs...' : err ? `Error: ${err}` : 'Create your first job to get started!'}
-              </p>
+            <div className="p-4 sm:p-6">
+              <StatePanel
+                tone={err ? 'error' : loading ? 'loading' : 'empty'}
+                title={loading ? 'Loading jobs' : err ? 'Jobs could not load' : 'No Jobs Yet'}
+                message={loading ? 'Loading jobs...' : err ? `Error: ${err}` : 'Create your first job to get started!'}
+              >
               {!loading && !err && (
                 <button
                   onClick={openNew}
-                  className="px-6 py-3 bg-brand-blue hover:bg-brand-blue/90 text-text-primary rounded-xl font-medium transition-all duration-200 shadow-soft"
+                  className="btn btn-primary"
                 >
                   Create New Job
                 </button>
               )}
+              </StatePanel>
+            </div>
+          ) : filteredJobs.length === 0 ? (
+            <div className="p-4 sm:p-6">
+              <StatePanel
+                title="No jobs match this status"
+                message={`There are no ${jobStatusFilter} jobs in the current job list.`}
+              />
             </div>
           ) : (
-            <div className="divide-y divide-white/5">
-              {jobs.map((j, index) => {
-                const priorityColors = {
-                  'Low': 'bg-slate-500/20 text-slate-300 border-slate-500/30',
-                  'Medium': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-                  'High': 'bg-orange-500/20 text-orange-300 border-orange-500/30',
-                  'Urgent': 'bg-red-500/20 text-red-300 border-red-500/30'
-                };
-                
-                const statusColors = {
-                  'Open': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-                  'In Progress': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-                  'Closed': 'bg-green-500/20 text-green-300 border-green-500/30'
-                };
-
-                return (
-                  <div key={j._id} className="p-6 hover:bg-brand-surface-hover transition-all duration-200 group">
-                    <div className="flex items-center justify-between">
-                      {/* Left Section - Job Info */}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-4 mb-3">
-                          <div className="w-10 h-10 bg-brand-blue/20 rounded-xl flex items-center justify-center text-lg">
-                            🔧
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-semibold text-white group-hover:text-brand-sky transition-colors">
-                              {j.title}
-                            </h3>
-                            <div className="flex items-center gap-4 text-sm text-text-secondary">
-                              <span className="flex items-center gap-1">
-                                <span>👤</span>
-                                {j.technician || 'Unassigned'}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <span>📅</span>
-                                {j.createdAt ? new Date(j.createdAt).toLocaleDateString() : '—'}
-                              </span>
-                            </div>
+            <div className="divide-y divide-white/10">
+              {filteredJobs.map((j) => (
+                <div key={j._id} className="group p-4 transition-all duration-200 hover:bg-white/[0.03] sm:p-5">
+                  <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+                    <div className="min-w-0 space-y-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0">
+                          <h3 className="text-lg font-bold leading-snug text-white transition-colors group-hover:text-brand-sky">
+                            {j.title}
+                          </h3>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <StatusBadge status={j.status} type="status" />
+                            <StatusBadge status={j.priority} type="priority" />
                           </div>
                         </div>
-
-                        <div className="flex items-center gap-3 mb-3">
-                          {/* Priority Badge */}
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${priorityColors[j.priority] || priorityColors['Low']}`}>
-                            {j.priority}
-                          </span>
-                          
-                          {/* Status Badge */}
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColors[j.status] || statusColors['Open']}`}>
-                            {j.status}
-                          </span>
-
-                          {/* Invoice Link */}
-                          {j.invoice && (
-                      <button
-                        type="button"
-                              className="px-3 py-1 rounded-full text-xs font-medium bg-brand-sky/20 text-brand-sky border border-brand-sky/30 hover:bg-brand-sky/30 transition-colors"
-                        onClick={() => nav(`/invoices?q=${encodeURIComponent((j.invoice || '').trim())}`)}
-                              title="View Invoice"
-                      >
-                              Invoice: {j.invoice}
-                      </button>
-                          )}
-                        </div>
-
-                        {/* Job Description Preview */}
-                        {j.description && (
-                          <p className="text-slate-400 text-sm line-clamp-2 max-w-2xl">
-                            {j.description}
-                          </p>
-                        )}
                       </div>
 
-                      {/* Right Section - Actions */}
-                      <div className="flex items-center gap-3 ml-6">
-                    <div className="flex gap-2">
+                      <div className="grid gap-2 text-sm text-slate-300 sm:grid-cols-2 xl:grid-cols-4">
+                        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                          <div className="text-xs uppercase text-slate-500">Technician</div>
+                          <div className="mt-0.5 truncate font-medium text-slate-100">
+                            {j.technician || 'Unassigned'}
+                          </div>
+                        </div>
+
+                        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                          <div className="text-xs uppercase text-slate-500">Created</div>
+                          <div className="mt-0.5 font-medium text-slate-100">
+                            {j.createdAt ? new Date(j.createdAt).toLocaleString() : '—'}
+                          </div>
+                        </div>
+
+                        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                          <div className="text-xs uppercase text-slate-500">Phone</div>
+                          <div className="mt-0.5 truncate font-medium text-slate-100">
+                            {j.phone || '—'}
+                          </div>
+                        </div>
+
+                        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+                          <div className="text-xs uppercase text-slate-500">Invoice</div>
+                          {j.invoice ? (
+                            <button
+                              type="button"
+                              className="mt-0.5 text-left font-semibold text-brand-sky underline-offset-4 transition-colors hover:text-sky-200 hover:underline"
+                              onClick={() => nav(`/invoices?q=${encodeURIComponent((j.invoice || '').trim())}`)}
+                              title="View Invoice"
+                            >
+                              {j.invoice}
+                            </button>
+                          ) : (
+                            <div className="mt-0.5 font-medium text-slate-100">—</div>
+                          )}
+                        </div>
+                      </div>
+
+                      {j.description && (
+                        <p className="max-w-4xl rounded-xl border border-white/10 bg-white/[0.025] px-3 py-2 text-sm leading-6 text-slate-300 line-clamp-2">
+                          {j.description}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 lg:justify-end">
                       <button
                         onClick={() => openEdit(j)}
-                            className="px-4 py-2 bg-brand-blue/20 hover:bg-brand-blue/30 text-brand-sky border border-brand-sky/30 rounded-xl font-medium transition-all duration-200 flex items-center gap-2"
+                        className="btn btn-blue flex-1 px-3 sm:flex-none sm:px-4 tap-target"
                       >
-                            <span>✏️</span>
-                        Edit
+                        <span>✏️</span>
+                        <span>Edit</span>
                       </button>
                       <button
                         onClick={() => removeJob(j._id)}
-                        className="px-4 py-2 bg-red-600/30 hover:bg-red-600/40 text-red-200 border border-red-500/50 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-lg"
+                        className="btn btn-danger flex-1 px-3 sm:flex-none sm:px-4 tap-target"
                       >
                         <span className="text-lg">🗑️</span>
-                        Delete
+                        <span>Delete</span>
                       </button>
                     </div>
-                      </div>
-                    </div>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           )}
         </div>
 
         {/* New/Edit Job Modal */}
         {open && (
-            <div
-              className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50"
-              onClick={(e) => { 
-                // Only close if clicking on the backdrop itself, not on child elements
-                if (e.target === e.currentTarget) {
-                  console.log('Modal closed by backdrop click');
-                  // Comment out auto-close for now to prevent accidental closing
-                  // setOpen(false);
-                }
-              }}
-              onKeyDown={(e) => {
-                // Prevent accidental closing with Escape key - comment out for now
-                if (e.key === 'Escape') {
-                  console.log('Escape key pressed - modal closing disabled');
-                  // setOpen(false);
-                }
-              }}
-            >
-
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-4"
+            onClick={(e) => { 
+              if (e.target === e.currentTarget) {
+                setOpen(false);
+              }
+            }}
+          >
             <div 
-              className="w-full max-w-4xl rounded-2xl border border-brand-border max-h-[90vh] flex flex-col shadow-2xl"
+              className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0c1450] shadow-2xl"
               onClick={(e) => e.stopPropagation()}
-              style={{ backgroundColor: '#0c1450' }}
             >
               {/* header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-brand-border flex-shrink-0 rounded-t-2xl" style={{ backgroundColor: '#0c1450' }}>
-                <h3 className="text-xl font-bold text-white">{editingId ? 'Edit Job' : 'New Job'}</h3>
-                <button onClick={() => {
-                  console.log('Modal closed by close button');
-                  setOpen(false);
-                }} className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm font-medium transition-colors">
-                  Close
-                </button>
+              <div className="flex-shrink-0 border-b border-white/10 bg-white/[0.03] px-4 py-4 sm:px-6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-xl font-bold text-white">{editingId ? 'Edit Job' : 'New Job'}</h3>
+                      <StatusBadge status={form.status} type="status" />
+                      <StatusBadge status={form.priority} type="priority" />
+                    </div>
+                    <p className="mt-1 text-sm text-slate-400">
+                      Customer details, scheduling, assignment, software, pricing, and completion records.
+                    </p>
+                  </div>
+                  <button onClick={() => setOpen(false)} className="btn btn-ghost text-sm px-3 py-1">
+                    Close
+                  </button>
+                </div>
               </div>
 
               {/* scrollable content */}
-              <div className="px-6 py-6 overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent hover:scrollbar-thumb-white/30" style={{ backgroundColor: '#0c1450' }}>
+              <div className="flex-1 space-y-5 overflow-y-auto px-4 py-5 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent hover:scrollbar-thumb-white/30 sm:px-6">
                 {/* Customer Details Section */}
-                <div className="mb-6 rounded-2xl p-6 border border-brand-sky/20" style={{ backgroundColor: '#0c1450' }}>
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-lg font-semibold text-brand-sky flex items-center gap-2">
-                      <span>👤</span> Customer Details
-                    </h4>
-                    <div className="flex items-center gap-2 text-sm text-slate-300">
-                      <span className="px-2 py-1 bg-blue-500/20 text-blue-300 rounded-full">Open: {jobCounts['Open']}</span>
-                      <span className="px-2 py-1 bg-yellow-500/20 text-yellow-300 rounded-full">In Progress: {jobCounts['In Progress']}</span>
-                      <span className="px-2 py-1 bg-green-500/20 text-green-300 rounded-full">Resolved: {jobCounts['Resolved'] + jobCounts['Closed']}</span>
-                    </div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 shadow-soft sm:p-5">
+                  <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
+                    <h4 className="text-lg font-semibold text-brand-sky">Customer Details</h4>
                   </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     {/* Customer Name with Auto-suggestions */}
                     <Field label="Customer Name *">
                       <div className="relative">
@@ -1557,7 +1811,7 @@ async function save() {
                         />
                         <button
                           type="button"
-                          className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-sm"
+                          className="btn btn-ghost text-sm px-3"
                           onClick={() => setForm(f => ({ ...f, customerId: generateCustomerCode() }))}
                           title="Generate new code"
                         >
@@ -1668,21 +1922,11 @@ async function save() {
                 </div>
 
                 {/* Job Details Section */}
-                <div className="mb-6 rounded-2xl p-6 border border-brand-sky/20" style={{ backgroundColor: '#0c1450' }}>
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-lg font-semibold text-brand-sky flex items-center gap-2">
-                      <span>🛠️</span> Job Details
-                    </h4>
-                    <div className="flex items-center gap-2">
-                      <button className="px-2 py-1 rounded text-xs bg-white/10 hover:bg-white/20 text-white transition-colors">
-                        Ed
-                      </button>
-                      <button className="px-2 py-1 rounded text-xs bg-red-500/20 hover:bg-red-500/30 text-red-300 transition-colors">
-                        🗑️
-                      </button>
-                    </div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 shadow-soft sm:p-5">
+                  <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
+                    <h4 className="text-lg font-semibold text-brand-sky">Job Details</h4>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     {/* Job Title */}
                     <Field label="Job Title *">
                     <input
@@ -1697,31 +1941,14 @@ async function save() {
 
                     {/* Invoice Number */}
                     <Field label="Invoice Number *">
-                      <div className="flex gap-2">
-                    <input
-                      className="w-full px-3 py-2 rounded-lg bg-transparent border border-white/10"
-                      value={form.invoice}
-                      onChange={(e) => setForm({ ...form, invoice: e.target.value })}
-                          placeholder="5-digit invoice"
-                        />
-                        <button
-                          type="button"
-                          className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-sm"
-                          onClick={() => {
-                            // Generate unique invoice number by checking existing jobs
-                            const existingInvoices = jobs.map(j => j.invoice).filter(Boolean);
-                            let newInvoice;
-                            do {
-                              newInvoice = String(Math.floor(10000 + Math.random() * 90000));
-                            } while (existingInvoices.includes(newInvoice));
-                            setForm(f => ({ ...f, invoice: newInvoice }));
-                          }}
-                          title="Generate unique invoice"
-                        >
-                          Generate
-                        </button>
-                      </div>
-                  </Field>
+                      <input
+                        className="w-full px-3 py-2 rounded-lg bg-transparent border border-white/10"
+                        value={form.invoice}
+                        onChange={(e) => setForm({ ...form, invoice: e.target.value })}
+                        placeholder="INV-2026-0001"
+                        readOnly
+                      />
+                    </Field>
 
                     {/* Priority */}
                   <Field label="Priority">
@@ -1739,15 +1966,54 @@ async function save() {
 
                     {/* Status */}
                   <Field label="Status">
-                    <select
-                      className="w-full px-3 py-2 rounded-lg bg-transparent border border-white/10"
-                      value={form.status}
-                      onChange={(e) => setForm({ ...form, status: e.target.value })}
-                    >
-                      <option>Open</option>
-                      <option>In Progress</option>
-                      <option>Closed</option>
-                    </select>
+                    <div className="flex items-center gap-2">
+                      <select
+                        className="flex-1 px-3 py-2 rounded-lg bg-transparent border border-white/10"
+                        value={form.status}
+                        onChange={(e) => setForm({ ...form, status: e.target.value })}
+                        disabled={form.status === 'Closed'}
+                      >
+                        <option>Open</option>
+                        <option>In Progress</option>
+                        <option>Completed</option>
+                        {/* Closed is not in dropdown - use Close Job button */}
+                      </select>
+                      {/* Close Job button - only for Completed jobs */}
+                      {form.status === 'Completed' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm('Close this job? It will be archived. You can reopen it later if needed.')) {
+                              setForm({ ...form, status: 'Closed' });
+                            }
+                          }}
+                          className="btn btn-warning text-sm px-3 whitespace-nowrap"
+                        >
+                          Close Job
+                        </button>
+                      )}
+                      {/* Reopen Job button - only for Closed jobs */}
+                      {form.status === 'Closed' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm('Reopen this job? It will return to Completed status.')) {
+                              setForm({ ...form, status: 'Completed' });
+                            }
+                          }}
+                          className="btn btn-blue text-sm px-3 whitespace-nowrap"
+                        >
+                          Reopen Job
+                        </button>
+                      )}
+                    </div>
+                    {/* Closed status indicator */}
+                    {form.status === 'Closed' && (
+                      <div className="mt-2 p-2 rounded bg-green-500/10 border border-green-500/30 text-green-200 text-xs flex items-center gap-2">
+                        <span>🔒</span>
+                        <span>Job is closed and archived</span>
+                      </div>
+                    )}
                   </Field>
 
                     {/* Technician */}
@@ -1756,7 +2022,10 @@ async function save() {
                       list="techList"
                       className="w-full px-3 py-2 rounded-lg bg-transparent border border-white/10"
                       value={form.technician}
-                      onChange={(e) => setForm({ ...form, technician: e.target.value })}
+                      onChange={(e) => {
+                        setForm({ ...form, technician: e.target.value });
+                        setConfirmedAssignmentWithoutAccount(false); // Reset confirmation when tech changes
+                      }}
                         placeholder="Assign technician..."
                       autoComplete="off"
                     />
@@ -1765,6 +2034,74 @@ async function save() {
                         <option key={name} value={name} />
                       ))}
                     </datalist>
+                    {/* Tech list load failure warning */}
+                    {techs.length === 0 && form.technician && (
+                      <div className="mt-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-200 text-sm">
+                        <div className="flex items-start gap-2">
+                          <span className="text-red-400">⚠️</span>
+                          <div>
+                            <p className="font-medium">Technician account safety data unavailable</p>
+                            <p className="text-red-300/80 text-xs mt-1">
+                              Could not load technician list. Assignment safety checks are disabled.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Warning: unknown technician (not in system) */}
+                    {form.technician && techs.length > 0 && !isKnownTechnician && (
+                      <div className="mt-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-200 text-sm">
+                        <div className="flex items-start gap-2">
+                          <span className="text-red-400">⚠️</span>
+                          <div>
+                            <p className="font-medium">Unknown technician</p>
+                            <p className="text-red-300/80 text-xs mt-1">
+                              "{form.technician}" is not in the technician list. Please create this technician first or select an existing one.
+                            </p>
+                            {!confirmedAssignmentWithoutAccount && (
+                              <button
+                                type="button"
+                                onClick={() => setConfirmedAssignmentWithoutAccount(true)}
+                                className="btn btn-danger mt-2 text-xs px-3 py-1"
+                              >
+                                I understand, assign anyway
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Warning: known technician has no login account */}
+                    {form.technician && isKnownTechnician && !selectedTechHasAccount && (
+                      <div className="mt-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-200 text-sm">
+                        <div className="flex items-start gap-2">
+                          <span className="text-amber-400">⚠️</span>
+                          <div>
+                            <p className="font-medium">This technician does not have a login account</p>
+                            <p className="text-amber-300/80 text-xs mt-1">
+                              They will not be able to access /tech-view until an admin creates a login account for them.
+                            </p>
+                            {!confirmedAssignmentWithoutAccount && (
+                              <button
+                                type="button"
+                                onClick={() => setConfirmedAssignmentWithoutAccount(true)}
+                                className="btn btn-warning mt-2 text-xs px-3 py-1"
+                              >
+                                I understand, assign anyway
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {/* Confirmation shown when acknowledged */}
+                    {form.technician && !selectedTechHasAccount && confirmedAssignmentWithoutAccount && (
+                      <div className="mt-2 text-xs text-amber-400 flex items-center gap-1">
+                        <span>✓</span> Assignment to technician without account confirmed
+                      </div>
+                    )}
                   </Field>
 
                     {/* Job Description */}
@@ -1784,8 +2121,8 @@ async function save() {
                   </div>
 
                 {/* Software Section */}
-                <div className="mb-8 bg-gradient-to-br from-brand-blue/5 to-brand-sky/5 rounded-3xl p-8 border border-brand-sky/20 shadow-soft">
-                  <h4 className="text-2xl font-bold text-brand-sky mb-6 flex items-center gap-3">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 shadow-soft sm:p-5">
+                  <h4 className="mb-4 flex items-center gap-3 border-b border-white/10 pb-3 text-lg font-semibold text-brand-sky">
                     <span>💿</span> Software
                   </h4>
                   <div className="space-y-3">
@@ -1845,14 +2182,14 @@ async function save() {
                             <button
                               type="button"
                               data-software-save={index}
-                              className="flex-1 px-3 py-2 rounded-lg bg-brand-blue hover:bg-brand-blue/90 text-white font-medium transition-colors"
+                              className="btn btn-blue flex-1 px-3"
                               onClick={() => saveSoftwareItem(index)}
                             >
                               Save
                             </button>
                             <button
                               type="button"
-                              className="px-3 py-2 rounded-lg bg-rose-600/80 hover:bg-rose-600 text-white"
+                              className="btn btn-danger px-3"
                               onClick={() => {
                                 const newSoftware = form.software.filter((_, i) => i !== index);
                                 // Recalculate total price when removing software
@@ -1884,7 +2221,7 @@ async function save() {
                     ))}
                     <button
                       type="button"
-                      className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white"
+                      className="btn btn-ghost"
                       onClick={() => {
                         const newSoftware = [...form.software, { name: '', value: 0 }];
                         // Recalculate total price when adding software
@@ -1909,11 +2246,11 @@ async function save() {
                 </div>
 
                 {/* Pricing Section */}
-                <div className="mb-8 bg-gradient-to-br from-brand-blue/5 to-brand-sky/5 rounded-3xl p-8 border border-brand-sky/20 shadow-soft">
-                  <h4 className="text-2xl font-bold text-brand-sky mb-6 flex items-center gap-3">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 shadow-soft sm:p-5">
+                  <h4 className="mb-4 flex items-center gap-3 border-b border-white/10 pb-3 text-lg font-semibold text-brand-sky">
                     <span>💰</span> Pricing
                   </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     {/* Base Time */}
                     <Field label="Base Time">
   <input
@@ -2070,10 +2407,10 @@ async function save() {
                 </div>
 
                 {/* Troubleshooting Section (Admin/Technician Only) */}
-                <div className="mb-8 bg-gradient-to-br from-brand-blue/5 to-brand-sky/5 rounded-3xl p-8 border border-brand-sky/20 shadow-soft">
-                  <h4 className="text-2xl font-bold text-brand-sky mb-6 flex items-center gap-3">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 shadow-soft sm:p-5">
+                  <h4 className="mb-4 flex flex-wrap items-center gap-3 border-b border-white/10 pb-3 text-lg font-semibold text-brand-sky">
                     <span>🔧</span> Troubleshooting & Resolution
-                    <span className="text-xs bg-yellow-600/20 text-yellow-300 px-2 py-1 rounded">Admin/Technician Only</span>
+                    <span className="badge badge-amber">Admin/Technician Only</span>
                   </h4>
                   <div>
                     <Field label="Troubleshooting Steps & Resolution">
@@ -2091,37 +2428,186 @@ async function save() {
                   </Field>
                   </div>
                 </div>
+
+                {/* Job Events Timeline (Read-only) */}
+                {editingId && (
+                  <div className="rounded-2xl border border-slate-400/20 bg-slate-500/[0.04] p-4 shadow-soft sm:p-5">
+                    <h4 className="mb-4 flex flex-wrap items-center gap-3 border-b border-white/10 pb-3 text-lg font-semibold text-sky-300">
+                      <span>Job Events Timeline</span>
+                      <span className="badge badge-slate">
+                        {timelineEvents.length} {timelineEvents.length === 1 ? 'event' : 'events'}
+                      </span>
+                    </h4>
+
+                    {timelineEvents.length === 0 ? (
+                      <StatePanel
+                        compact
+                        title="No timeline events"
+                        message="No timeline events recorded yet for this job."
+                      />
+                    ) : (
+                      <div className="max-h-80 overflow-y-auto pr-2">
+                        <div className="space-y-4">
+                          {timelineEvents.map((event, idx) => {
+                            const meta = getEventMeta(event?.type);
+                            const eventTs = event?.timestamp || event?.createdAt;
+                            const fullTimestamp = eventTs ? new Date(eventTs).toLocaleString() : 'Unknown time';
+
+                            return (
+                              <div key={`${event?.type || 'event'}-${eventTs || idx}-${idx}`} className="relative pl-7">
+                                {idx < timelineEvents.length - 1 && (
+                                  <span className="absolute left-[7px] top-6 bottom-[-14px] w-px bg-white/10" />
+                                )}
+                                <span className={`absolute left-0 top-1 h-4 w-4 rounded-full border ${meta.dotClass}`} />
+
+                                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className={`badge badge-sm ${meta.badgeClass}`}>
+                                          {meta.label}
+                                        </span>
+                                        <span className="text-sm text-slate-200 font-medium">
+                                          {event?.actorName || 'System'}
+                                        </span>
+                                      </div>
+                                      <p className="text-sm text-slate-300 mt-2 break-words">
+                                        {renderEventDetails(event)}
+                                      </p>
+                                    </div>
+                                    <span
+                                      className="text-xs text-slate-400 whitespace-nowrap"
+                                      title={fullTimestamp}
+                                    >
+                                      {formatRelativeTime(eventTs)}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Completion Evidence Section (Read-only - shown when technician actually submitted evidence) */}
+                {editingId && form.completionForm?.submittedAt && (
+                  <div className="rounded-2xl border border-green-500/20 bg-green-500/[0.04] p-4 shadow-soft sm:p-5">
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
+                      <h4 className="flex items-center gap-3 text-lg font-semibold text-green-400">
+                        <span>📋</span> Completion Evidence
+                        <span className="badge badge-emerald">Technician Submitted</span>
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={downloadCompletionReport}
+                        className="btn btn-success text-sm"
+                      >
+                        Download Report
+                      </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      {/* Show a note that this is read-only */}
+                      <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/30 text-green-200 text-sm mb-4">
+                        <span className="font-medium">Review before closing:</span> This evidence was submitted by the technician when marking the job complete. It cannot be edited.
+                      </div>
+
+                      {/* Work Performed */}
+                      <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Work Performed</label>
+                        <div className="p-3 bg-white/5 rounded-lg border border-white/10 text-slate-200 whitespace-pre-wrap">
+                          {form.completionForm?.workPerformed || (
+                            <span className="text-slate-500 italic">No completion form submitted</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Parts Used */}
+                      {form.completionForm?.partsUsed && (
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-2">Parts/Materials Used</label>
+                          <div className="p-3 bg-white/5 rounded-lg border border-white/10 text-slate-200">
+                            {form.completionForm.partsUsed}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Follow-up Required */}
+                      {form.completionForm?.followUpRequired && (
+                        <div className="p-4 bg-amber-500/10 rounded-lg border border-amber-500/30">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-amber-400 text-lg">⚠️</span>
+                            <span className="font-medium text-amber-400">Follow-up Required</span>
+                          </div>
+                          <p className="text-slate-300">{form.completionForm.followUpNotes}</p>
+                        </div>
+                      )}
+
+                      {/* Photos */}
+                      {form.completionPhotos && form.completionPhotos.length > 0 && (
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-2">
+                            Evidence Photos ({form.completionPhotos.length})
+                          </label>
+                          <div className="flex gap-3 flex-wrap">
+                            {form.completionPhotos.map((photo, idx) => (
+                              <a
+                                key={idx}
+                                href={photo.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-24 h-24 rounded-lg overflow-hidden border border-slate-600 hover:border-green-400 transition"
+                              >
+                                <img
+                                  src={photo.url}
+                                  alt={`Evidence ${idx + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Submitted Info */}
+                      {form.completionForm?.submittedAt && (
+                        <p className="text-slate-500 text-xs pt-2 border-t border-white/10">
+                          Submitted: {new Date(form.completionForm.submittedAt).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* sticky footer */}
-              <div className="px-6 py-4 border-t border-brand-border rounded-b-2xl" style={{ backgroundColor: '#0c1450' }}>
-                <div className="flex justify-between items-center">
-                  <div>
+              <div className="flex-shrink-0 border-t border-white/10 bg-white/[0.03] px-4 py-4 sm:px-6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-h-10">
                     {editingId && (
                       <button
                         onClick={() => removeJob(editingId)}
-                        className="px-4 py-2 rounded-lg bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 font-medium transition-all duration-200 flex items-center gap-2"
+                        className="btn btn-danger"
                       >
-                        <span>🗑️</span>
                         Delete Job
                       </button>
                     )}
                   </div>
-                  <div className="flex gap-3">
+                  <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                     <button
-                      onClick={() => {
-                        console.log('Modal closed by cancel button');
-                        setOpen(false);
-                      }}
-                      className="px-6 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium transition-all duration-200"
+                      onClick={() => setOpen(false)}
+                      className="btn btn-ghost w-full px-6 sm:w-auto"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={save}
-                      className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium transition-all duration-200 shadow-lg"
+                      className="btn btn-primary w-full px-6 sm:w-auto"
                     >
-                      Create - {currency.format(
+                      {editingId ? 'Save Job' : 'Create Job'} - {currency.format(
                         form.amount || (BASE_PRICE + getExtraPrice(Number(form.additionalMins)||0))
                       )}
                     </button>
@@ -2136,19 +2622,122 @@ async function save() {
   );
 }
 
-function Card({ label, value }) {
+function Card({ label, value, accent = 'default' }) {
+  const accents = {
+    default: {
+      panel: 'from-white/5 to-white/[0.02] border-white/10 hover:border-white/20',
+      marker: 'bg-slate-300',
+      glow: 'bg-white/10',
+    },
+    blue: {
+      panel: 'from-blue-500/15 to-blue-500/[0.03] border-blue-400/20 hover:border-blue-300/35',
+      marker: 'bg-blue-300',
+      glow: 'bg-blue-400/15',
+    },
+    sky: {
+      panel: 'from-sky-500/15 to-sky-500/[0.03] border-sky-400/20 hover:border-sky-300/35',
+      marker: 'bg-sky-300',
+      glow: 'bg-sky-400/15',
+    },
+    teal: {
+      panel: 'from-teal-500/15 to-teal-500/[0.03] border-teal-400/20 hover:border-teal-300/35',
+      marker: 'bg-teal-300',
+      glow: 'bg-teal-400/15',
+    },
+    fuchsia: {
+      panel: 'from-fuchsia-500/15 to-fuchsia-500/[0.03] border-fuchsia-400/20 hover:border-fuchsia-300/35',
+      marker: 'bg-fuchsia-300',
+      glow: 'bg-fuchsia-400/15',
+    },
+    emerald: {
+      panel: 'from-emerald-500/15 to-emerald-500/[0.03] border-emerald-400/20 hover:border-emerald-300/35',
+      marker: 'bg-emerald-300',
+      glow: 'bg-emerald-400/15',
+    },
+    slate: {
+      panel: 'from-slate-500/15 to-slate-500/[0.03] border-slate-400/20 hover:border-slate-300/30',
+      marker: 'bg-slate-300',
+      glow: 'bg-slate-400/10',
+    },
+  };
+  const tone = accents[accent] || accents.default;
+
   return (
-    <div className="rounded-2xl p-5 bg-white/5">
-      <div className="text-sm opacity-75">{label}</div>
-      <div className="text-4xl font-extrabold mt-2">{value}</div>
+    <div className={`group relative overflow-hidden rounded-xl sm:rounded-2xl border bg-gradient-to-br p-3.5 sm:p-5 shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${tone.panel}`}>
+      <div className={`absolute inset-x-0 top-0 h-1 ${tone.marker}`} />
+      <div className={`absolute right-3 top-3 h-9 w-9 rounded-full blur-xl transition-opacity duration-200 group-hover:opacity-90 ${tone.glow}`} />
+      <div className="relative flex min-h-[5.5rem] flex-col justify-between gap-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 text-xs font-semibold uppercase text-slate-300">
+            {label}
+          </div>
+          <span className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${tone.marker}`} />
+        </div>
+        <div className="text-3xl font-extrabold leading-none text-white">
+          {value}
+        </div>
+      </div>
     </div>
   );
 }
 
+function StatePanel({ title, message, tone = 'empty', compact = false, children }) {
+  const tones = {
+    empty: 'border-white/10 bg-white/[0.04] text-slate-300',
+    loading: 'border-brand-sky/25 bg-brand-sky/10 text-sky-100',
+    error: 'border-rose-400/35 bg-rose-500/10 text-rose-100',
+  };
+
+  return (
+    <div className={`surface rounded-2xl ${compact ? 'p-4 text-left' : 'p-6 text-center sm:p-8'} ${tones[tone] || tones.empty}`}>
+      <div className="mx-auto mb-3 h-1 w-16 rounded-full bg-brand-sky/60" />
+      <h3 className="text-lg font-semibold text-white">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-slate-300">{message}</p>
+      {children && <div className="mt-5 flex justify-center">{children}</div>}
+    </div>
+  );
+}
+
+function StatusBadge({ status, type = 'status' }) {
+  const styles = {
+    status: {
+      'Open': 'badge-blue',
+      'Assigned': 'badge-blue',
+      'Accepted': 'badge-sky',
+      'Scheduled': 'badge-sky',
+      'En Route': 'badge-amber',
+      'On Site': 'badge-orange',
+      'In Progress': 'badge-fuchsia',
+      'Completed': 'badge-emerald',
+      'Closed': 'badge-slate',
+    },
+    priority: {
+      'Low': 'badge-slate',
+      'Medium': 'badge-amber',
+      'High': 'badge-orange',
+      'Urgent': 'badge-rose',
+    },
+  };
+
+  const statusStyle = styles[type][status] || styles[type]['Open'];
+
+  return (
+    <span className={`badge ${statusStyle}`}>
+      {status}
+    </span>
+  );
+}
+
 function Field({ label, children, className = '' }) {
+  const isRequired = typeof label === 'string' && label.trim().endsWith('*');
+  const displayLabel = isRequired ? label.replace(/\s*\*$/, '') : label;
+
   return (
     <label className={`block ${className}`}>
-      <div className="text-sm text-slate-300 mb-1">{label}</div>
+      <div className="mb-1 flex items-center gap-1 text-sm font-medium text-slate-300">
+        <span>{displayLabel}</span>
+        {isRequired && <span className="text-rose-300">*</span>}
+      </div>
       {children}
     </label>
   );

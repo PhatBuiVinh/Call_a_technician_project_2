@@ -27,7 +27,7 @@ export async function api(path, { method='GET', body, headers={} } = {}){
   }
 
   const text = await res.text();
-  let data = null; try{ data = text ? JSON.parse(text) : null }catch{}
+  let data = null; try{ data = text ? JSON.parse(text) : null }catch{ void 0; }
   if(!res.ok) throw new Error((data && (data.error || data.message)) || res.statusText);
   return data;
 }
@@ -41,4 +41,22 @@ export const incomingJobsApi = {
   getIncomingJob: (id) => api(`/incoming-jobs/${id}`),
   updateIncomingJob: (id, data) => api(`/incoming-jobs/${id}`, { method: 'PUT', body: data }),
   deleteIncomingJob: (id) => api(`/incoming-jobs/${id}`, { method: 'DELETE' }),
+  
+  // Lead-to-job conversion functions
+  convertCheck: (requestId) => api(`/incoming-jobs/${requestId}/convert-check`),
+  getConvertData: (requestId) => api(`/incoming-jobs/${requestId}/convert-check`),
+};
+
+export const reportsApi = {
+  getDashboardSummary: () => api('/reports/dashboard-summary'),
+
+  getDateRangeSummary: ({ from, to }) => {
+    const query = new URLSearchParams({ from, to }).toString();
+    return api(`/reports/date-range-summary?${query}`);
+  },
+
+  getDateRangeTechnicians: ({ from, to }) => {
+    const query = new URLSearchParams({ from, to }).toString();
+    return api(`/reports/date-range-technicians?${query}`);
+  },
 };

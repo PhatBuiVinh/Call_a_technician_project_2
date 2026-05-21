@@ -1,32 +1,54 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Link } from "react-router-dom";
 import { Menu, X } from "lucide-react";
+import Button from "../atoms/Button";
 import logo from "../../assets/logo/Transparent-01.png";
 
 export default function NavBar() {
   const [isOpen, setIsOpen] = useState(false);
-  const PORTAL_URL = import.meta.env.VITE_PORTAL_URL || 'http://localhost:5173'; // Admin portal URL
-  
-  // Only show login button if portal URL is configured
-  const showLoginButton = !!PORTAL_URL;
+  const [isScrolled, setIsScrolled] = useState(false);
 
   const navLinks = [
     { name: "Home", path: "/" },
     { name: "About Us", path: "/about" },
-    { name: "Our Services", path: "/services" },
-    { name: "Location", path: "/location" },
+    { name: "Services", path: "/services" },
+    { name: "Consulting", path: "/consulting" },
+    { name: "Service Areas", path: "/service-areas" },
     { name: "Blog", path: "/blog" },
   ];
 
-  const linkBase = "transition";
-  const linkActive = "text-brand4 font-semibold";
-  const linkIdle = "text-white hover:text-brand2";
+  const linkBase = "relative transition motion-standard focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-lightblue/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent after:content-[''] after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:rounded-full after:transition-all after:duration-200";
+  const linkActive = "text-brand-green font-semibold after:w-full after:bg-brand-green";
+  const linkIdle = "text-white/90 hover:text-brand-lightblue hover:after:w-full hover:after:bg-brand-lightblue";
+  const mobileLinkIdle = "text-slate-800 hover:text-brand-blue";
+
+  useEffect(() => {
+    const onScroll = () => setIsScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = isOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") setIsOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   return (
-    <nav className="fixed top-0 left-0 w-full z-50 bg-brand-navy text-brand-green shadow-md">
-      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 ml-[-28px]">
-          <img src={logo} alt="Call-a-Technician logo" className="h-14 w-auto" />
+    <nav className={`fixed top-0 left-0 w-full z-50 text-brand-green border-b border-white/10 backdrop-blur-md motion-standard ${isScrolled ? "bg-brand-navy/95" : "bg-brand-navy/90"}`}>
+      <div className="container-app py-2.5 md:py-3 flex items-center justify-between gap-3">
+        <Link to="/" className="flex items-center gap-2 shrink-0 leading-none">
+          <img src={logo} alt="Call-a-Technician logo" className="block h-11 md:h-12 w-auto object-contain" />
         </Link>
 
         {/* Desktop links */}
@@ -47,27 +69,12 @@ export default function NavBar() {
 
         {/* Desktop CTA buttons */}
         <div className="hidden md:flex items-center gap-3">
-          <Link to="/contact" className="btn-primary">Contact Us</Link>
-
-          {/* LOGIN → external Portal - only show if configured */}
-          {showLoginButton ? (
-            <a
-              href={`${PORTAL_URL}/login`}
-              className="btn-secondary"
-              rel="noreferrer"
-            >
-              Login
-            </a>
-          ) : (
-            <span className="btn-secondary opacity-60 cursor-not-allowed" title="Portal available on request">
-              Portal
-            </span>
-          )}
+          <Button to="/contact" variant="primary" className="text-sm">Request a Technician</Button>
         </div>
 
         {/* Mobile hamburger */}
         <button
-          className="md:hidden text-brand4 hover:text-brand2 transition"
+          className="md:hidden text-brand-green hover:text-brand-lightblue transition motion-standard"
           onClick={() => setIsOpen(!isOpen)}
           aria-label="Toggle menu"
         >
@@ -77,50 +84,38 @@ export default function NavBar() {
 
       {/* Mobile menu */}
       {isOpen && (
-        <div className="md:hidden bg-white text-black absolute top-full left-0 w-full shadow-lg">
-          <div className="flex flex-col gap-4 p-4">
-            {navLinks.map((l) => (
-              <NavLink
-                key={l.name}
-                to={l.path}
-                className={({ isActive }) =>
-                  `${linkBase} ${isActive ? linkActive : linkIdle}`
-                }
-                end={l.path === "/"}
+        <>
+          <button
+            className="fixed inset-0 top-[76px] bg-slate-950/50 backdrop-blur-md md:hidden"
+            aria-label="Close menu"
+            onClick={() => setIsOpen(false)}
+          />
+          <div className="absolute top-full left-0 w-full rounded-b-[32px] border-b border-slate-200 bg-white text-black md:hidden">
+            <div className="flex flex-col gap-2 p-4">
+              {navLinks.map((l) => (
+                <NavLink
+                  key={l.name}
+                  to={l.path}
+                  className={({ isActive }) =>
+                    `rounded-xl px-3 py-2.5 text-base transition motion-standard focus-brand ${isActive ? "bg-brand-lightblue/20 text-brand-blue font-semibold" : mobileLinkIdle}`
+                  }
+                  end={l.path === "/"}
+                  onClick={() => setIsOpen(false)}
+                >
+                  {l.name}
+                </NavLink>
+              ))}
+              <Button
+                to="/contact"
+                variant="primary"
+                className="mt-1 text-center justify-center"
                 onClick={() => setIsOpen(false)}
               >
-                {l.name}
-              </NavLink>
-            ))}
-            <Link
-              to="/contact"
-              className="btn-primary text-center"
-              onClick={() => setIsOpen(false)}
-            >
-              Contact Us
-            </Link>
-
-            {/* LOGIN (mobile) → external Portal - only show if configured */}
-            {showLoginButton ? (
-              <a
-                href={`${PORTAL_URL}/login`}
-                className="btn-secondary text-center"
-                onClick={() => setIsOpen(false)}
-                rel="noreferrer"
-              >
-                Login
-              </a>
-            ) : (
-              <span 
-                className="btn-secondary text-center opacity-60 cursor-not-allowed"
-                onClick={() => setIsOpen(false)}
-                title="Portal available on request"
-              >
-                Portal
-              </span>
-            )}
+                Request a Technician
+              </Button>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </nav>
   );

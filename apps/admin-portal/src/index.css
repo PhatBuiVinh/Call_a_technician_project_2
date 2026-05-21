@@ -93,10 +93,38 @@
   .page { @apply min-h-screen bg-brand-bg text-white; }
   .panel { @apply rounded-2xl bg-white/5 border border-white/10; box-shadow: var(--shadow-soft); }
   .card  { @apply rounded-2xl bg-white/5 border border-white/10; }
+  .container-app { @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8; }
+  .surface {
+    @apply bg-white/5 border border-white/10;
+    box-shadow: var(--shadow-soft);
+  }
+  .border-surf { border-color: rgba(82, 213, 255, 0.18); }
+
+  /* Badges / status pills */
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium leading-none whitespace-nowrap;
+  }
+  .badge-sm { @apply px-2 py-1 text-[11px]; }
+  .badge-lg { @apply px-3 py-1.5 text-sm font-semibold; }
+  .badge-blue { @apply bg-blue-500/15 text-blue-200 border-blue-400/35; }
+  .badge-sky { @apply bg-sky-500/15 text-sky-200 border-sky-400/35; }
+  .badge-amber { @apply bg-amber-500/15 text-amber-200 border-amber-400/35; }
+  .badge-orange { @apply bg-orange-500/15 text-orange-200 border-orange-400/35; }
+  .badge-fuchsia { @apply bg-fuchsia-500/15 text-fuchsia-200 border-fuchsia-400/35; }
+  .badge-emerald { @apply bg-emerald-500/15 text-emerald-200 border-emerald-400/35; }
+  .badge-slate { @apply bg-slate-500/15 text-slate-300 border-slate-400/25; }
+  .badge-rose { @apply bg-rose-500/15 text-rose-200 border-rose-400/35; }
+  .badge-neutral {
+    background: rgba(255,255,255,.08);
+    color: rgb(203 213 225);
+    border-color: rgba(255,255,255,.1);
+  }
 
   /* Inputs */
   .input, .select, .textarea {
     @apply w-full px-3 py-2 rounded-xl bg-transparent border border-white/10 outline-none;
+    min-height: 44px;
+    font-size: 16px;
   }
   .input:focus, .select:focus, .textarea:focus {
     box-shadow: 0 0 0 3px rgba(82,213,255,.35);
@@ -104,14 +132,26 @@
   }
 
   /* Buttons */
-  .btn { @apply inline-flex items-center justify-center rounded-xl px-4 py-2 font-medium transition; }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 font-medium transition shadow-sm;
+    min-height: 44px;
+  }
+  .btn:focus-visible {
+    outline: 2px solid rgba(82,213,255,.85);
+    outline-offset: 2px;
+  }
+  .btn:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+  }
+
   .btn-primary {
     /* brand green primary */
     background: #31EE88;
     color: #000154;
     border: 1px solid #29d77a;
   }
-  .btn-primary:hover { background:#29d77a; border-color:#22c46e; }
+  .btn-primary:hover:not(:disabled) { background:#29d77a; border-color:#22c46e; }
 
   .btn-blue {
     /* brand blue secondary */
@@ -119,12 +159,54 @@
     color:#fff;
     border:1px solid rgba(255,255,255,.1);
   }
-  .btn-blue:hover { background:#1548ae; }
+  .btn-blue:hover:not(:disabled) { background:#1548ae; }
 
   .btn-ghost {
-    @apply bg-white/8 text-white border border-white/10;
+    background: rgba(255,255,255,.08);
+    color:#fff;
+    border:1px solid rgba(255,255,255,.1);
   }
-  .btn-ghost:hover { @apply bg-white/12; }
+  .btn-ghost:hover:not(:disabled) { background: rgba(255,255,255,.12); }
+
+  .btn-green, .btn-success {
+    @apply bg-emerald-400 text-slate-950 border border-emerald-300;
+  }
+  .btn-green:hover:not(:disabled),
+  .btn-success:hover:not(:disabled) { @apply bg-emerald-300; }
+
+  .btn-yellow, .btn-warning {
+    @apply bg-amber-300 text-slate-950 border border-amber-200;
+  }
+  .btn-yellow:hover:not(:disabled),
+  .btn-warning:hover:not(:disabled) { @apply bg-amber-200; }
+
+  .btn-orange {
+    @apply bg-orange-400 text-slate-950 border border-orange-300;
+  }
+  .btn-orange:hover:not(:disabled) { @apply bg-orange-300; }
+
+  .btn-pink {
+    @apply bg-fuchsia-400 text-slate-950 border border-fuchsia-300;
+  }
+  .btn-pink:hover:not(:disabled) { @apply bg-fuchsia-300; }
+
+  .btn-danger {
+    @apply bg-rose-600 text-white border border-rose-500;
+  }
+  .btn-danger:hover:not(:disabled) { @apply bg-rose-500; }
+
+  @media (max-width: 768px) {
+    .btn {
+      min-height: 48px;
+      padding: 0.75rem 1rem;
+    }
+
+    .input, .select, .textarea {
+      min-height: 48px;
+      padding-top: 0.75rem;
+      padding-bottom: 0.75rem;
+    }
+  }
 
   /* KPIs */
   .kpi {
@@ -148,10 +230,16 @@
   .nav-link-active { @apply bg-white/10 border-white/10; }
 }
 
-    /* Tables */
-    .table { @apply w-full text-left; }
-    .table thead { @apply bg-white/5 text-slate-300; }
-    .table tr { @apply border-t border-white/10; }
+    /* Tables - Enhanced for better readability */
+    .table { @apply w-full text-left border-collapse; }
+    .table thead { @apply bg-white/10 text-slate-200 text-sm font-semibold; }
+    .table th { @apply py-3 px-4 border-b border-white/15; }
+    .table tbody tr { @apply border-t border-white/10 transition-colors duration-150; }
+    .table tbody tr:hover { @apply bg-white/[0.04]; }
+    .table td { @apply py-3 px-4; }
+    /* Subtle zebra striping for large tables */
+    .table tbody tr:nth-child(even) { @apply bg-white/[0.02]; }
+    .table tbody tr:nth-child(even):hover { @apply bg-white/[0.05]; }
 
     /* Custom Scrollbar */
     .scrollbar-thin {
@@ -224,4 +312,76 @@
 .fc .fc-highlight {
   background: rgba(82, 213, 255, .28) !important;
   box-shadow: inset 0 0 0 1px rgba(82, 213, 255, .55);
+}
+
+/* Mobile safe area padding for bottom actions */
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+/* ─────────────────────────────────────────────────────────
+   Mobile Responsiveness Utilities
+   ───────────────────────────────────────────────────────── */
+
+/* Responsive container with safe horizontal padding */
+.container-responsive {
+  @apply w-full mx-auto px-3 sm:px-4 lg:px-6;
+  max-width: 100%;
+}
+
+@media (min-width: 640px) {
+  .container-responsive { max-width: 640px; }
+}
+@media (min-width: 768px) {
+  .container-responsive { max-width: 768px; }
+}
+@media (min-width: 1024px) {
+  .container-responsive { max-width: 1024px; }
+}
+@media (min-width: 1280px) {
+  .container-responsive { max-width: 1280px; }
+}
+
+/* Touch-friendly tap targets on mobile */
+@media (max-width: 768px) {
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Stack buttons vertically on very small screens */
+  .btn-stack-mobile {
+    @apply flex flex-col w-full gap-2;
+  }
+  
+  .btn-stack-mobile > button,
+  .btn-stack-mobile > a {
+    @apply w-full justify-center;
+  }
+  
+  /* Horizontal scroll for tables/cards on mobile */
+  .scroll-x-mobile {
+    @apply overflow-x-auto -mx-3 px-3;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Compact cards on mobile */
+  .card-compact-mobile {
+    @apply p-3 rounded-xl;
+  }
+  
+  /* Smaller text on mobile for dense UIs */
+  .text-compact-mobile {
+    @apply text-xs leading-snug;
+  }
+}
+
+/* Responsive table wrapper */
+.table-responsive {
+  @apply w-full overflow-x-auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive table {
+  @apply min-w-full;
 }

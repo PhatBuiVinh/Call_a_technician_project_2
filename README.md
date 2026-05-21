@@ -2,6 +2,8 @@
 
 This is a unified project containing both the marketing website and admin portal for Call-a-Technician, with a shared backend API.
 
+For a presentation-ready walkthrough, see [docs/DEMO-SMOKE-CHECKLIST.md](docs/DEMO-SMOKE-CHECKLIST.md).
+
 ## Project Structure
 
 ```
@@ -29,26 +31,26 @@ This is a unified project containing both the marketing website and admin portal
 
 2. **Set up environment variables:**
    
-   Create `.env` files in each project directory:
+   Copy the `.env.example` files and fill in local-only values. Do not commit real `.env` or `.env.development` files.
    
    **packages/backend-api/.env:**
    ```env
-   PORT=3000
-   MONGODB_URI=mongodb://localhost:27017/call-a-technician
-   JWT_SECRET=your-super-secret-jwt-key
+   PORT=5000
+   MONGODB_URI=replace_me
+   JWT_SECRET=replace_me
    CLIENT_ORIGIN=http://localhost:5173
    MARKETING_ORIGIN=http://localhost:5174
    ```
    
    **apps/marketing-site/.env:**
    ```env
-   VITE_API_URL=http://localhost:3000
+   VITE_API_BASE=/api
    VITE_PORTAL_URL=http://localhost:5173
    ```
    
    **apps/admin-portal/.env:**
    ```env
-   VITE_API_URL=http://localhost:3000
+   VITE_API_BASE=/api
    ```
 
 3. **Start MongoDB** (if running locally)
@@ -59,9 +61,11 @@ This is a unified project containing both the marketing website and admin portal
    ```
 
    This will start:
-   - Backend API on http://localhost:3000
+   - Backend API on http://localhost:5000
    - Marketing site on http://localhost:5174
    - Admin portal on http://localhost:5173
+
+   The Vite dev servers proxy `/api` to `http://localhost:5000`, so the frontends call the backend through the same `/api` path in local development.
 
 ## Individual Commands
 
@@ -69,6 +73,8 @@ This is a unified project containing both the marketing website and admin portal
 ```bash
 npm run dev:backend
 ```
+
+After the backend is running, use `npm test --workspace packages/backend-api` to run the read-only smoke test. It checks `GET /api/health` and does not create, update, or delete any records.
 
 ### Marketing Site
 ```bash
@@ -143,18 +149,24 @@ npm run dev:portal
 ## Environment Variables
 
 ### Backend
-- `PORT` - Server port (default: 3000)
+- `PORT` - Server port. Use `5000` for local development so the marketing site and admin portal Vite proxies can reach `/api`.
 - `MONGODB_URI` - MongoDB connection string
 - `JWT_SECRET` - Secret for JWT tokens
 - `CLIENT_ORIGIN` - Admin portal URL
 - `MARKETING_ORIGIN` - Marketing site URL
+- `RATE_LIMIT_ENABLED` - Keep enabled for demos and normal local testing; only set `false` temporarily in your own local `.env` for controlled testing
+- `RECAPTCHA_SECRET_KEY` - Leave blank for local demos without reCAPTCHA. In production, set this together with the matching frontend site key.
 
 ### Marketing Site
-- `VITE_API_URL` - Backend API URL
+- `VITE_API_BASE` - API base path, use `/api` in local development
 - `VITE_PORTAL_URL` - Admin portal URL
+- `VITE_RECAPTCHA_SITE_KEY` - Leave blank for local demos without reCAPTCHA. In production, set this together with the matching backend secret.
 
 ### Admin Portal
-- `VITE_API_URL` - Backend API URL
+- `VITE_API_BASE` - API base path, use `/api` in local development
+- `VITE_ENABLE_MOCKS` - Optional local development flag. Keep `false` or unset for demos so API failures are visible.
+
+`VITE_API_URL` is legacy and not used by the current frontend API clients.
 
 ## License
 

@@ -25,6 +25,8 @@ export function AuthProvider({ children }) {
     // ensure the other store is clean
     (remember ? sessionStorage : localStorage).removeItem('cat_user');
     (remember ? sessionStorage : localStorage).removeItem('cat_token');
+
+    return { token, user };
   };
 
   const register = async (name, email, password, remember=true) => {
@@ -35,6 +37,8 @@ export function AuthProvider({ children }) {
     store.setItem('cat_token', token);
     (remember ? sessionStorage : localStorage).removeItem('cat_user');
     (remember ? sessionStorage : localStorage).removeItem('cat_token');
+
+    return { token, user };
   };
 
   const logout = () => {
@@ -47,4 +51,5 @@ export function AuthProvider({ children }) {
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }
 
+/* eslint-disable-next-line react-refresh/only-export-components */
 export function useAuth(){ return useContext(AuthCtx); }

@@ -2,7 +2,7 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, FreeMode } from "swiper/modules";
 import "swiper/css";
 import Section from "../../layout/Section";
-import { H2 } from "../../ui/Heading";
+import { H2 } from "../../UI/Heading";
 
 // import local logo assets (replace with your real files)
 import logoMicrosoft from "../../../assets/logos/microsoft.png";
@@ -37,7 +37,7 @@ export default function LogosCarousel() {
     <Section>
       <div className="container-app">
         <div className="text-center mb-6">
-          <H2 className="!text-xl md:!text-2xl">Trusted by homes & small businesses</H2>
+          <H2>Trusted by homes & small businesses</H2>
           <p className="mt-2 text-slate-600">Proudly supporting Adelaide with reliable tech services</p>
         </div>
 

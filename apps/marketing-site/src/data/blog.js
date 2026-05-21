@@ -1,4 +1,6 @@
 // You can replace this with API data later.
+import blogDemoImage from "../assets/blog/blogdemo.jpg";
+
 export const CATEGORIES = ["Tips", "Troubleshooting", "Security", "Wi-Fi", "Business IT"];
 
 export const POSTS = [
@@ -10,7 +12,7 @@ export const POSTS = [
     author: "Alex T.",
     date: "2025-08-02",
     readMins: 6,
-    image: "/src/assets/blog/blogdemo.jpg",
+    image: blogDemoImage,
     featured: true,
     content: [
       { type: "p", text: "A slow Windows PC is usually a mix of startup apps, background processes, and storage issues. Here are practical steps you can do today without buying new hardware." },
@@ -35,7 +37,7 @@ export const POSTS = [
     author: "Sam R.",
     date: "2025-07-18",
     readMins: 5,
-    image: "/src/assets/blog/blogdemo.jpg",
+    image: blogDemoImage,
     content: [
       { type: "p", text: "Wi-Fi dropouts are usually caused by poor placement, interference, or an overworked router. Follow this checklist to stabilise your network." },
       { type: "h2", text: "1) Router placement" },
@@ -58,7 +60,7 @@ export const POSTS = [
     author: "Casey M.",
     date: "2025-06-11",
     readMins: 4,
-    image: "/src/assets/blog/blogdemo.jpg",
+    image: blogDemoImage,
   },
   {
     id: "email-hacked",
@@ -68,7 +70,7 @@ export const POSTS = [
     author: "Alex T.",
     date: "2025-05-28",
     readMins: 7,
-    image: "/src/assets/blog/blogdemo.jpg",
+    image: blogDemoImage,
   },
   {
     id: "small-biz-it-starter",
@@ -78,7 +80,7 @@ export const POSTS = [
     author: "Sam R.",
     date: "2025-05-05",
     readMins: 6,
-    image: "/src/assets/blog/blogdemo.jpg",
+    image: blogDemoImage,
   },
   {
     id: "mac-maintenance",
@@ -88,6 +90,6 @@ export const POSTS = [
     author: "Casey M.",
     date: "2025-04-14",
     readMins: 4,
-    image: "/src/assets/blog/blogdemo.jpg",
+    image: blogDemoImage,
   },
 ];

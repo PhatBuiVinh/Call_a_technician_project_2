@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
 import Section from "../components/layout/Section";
-import { H2 } from "../components/ui/Heading";
+import { H2 } from "../components/UI/Heading";
+import NeedHelpBand from "../components/UI/NeedHelpBand";
 import Button from "../components/atoms/Button";
 import { SA_MARKERS } from "../data/Home"; // <-- adjust path if needed
 
@@ -225,20 +226,16 @@ export default function Location() {
               </div>
 
               {/* CTA band */}
-              <div className="mt-8 rounded-2xl overflow-hidden bg-brand-navy text-white p-6 relative">
-                <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-blue to-brand-lightblue" />
-                <div className="font-semibold italic">Need help today?</div>
-                <p className="text-white/80 text-sm mt-1">
-                  Same-day bookings available across Adelaide.
-                </p>
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <a href="/contact" className="rounded-md bg-white text-brand-navy px-4 py-2 text-sm font-semibold hover:bg-slate-100">
-                    Contact Us
-                  </a>
-                  <a href="tel:1300551350" className="rounded-md border border-white px-4 py-2 text-sm font-semibold hover:bg-white/10">
-                    Call 1300 551 350
-                  </a>
-                </div>
+              <div className="mt-8">
+                <NeedHelpBand
+                  title="Need help today?"
+                  description="Same-day bookings available across Adelaide."
+                  primaryLabel="Request a Technician"
+                  primaryTo="/contact"
+                  secondaryLabel="Call 1300 551 350"
+                  secondaryHref="tel:1300551350"
+                  className="p-6 md:p-8"
+                />
               </div>
             </div>
           </div>
