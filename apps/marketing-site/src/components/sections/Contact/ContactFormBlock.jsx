@@ -694,7 +694,9 @@ export default function ContactFormBlock() {
                 )}
 
                 {activeStep < 3 ? (
-                  <Button type="button" onClick={onNextStep}>Continue</Button>
+                  <Button type="button" onClick={onNextStep}>
+                    {activeStep === 2 ? "Continue to photos" : "Continue"}
+                  </Button>
                 ) : (
                   <Button
                     type="submit"

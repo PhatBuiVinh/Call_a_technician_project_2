@@ -12,6 +12,7 @@ const SUPPORT_EMAIL = import.meta.env.VITE_SUPPORT_EMAIL || "support@callatech.c
 
 export default function RequestCallForm() {
   const fileInputRef = useRef(null);
+  const attachmentSectionRef = useRef(null);
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -22,6 +23,7 @@ export default function RequestCallForm() {
   const [imagePreviews, setImagePreviews] = useState([]);
   const [isProcessingImages, setIsProcessingImages] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isReadyToSubmit, setIsReadyToSubmit] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null); // 'success', 'error', null
   const [submitError, setSubmitError] = useState('');
 
@@ -89,7 +91,6 @@ export default function RequestCallForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
     setSubmitStatus(null);
     setSubmitError('');
 
@@ -102,6 +103,17 @@ export default function RequestCallForm() {
       if (formData.email.trim() && !/^\S+@\S+\.\S+$/.test(formData.email.trim())) {
         throw new Error('Please enter a valid email address.');
       }
+
+      if (!isReadyToSubmit) {
+        setIsReadyToSubmit(true);
+        window.setTimeout(() => {
+          attachmentSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          fileInputRef.current?.focus({ preventScroll: true });
+        }, 0);
+        return;
+      }
+
+      setIsSubmitting(true);
 
       // Prepare submit data with proper image handling
       const submitData = {
@@ -128,6 +140,7 @@ export default function RequestCallForm() {
         });
         setImages([]);
         setImagePreviews([]);
+        setIsReadyToSubmit(false);
         
         // Reset the file input
         if (fileInputRef.current) fileInputRef.current.value = '';
@@ -200,10 +213,18 @@ export default function RequestCallForm() {
               />
 
               {/* Image Upload */}
-              <div>
+              <div
+                ref={attachmentSectionRef}
+                className={isReadyToSubmit ? "rounded-2xl border border-brand-blue/30 bg-brand-lightblue/10 p-4" : ""}
+              >
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Upload Images (Optional - up to 5 images, max 5MB each)
                 </label>
+                <p className="mb-2 text-xs text-slate-500">
+                  {isReadyToSubmit
+                    ? "Add photos now, or press Send request if you don't need to attach any."
+                    : "After your details are complete, the next step pauses here so you can add photos before sending."}
+                </p>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -269,7 +290,7 @@ export default function RequestCallForm() {
                         >
                           {isSubmitting ? 'Submitting...' : 
                            isProcessingImages ? 'Processing Images...' : 
-                           'Request a Call'}
+                           isReadyToSubmit ? 'Send Request' : 'Continue to Photos'}
                         </Button>
                       </div>
 
