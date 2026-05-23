@@ -325,7 +325,7 @@ export default function ContactFormBlock() {
 
   // SUBMIT: replaced to call Portal API (no more fake demo delay)
   async function onSubmit(e) {
-    e.preventDefault();
+    e?.preventDefault?.();
 
     if (activeStep < 3) {
       onNextStep();
@@ -481,7 +481,7 @@ export default function ContactFormBlock() {
             </div>
           )}
 
-          <form onSubmit={onSubmit} className="mt-6 grid gap-5" noValidate>
+          <form onSubmit={(e) => e.preventDefault()} className="mt-6 grid gap-5" noValidate>
             {/* Honeypot */}
             <div className="hidden">
               <label>
@@ -699,7 +699,8 @@ export default function ContactFormBlock() {
                   </Button>
                 ) : (
                   <Button
-                    type="submit"
+                    type="button"
+                    onClick={onSubmit}
                     className="min-w-40 inline-flex items-center justify-center gap-2"
                     disabled={submitting}
                   >

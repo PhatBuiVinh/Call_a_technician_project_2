@@ -115,8 +115,7 @@ export default function RequestCallForm() {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     setSubmitStatus(null);
     setSubmitError('');
 
@@ -186,7 +185,7 @@ export default function RequestCallForm() {
               We’ll get back to you within business hours — usually faster.
             </p>
 
-            <form onSubmit={handleSubmit} className="mt-6 grid gap-4">
+            <form onSubmit={(e) => e.preventDefault()} className="mt-6 grid gap-4">
               <Input 
                 label="Full name" 
                 name="fullName"
@@ -295,8 +294,9 @@ export default function RequestCallForm() {
                       <div className="flex justify-center md:justify-start">
                         {isReadyToSubmit ? (
                           <Button
-                            type="submit"
+                            type="button"
                             className="min-h-11 min-w-40"
+                            onClick={handleSubmit}
                             disabled={isSubmitting || isProcessingImages}
                           >
                             {isSubmitting ? 'Submitting...' : isProcessingImages ? 'Processing Images...' : 'Submit Request'}
