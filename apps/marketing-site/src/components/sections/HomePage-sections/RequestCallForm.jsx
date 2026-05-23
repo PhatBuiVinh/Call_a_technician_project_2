@@ -89,29 +89,39 @@ export default function RequestCallForm() {
     setImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
+  const validateFormData = () => {
+    if (!formData.fullName.trim() || !formData.phone.trim() || !formData.email.trim() || !formData.description.trim()) {
+      throw new Error('Please fill in all required fields');
+    }
+
+    if (formData.email.trim() && !/^\S+@\S+\.\S+$/.test(formData.email.trim())) {
+      throw new Error('Please enter a valid email address.');
+    }
+  };
+
+  const handleContinueToPhotos = () => {
+    setSubmitStatus(null);
+    setSubmitError('');
+
+    try {
+      validateFormData();
+      setIsReadyToSubmit(true);
+      window.setTimeout(() => {
+        attachmentSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 0);
+    } catch (error) {
+      setSubmitStatus('error');
+      setSubmitError(error?.message || 'Please check the form and try again.');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitStatus(null);
     setSubmitError('');
 
     try {
-      // Validate form data
-      if (!formData.fullName.trim() || !formData.phone.trim() || !formData.email.trim() || !formData.description.trim()) {
-        throw new Error('Please fill in all required fields');
-      }
-
-      if (formData.email.trim() && !/^\S+@\S+\.\S+$/.test(formData.email.trim())) {
-        throw new Error('Please enter a valid email address.');
-      }
-
-      if (!isReadyToSubmit) {
-        setIsReadyToSubmit(true);
-        window.setTimeout(() => {
-          attachmentSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          fileInputRef.current?.focus({ preventScroll: true });
-        }, 0);
-        return;
-      }
+      validateFormData();
 
       setIsSubmitting(true);
 
@@ -283,15 +293,23 @@ export default function RequestCallForm() {
               )}
 
                       <div className="flex justify-center md:justify-start">
-                        <Button 
-                          type="submit" 
-                          className="min-h-11 min-w-40"
-                          disabled={isSubmitting || isProcessingImages}
-                        >
-                          {isSubmitting ? 'Submitting...' : 
-                           isProcessingImages ? 'Processing Images...' : 
-                           isReadyToSubmit ? 'Send Request' : 'Continue to Photos'}
-                        </Button>
+                        {isReadyToSubmit ? (
+                          <Button
+                            type="submit"
+                            className="min-h-11 min-w-40"
+                            disabled={isSubmitting || isProcessingImages}
+                          >
+                            {isSubmitting ? 'Submitting...' : isProcessingImages ? 'Processing Images...' : 'Submit Request'}
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            className="min-h-11 min-w-40"
+                            onClick={handleContinueToPhotos}
+                          >
+                            Continue to Photos
+                          </Button>
+                        )}
                       </div>
 
               <p className="text-xs text-slate-500 text-center md:text-left mt-2">
